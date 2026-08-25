@@ -30,14 +30,18 @@ du projet, implementee dans un unique composant : le Repository
 | Module | Etat | Etape prevue |
 |---|---|---|
 | `common` | Implemente | 1 |
-| `data_engine` (schemas, synthetique, stockage PIT) | Implemente | 1 |
-| `backtesting_engine` (boucle chronologique minimale) | Implemente | 1 |
-| `football_model` | Non implemente | 2 |
-| `calibration_engine` | Non implemente | 2 |
-| `market_engine` | Non implemente | 3 |
+| `data_engine` (schemas, synthetique, stockage PIT) | Implemente (etendu etape 2 : force d'equipe simulee) | 1 |
+| `backtesting_engine` (boucle chronologique minimale + walk-forward) | Implemente | 1 (boucle) / 2 (walk-forward) |
+| `football_model` (Poisson simple, attaque/defense, A1, A2, benchmarks naif/Elo) | Implemente | 2 |
+| `calibration_engine` (Brier, log loss, reliability, tests de significativite) | Implemente | 2 |
+| `market_engine` | Partiel : retrait de marge uniquement (benchmark) | 2 (partiel) / 3 (complet) |
 | `value_engine` | Non implemente | 3 |
 | `risk_engine` | Non implemente | 4 |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
+
+Detail de l'etape 2 : voir `docs/research_framework.md` (section H) pour le
+protocole ayant guide ces choix, et le rapport de walk-forward (execute via
+`scripts/run_stage2_walk_forward.py`) pour les resultats empiriques.
 
 ## 3. Ce qui est implemente a l'etape 1
 

@@ -1,0 +1,20 @@
+# Configuration du dataset synthetique pour le walk-forward de l'etape 2.
+# Contrairement a configs/backtest_stage1.yaml (infrastructure pure, aucun
+# signal d'equipe), ce dataset simule une vraie force d'attaque/defense
+# par equipe (team_attack_log_std/team_defense_log_std > 0), necessaire
+# pour qu'il y ait un signal a detecter et comparer entre configurations
+# de modele.
+
+synthetic_data:
+  seed: 2024
+  n_teams: 14
+  n_matches: 900
+  start_date: "2021-08-01T00:00:00+00:00"
+  days_between_matches: 1.0
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+  team_attack_log_std: 0.35
+  team_defense_log_std: 0.35
+
+decision_offset_hours_before_kickoff: 2.0

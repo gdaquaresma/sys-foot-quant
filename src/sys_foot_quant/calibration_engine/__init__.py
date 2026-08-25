@@ -1,1 +1,2 @@
-"""Calibration des probabilites (Brier, log loss, reliability). NON IMPLEMENTE (etape 2)."""
+"""Calibration des probabilites : Brier score, log loss, reliability diagrams,
+tests de significativite statistique hors echantillon."""

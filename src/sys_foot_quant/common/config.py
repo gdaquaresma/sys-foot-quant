@@ -38,6 +38,22 @@ class SyntheticDataConfig(BaseModel):
         default_factory=lambda: [72.0, 24.0, 1.0],
         description="Heures avant le coup d'envoi auxquelles une cote est publiee.",
     )
+    team_attack_log_std: float = Field(
+        0.0,
+        ge=0,
+        description=(
+            "Ecart-type (echelle log) de la force d'attaque simulee par equipe. "
+            "0 = toutes les equipes identiques (comportement etape 1, inchange)."
+        ),
+    )
+    team_defense_log_std: float = Field(
+        0.0,
+        ge=0,
+        description=(
+            "Ecart-type (echelle log) de la force defensive simulee par equipe. "
+            "0 = toutes les equipes identiques (comportement etape 1, inchange)."
+        ),
+    )
 
 
 class BacktestStageOneConfig(BaseModel):

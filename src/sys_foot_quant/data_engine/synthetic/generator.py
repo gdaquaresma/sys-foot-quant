@@ -48,6 +48,17 @@ class SyntheticDataset:
     matches: pd.DataFrame
     match_results: pd.DataFrame
     odds_snapshots: pd.DataFrame
+    # Force reellement utilisee pour generer les resultats (attack/defense
+    # multiplicatifs par equipe, base 1.0 = force moyenne). N'est PAS une
+    # table de faits point-in-time et n'est jamais ecrite en Parquet : c'est
+    # un artefact de validation, utilise uniquement pour verifier qu'un
+    # estimateur retrouve un signal connu (voir tests/integration). Un
+    # modele de prediction ne doit jamais y avoir acces.
+    true_team_strength: pd.DataFrame
+
+
+_BASE_HOME_LAMBDA = 1.35
+_BASE_AWAY_LAMBDA = 1.10
 
 
 def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
@@ -58,12 +69,26 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
         Team(team_id=i, name=f"Team_{i:02d}") for i in range(config.n_teams)
     ]
 
+    # Force d'attaque/defense simulee par equipe (echelle log-normale,
+    # centree sur 1.0). std=0 => toutes les equipes a 1.0, comportement
+    # strictement identique a l'etape 1 (aucun signal d'equipe).
+    team_attack = np.exp(rng.normal(0.0, config.team_attack_log_std, size=config.n_teams))
+    team_defense = np.exp(rng.normal(0.0, config.team_defense_log_std, size=config.n_teams))
+    true_team_strength = pd.DataFrame(
+        {
+            "team_id": list(range(config.n_teams)),
+            "true_attack": team_attack,
+            "true_defense": team_defense,
+        }
+    )
+
     matches: list[Match] = []
     results: list[MatchResult] = []
     odds: list[OddsSnapshot] = []
 
     for i in range(config.n_matches):
         home_id, away_id = rng.choice(config.n_teams, size=2, replace=False)
+        home_id, away_id = int(home_id), int(away_id)
         kickoff = start + timedelta(days=config.days_between_matches * i)
         fixture_known = kickoff - timedelta(
             days=config.fixture_announcement_days_before
@@ -71,15 +96,17 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
 
         match = Match(
             match_id=i + 1,
-            home_team_id=int(home_id),
-            away_team_id=int(away_id),
+            home_team_id=home_id,
+            away_team_id=away_id,
             kickoff_time=kickoff,
             knowledge_time=fixture_known,
         )
         matches.append(match)
 
-        home_goals = int(rng.poisson(lam=1.35))
-        away_goals = int(rng.poisson(lam=1.10))
+        lam_home = _BASE_HOME_LAMBDA * team_attack[home_id] * team_defense[away_id]
+        lam_away = _BASE_AWAY_LAMBDA * team_attack[away_id] * team_defense[home_id]
+        home_goals = int(rng.poisson(lam=lam_home))
+        away_goals = int(rng.poisson(lam=lam_away))
         confirmation_delay = config.result_confirmation_delay_hours + float(
             rng.uniform(0.0, 0.5)
         )
@@ -120,4 +147,5 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
         matches=pd.DataFrame([m.model_dump() for m in matches]),
         match_results=pd.DataFrame([r.model_dump() for r in results]),
         odds_snapshots=pd.DataFrame([o.model_dump() for o in odds]),
+        true_team_strength=true_team_strength,
     )
