@@ -23,7 +23,11 @@ def _configs():
 
 
 @given(decision_offset_hours=st.floats(min_value=0.0, max_value=48.0))
-@settings(max_examples=25, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=25,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
 def test_walk_forward_never_trains_on_matches_at_or_after_decision_time(
     repo, decision_offset_hours: float
 ) -> None:

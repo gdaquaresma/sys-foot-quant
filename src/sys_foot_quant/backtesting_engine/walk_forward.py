@@ -57,8 +57,16 @@ class MatchEvaluation:
     decision_time: datetime
     home_team_id: int
     away_team_id: int
+    home_goals: int
+    away_goals: int
     outcome: int  # 0=domicile, 1=nul, 2=exterieur
     predictions: dict[str, tuple[float, float, float] | None] = field(default_factory=dict)
+    # (lambda, mu) predits, uniquement pour les modeles qui exposent
+    # predict_lambda_mu (PoissonModel) - None sinon (naive/elo/marche).
+    # Utilise exclusivement par le diagnostic de Chi-Deux
+    # (calibration_engine.goodness_of_fit), jamais par les metriques de
+    # decision (Brier/log loss, qui restent bases sur ``predictions``).
+    lambda_mu: dict[str, tuple[float, float] | None] = field(default_factory=dict)
 
 
 def _outcome_index(home_goals: int, away_goals: int) -> int:
@@ -128,18 +136,25 @@ def run_walk_forward(
         outcome = _outcome_index(int(result["home_goals"]), int(result["away_goals"]))
 
         predictions: dict[str, tuple[float, float, float] | None] = {}
+        lambda_mu: dict[str, tuple[float, float] | None] = {}
         if len(train_df) == 0:
             for cfg in model_configs:
                 predictions[cfg.name] = None
+                lambda_mu[cfg.name] = None
         else:
             for cfg in model_configs:
                 model = cfg.fit(train_df, decision_time)
                 predictions[cfg.name] = model.predict(home_team_id, away_team_id)
+                predict_lm = getattr(model, "predict_lambda_mu", None)
+                lambda_mu[cfg.name] = (
+                    predict_lm(home_team_id, away_team_id) if predict_lm is not None else None
+                )
 
         if include_market_benchmark:
             predictions["market_no_vig"] = market_benchmark_probs(
                 repository, match_id, decision_time
             )
+            lambda_mu["market_no_vig"] = None
 
         evaluations.append(
             MatchEvaluation(
@@ -147,8 +162,11 @@ def run_walk_forward(
                 decision_time=decision_time,
                 home_team_id=home_team_id,
                 away_team_id=away_team_id,
+                home_goals=int(result["home_goals"]),
+                away_goals=int(result["away_goals"]),
                 outcome=outcome,
                 predictions=predictions,
+                lambda_mu=lambda_mu,
             )
         )
 
@@ -170,3 +188,22 @@ def to_probs_and_outcomes(
         rows.append(p)
         outcomes.append(ev.outcome)
     return np.array(rows), np.array(outcomes)
+
+
+def to_lambda_mu_and_goals(
+    evaluations: list[MatchEvaluation], model_name: str
+) -> tuple[list[tuple[float, float]], np.ndarray, np.ndarray]:
+    """Extrait (lambda, mu) predits et les buts reellement observes, pour
+    les matchs ou ``model_name`` expose predict_lambda_mu (voir
+    calibration_engine.goodness_of_fit)."""
+    lambdas_mus = []
+    home_goals = []
+    away_goals = []
+    for ev in evaluations:
+        lm = ev.lambda_mu.get(model_name)
+        if lm is None:
+            continue
+        lambdas_mus.append(lm)
+        home_goals.append(ev.home_goals)
+        away_goals.append(ev.away_goals)
+    return lambdas_mus, np.array(home_goals), np.array(away_goals)

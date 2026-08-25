@@ -20,6 +20,25 @@ Determinisme : pour un ``seed`` donne, la sortie est entierement
 reproductible (meme table logique), independamment de l'environnement
 d'execution. Voir docs/decisions/0004-reproductibilite-deterministe.md
 pour la distinction avec une reproductibilite "bit-a-bit".
+
+Force d'equipe et derive temporelle (etape 2, correction) : chaque equipe
+a une force d'attaque/defense de base (log-normale, comme a l'etape 2
+initiale), et optionnellement un TAUX DE DERIVE propre (log-lineaire dans
+le temps). Avec un taux de derive nul (defaut), le comportement est
+strictement identique a l'etape 2 initiale (force constante). Avec un
+taux non nul, la force "effective" d'une equipe au jour ``d`` depuis le
+debut du dataset est ``force_base * exp(taux_derive * d)`` - une derive
+connue, deterministe et reproductible pour un seed donne, precisement
+pour tester si une ponderation temporelle (A1) capture reellement un
+signal de forme evolutive quand ce signal existe (voir
+docs/research_framework.md et le rapport de correction de l'etape 2).
+
+Marche synthetique : les cotes sont desormais generees a partir des
+VRAIES probabilites d'issue du match (calculees a partir des memes lambda
+utilises pour generer les buts), perturbees par un bruit de Dirichlet
+controle (marche "informe mais imparfait"), puis une marge (overround)
+connue est appliquee. C'est la correction du defaut de l'etape 2 initiale
+ou les cotes etaient generees independamment de la force des equipes.
 """
 
 from __future__ import annotations
@@ -29,6 +48,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from scipy.stats import poisson as scipy_poisson
 
 from sys_foot_quant.common.config import SyntheticDataConfig
 from sys_foot_quant.common.time_utils import to_utc
@@ -41,6 +61,20 @@ from sys_foot_quant.data_engine.schemas.entities import (
 
 _SELECTIONS = ("home", "draw", "away")
 
+_BASE_HOME_LAMBDA = 1.35
+_BASE_AWAY_LAMBDA = 1.10
+
+# Troncature pour le calcul des vraies probabilites d'issue (utilisees
+# uniquement pour generer le marche synthetique, PAS pour generer les
+# buts eux-memes qui restent tires directement d'un Poisson exact).
+# Duplique volontairement le calcul de football_model.scoring plutot que
+# d'importer ce module depuis data_engine : le Data Engine ne doit pas
+# dependre du Football Model (respect du sens de dependance de
+# l'architecture, voir docs/architecture.md). Le calcul est trivial
+# (produit de deux Poisson independants) et teste separement des deux
+# cotes.
+_TRUE_PROB_MAX_GOALS = 15
+
 
 @dataclass(frozen=True)
 class SyntheticDataset:
@@ -49,16 +83,29 @@ class SyntheticDataset:
     match_results: pd.DataFrame
     odds_snapshots: pd.DataFrame
     # Force reellement utilisee pour generer les resultats (attack/defense
-    # multiplicatifs par equipe, base 1.0 = force moyenne). N'est PAS une
-    # table de faits point-in-time et n'est jamais ecrite en Parquet : c'est
-    # un artefact de validation, utilise uniquement pour verifier qu'un
-    # estimateur retrouve un signal connu (voir tests/integration). Un
-    # modele de prediction ne doit jamais y avoir acces.
+    # multiplicatifs par equipe a J+0, base 1.0 = force moyenne, plus le
+    # taux de derive log-lineaire par jour). N'est PAS une table de faits
+    # point-in-time et n'est jamais ecrite en Parquet : c'est un artefact
+    # de validation, utilise uniquement pour verifier qu'un estimateur
+    # retrouve un signal connu (voir tests/integration). Un modele de
+    # prediction ne doit jamais y avoir acces.
     true_team_strength: pd.DataFrame
 
 
-_BASE_HOME_LAMBDA = 1.35
-_BASE_AWAY_LAMBDA = 1.10
+def _true_outcome_probabilities(lam: float, mu: float) -> tuple[float, float, float]:
+    """(P(domicile), P(nul), P(exterieur)) exactes pour deux Poisson
+    independants de parametres lam/mu, renormalisees apres troncature."""
+    goals = np.arange(0, _TRUE_PROB_MAX_GOALS + 1)
+    p_home_goals = scipy_poisson.pmf(goals, lam)
+    p_away_goals = scipy_poisson.pmf(goals, mu)
+    matrix = np.outer(p_home_goals, p_away_goals)
+    n = matrix.shape[0]
+    rows, cols = np.indices((n, n))
+    home_win = float(matrix[rows > cols].sum())
+    draw = float(matrix[rows == cols].sum())
+    away_win = float(matrix[rows < cols].sum())
+    total = home_win + draw + away_win
+    return (home_win / total, draw / total, away_win / total)
 
 
 def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
@@ -70,15 +117,24 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
     ]
 
     # Force d'attaque/defense simulee par equipe (echelle log-normale,
-    # centree sur 1.0). std=0 => toutes les equipes a 1.0, comportement
-    # strictement identique a l'etape 1 (aucun signal d'equipe).
+    # centree sur 1.0) a J+0. std=0 => toutes les equipes a 1.0.
     team_attack = np.exp(rng.normal(0.0, config.team_attack_log_std, size=config.n_teams))
     team_defense = np.exp(rng.normal(0.0, config.team_defense_log_std, size=config.n_teams))
+    # Taux de derive log-lineaire par equipe (par jour). 0 => force
+    # constante dans le temps (comportement etape 2 initial, inchange).
+    attack_drift_rate = rng.normal(
+        0.0, config.team_attack_drift_log_std_per_day, size=config.n_teams
+    )
+    defense_drift_rate = rng.normal(
+        0.0, config.team_defense_drift_log_std_per_day, size=config.n_teams
+    )
     true_team_strength = pd.DataFrame(
         {
             "team_id": list(range(config.n_teams)),
             "true_attack": team_attack,
             "true_defense": team_defense,
+            "true_attack_drift_rate": attack_drift_rate,
+            "true_defense_drift_rate": defense_drift_rate,
         }
     )
 
@@ -103,8 +159,18 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
         )
         matches.append(match)
 
-        lam_home = _BASE_HOME_LAMBDA * team_attack[home_id] * team_defense[away_id]
-        lam_away = _BASE_AWAY_LAMBDA * team_attack[away_id] * team_defense[home_id]
+        days_since_start = config.days_between_matches * i
+        attack_h_eff = team_attack[home_id] * np.exp(attack_drift_rate[home_id] * days_since_start)
+        defense_h_eff = team_defense[home_id] * np.exp(
+            defense_drift_rate[home_id] * days_since_start
+        )
+        attack_a_eff = team_attack[away_id] * np.exp(attack_drift_rate[away_id] * days_since_start)
+        defense_a_eff = team_defense[away_id] * np.exp(
+            defense_drift_rate[away_id] * days_since_start
+        )
+
+        lam_home = _BASE_HOME_LAMBDA * attack_h_eff * defense_a_eff
+        lam_away = _BASE_AWAY_LAMBDA * attack_a_eff * defense_h_eff
         home_goals = int(rng.poisson(lam=lam_home))
         away_goals = int(rng.poisson(lam=lam_away))
         confirmation_delay = config.result_confirmation_delay_hours + float(
@@ -119,18 +185,29 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
             )
         )
 
-        true_home_strength = rng.uniform(0.30, 0.55)
-        true_away_strength = rng.uniform(0.20, 0.35)
-        true_draw = 1.0 - true_home_strength - true_away_strength
-        base_probs = np.array([true_home_strength, true_draw, true_away_strength])
-        base_probs = base_probs / base_probs.sum()
+        # Marche synthetique "informe mais imparfait" : centre sur les
+        # VRAIES probabilites d'issue du match (calculees a partir des
+        # memes lambda que les buts), perturbe par un bruit de Dirichlet
+        # controle, puis une marge connue est appliquee. Voir
+        # market_engine.overround.remove_overround_proportional pour la
+        # verification mathematique que cette marge est bien reconstructible.
+        true_probs = np.array(_true_outcome_probabilities(lam_home, lam_away))
 
         for offset_hours in config.odds_snapshot_offsets_hours:
             snapshot_time = kickoff - timedelta(hours=offset_hours)
-            noise = rng.dirichlet(alpha=base_probs * 40.0)
-            overround = 1.05
-            implied = noise * overround
-            for selection, prob in zip(_SELECTIONS, implied):
+            noisy_probs = rng.dirichlet(alpha=true_probs * config.market_noise_concentration)
+            implied_with_margin = noisy_probs * (1.0 + config.market_margin)
+            # Garde-fou rare : pour un match tres desequilibre, le bruit de
+            # Dirichlet peut occasionnellement placer une probabilite tres
+            # proche de 1, ce qui, une fois la marge appliquee, depasserait
+            # 1 et rendrait la cote decimale invalide (<= 1). On ecrete
+            # directement la probabilite impliquee finale (sans
+            # renormaliser - renormaliser apres ecretage reintroduirait le
+            # meme probleme en gonflant a nouveau la valeur ecretee). Cela
+            # ne modifie qu'une fraction infime des observations les plus
+            # extremes et est documente comme tel.
+            implied_with_margin = np.clip(implied_with_margin, 1e-6, 0.999)
+            for selection, prob in zip(_SELECTIONS, implied_with_margin):
                 odds.append(
                     OddsSnapshot(
                         match_id=match.match_id,

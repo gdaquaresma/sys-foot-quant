@@ -29,7 +29,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from sys_foot_quant.backtesting_engine.walk_forward import (  # noqa: E402
     ModelConfig,
     run_walk_forward,
+    to_lambda_mu_and_goals,
     to_probs_and_outcomes,
+)
+from sys_foot_quant.calibration_engine.goodness_of_fit import (  # noqa: E402
+    poisson_goodness_of_fit,
 )
 from sys_foot_quant.calibration_engine.metrics import brier_score, log_loss  # noqa: E402
 from sys_foot_quant.calibration_engine.significance import (  # noqa: E402
@@ -164,6 +168,26 @@ def main(
                 f"IC95%=[{boot['ci_low']:+.4f}, {boot['ci_high']:+.4f}] "
                 f"p_boot={boot['p_value']:.4f} p_ttest={ttest['p_value']:.4f}"
             )
+
+    typer.echo(
+        "\n=== Diagnostic complementaire de Chi-Deux (forme de la distribution "
+        "des scores) ===\n"
+        "AVERTISSEMENT : ce diagnostic ne doit JAMAIS servir seul a "
+        "accepter ou rejeter un modele - voir "
+        "calibration_engine/goodness_of_fit.py pour ses limites precises."
+    )
+    for name in ["poisson_simple", "poisson_A1_A2"]:
+        lambdas_mus, home_goals, away_goals = to_lambda_mu_and_goals(evaluations, name)
+        if not lambdas_mus:
+            continue
+        gof = poisson_goodness_of_fit(lambdas_mus, home_goals, away_goals, max_goals_per_side=3)
+        validity = "valide (tous effectifs attendus >= 5)" if gof.is_valid else (
+            f"A INTERPRETER AVEC PRUDENCE (effectif attendu minimal={gof.min_expected_count:.2f} < 5)"
+        )
+        typer.echo(
+            f"{name:<16} chi2={gof.statistic:>8.2f} dof={gof.dof:>3} "
+            f"p_value={gof.p_value:.4f} n={gof.n_matches:<4} -> {validity}"
+        )
 
 
 if __name__ == "__main__":

@@ -54,6 +54,39 @@ class SyntheticDataConfig(BaseModel):
             "0 = toutes les equipes identiques (comportement etape 1, inchange)."
         ),
     )
+    team_attack_drift_log_std_per_day: float = Field(
+        0.0,
+        ge=0,
+        description=(
+            "Ecart-type (echelle log, par jour) du taux de derive de la force "
+            "d'attaque par equipe. 0 = force constante dans le temps (scenario "
+            "de controle). >0 = derive lineaire (en log) connue et reproductible, "
+            "propre a chaque equipe, utilisee pour tester l'hypothese A1."
+        ),
+    )
+    team_defense_drift_log_std_per_day: float = Field(
+        0.0,
+        ge=0,
+        description="Idem team_attack_drift_log_std_per_day, pour la defense.",
+    )
+    market_margin: float = Field(
+        0.05,
+        ge=0,
+        description=(
+            "Marge (overround) appliquee au marche synthetique, en plus des "
+            "vraies probabilites du match. 0.05 = 5%."
+        ),
+    )
+    market_noise_concentration: float = Field(
+        40.0,
+        gt=0,
+        description=(
+            "Concentration de la loi de Dirichlet centree sur les vraies "
+            "probabilites du match (avant marge) : plus la valeur est elevee, "
+            "plus le marche synthetique est proche de la verite (marche "
+            "'informe'). Valeur fixee une fois, non optimisee."
+        ),
+    )
 
 
 class BacktestStageOneConfig(BaseModel):

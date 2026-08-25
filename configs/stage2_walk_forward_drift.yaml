@@ -1,0 +1,23 @@
+# Scenario "derive reelle" pour tester l'hypothese A1 : contrairement a
+# configs/stage2_walk_forward.yaml (scenario de controle, force
+# constante), chaque equipe derive ici reellement dans le temps (taux
+# connu, reproductible, tire du meme seed). Memes tailles de dataset que
+# le scenario de controle pour une comparaison directe.
+
+synthetic_data:
+  seed: 2024
+  n_teams: 14
+  n_matches: 900
+  start_date: "2021-08-01T00:00:00+00:00"
+  days_between_matches: 1.0
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+  team_attack_log_std: 0.35
+  team_defense_log_std: 0.35
+  team_attack_drift_log_std_per_day: 0.0015
+  team_defense_drift_log_std_per_day: 0.0015
+  market_margin: 0.05
+  market_noise_concentration: 40.0
+
+decision_offset_hours_before_kickoff: 2.0

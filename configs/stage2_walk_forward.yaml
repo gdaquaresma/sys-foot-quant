@@ -1,9 +1,12 @@
-# Configuration du dataset synthetique pour le walk-forward de l'etape 2.
+# Scenario "controle" (force constante) pour le walk-forward de l'etape 2.
 # Contrairement a configs/backtest_stage1.yaml (infrastructure pure, aucun
 # signal d'equipe), ce dataset simule une vraie force d'attaque/defense
 # par equipe (team_attack_log_std/team_defense_log_std > 0), necessaire
 # pour qu'il y ait un signal a detecter et comparer entre configurations
-# de modele.
+# de modele - mais SANS derive temporelle
+# (team_*_drift_log_std_per_day = 0, valeur par defaut, non repetee ici).
+# A comparer a configs/stage2_walk_forward_drift.yaml (meme dataset, avec
+# derive reelle) pour tester l'hypothese A1 sur les deux scenarios.
 
 synthetic_data:
   seed: 2024
@@ -16,5 +19,7 @@ synthetic_data:
   odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
   team_attack_log_std: 0.35
   team_defense_log_std: 0.35
+  market_margin: 0.05
+  market_noise_concentration: 40.0
 
 decision_offset_hours_before_kickoff: 2.0
