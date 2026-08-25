@@ -30,18 +30,19 @@ du projet, implementee dans un unique composant : le Repository
 | Module | Etat | Etape prevue |
 |---|---|---|
 | `common` | Implemente | 1 |
-| `data_engine` (schemas, synthetique, stockage PIT) | Implemente (etendu etape 2 : force d'equipe simulee) | 1 |
+| `data_engine` (schemas, synthetique, stockage PIT) | Implemente (etendu etape 2 : force d'equipe + derive simulees ; etape 3 : plancher realiste du marche synthetique) | 1 |
 | `backtesting_engine` (boucle chronologique minimale + walk-forward) | Implemente | 1 (boucle) / 2 (walk-forward) |
-| `football_model` (Poisson simple, attaque/defense, A1, A2, benchmarks naif/Elo) | Implemente | 2 |
-| `calibration_engine` (Brier, log loss, reliability, tests de significativite) | Implemente | 2 |
-| `market_engine` | Partiel : retrait de marge uniquement (benchmark) | 2 (partiel) / 3 (complet) |
-| `value_engine` | Non implemente | 3 |
+| `football_model` (Poisson simple, attaque/defense, A1, A2, benchmarks naif/Elo) | Implemente (A1 reste INDETERMINE, non teste sur donnees reelles) | 2 |
+| `calibration_engine` (Brier, log loss, reliability, tests de significativite, Chi-Deux) | Implemente | 2 |
+| `market_engine` (snapshot, retrait de marge proportionnel + Shin, comparaison) | Implemente | 2 (benchmark) / 3 (complet) |
+| `value_engine` (edge, EV, CLV, selection - AUCUNE selection sur EV seule) | Implemente | 3 |
 | `risk_engine` | Non implemente | 4 |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
 
-Detail de l'etape 2 : voir `docs/research_framework.md` (section H) pour le
-protocole ayant guide ces choix, et le rapport de walk-forward (execute via
-`scripts/run_stage2_walk_forward.py`) pour les resultats empiriques.
+Detail des etapes : voir `docs/research_framework.md` (section H) pour le
+protocole ayant guide l'etape 2, et les scripts `scripts/run_stage2_walk_forward.py`
+/ `scripts/run_stage3_value_engine.py` pour les resultats empiriques (tous
+sur donnees synthetiques - voir avertissements dans chaque script).
 
 ## 3. Ce qui est implemente a l'etape 1
 
