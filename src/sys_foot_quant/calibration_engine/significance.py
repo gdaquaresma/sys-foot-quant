@@ -58,6 +58,46 @@ def paired_bootstrap_test(
     }
 
 
+def two_sample_bootstrap_test(
+    sample_a: np.ndarray, sample_b: np.ndarray, n_resamples: int = 10_000, seed: int | None = None
+) -> dict[str, float]:
+    """Bootstrap NON apparie (deux echantillons independants) sur la
+    difference de moyennes (a - b).
+
+    A utiliser quand les deux groupes compares ne portent pas sur les
+    memes observations (ex : sous-groupe "calendrier charge" vs le reste,
+    section E du research framework) - contrairement a
+    ``paired_bootstrap_test``, qui suppose des observations appariees sur
+    le MEME echantillon de matchs (deux configurations de modele evaluees
+    sur les memes matchs), hypothese qui ne tient pas ici.
+    """
+    a = np.asarray(sample_a, dtype=float)
+    b = np.asarray(sample_b, dtype=float)
+    if a.size == 0 or b.size == 0:
+        raise ValueError("Les deux echantillons doivent etre non vides.")
+
+    rng = np.random.default_rng(seed)
+    mean_diff = float(a.mean() - b.mean())
+
+    idx_a = rng.integers(0, a.size, size=(n_resamples, a.size))
+    idx_b = rng.integers(0, b.size, size=(n_resamples, b.size))
+    resample_diffs = a[idx_a].mean(axis=1) - b[idx_b].mean(axis=1)
+
+    ci_low, ci_high = np.percentile(resample_diffs, [2.5, 97.5])
+    if mean_diff >= 0:
+        p_value = 2.0 * float(np.mean(resample_diffs <= 0))
+    else:
+        p_value = 2.0 * float(np.mean(resample_diffs >= 0))
+    p_value = min(p_value, 1.0)
+
+    return {
+        "mean_diff": mean_diff,
+        "ci_low": float(ci_low),
+        "ci_high": float(ci_high),
+        "p_value": p_value,
+    }
+
+
 def paired_t_test(diffs: np.ndarray) -> dict[str, float]:
     """Test t apparie classique (test t a un echantillon sur les
     differences), fourni en verification croisee du bootstrap."""

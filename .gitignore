@@ -10,6 +10,7 @@ data/curated/*.parquet
 data/cache/*
 data/raw_stage2*/
 data/raw_stage3*/
+data/raw_stage5*/
 data/value_logs/
 !data/raw/.gitkeep
 !data/curated/.gitkeep

@@ -11,6 +11,7 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from sys_foot_quant.backtesting_engine.walk_forward import ModelConfig, run_walk_forward
+from sys_foot_quant.football_model.bayesian_sequential import BayesianSequentialModel
 from sys_foot_quant.football_model.naive import NaiveModel
 from sys_foot_quant.football_model.poisson import PoissonModel
 
@@ -19,6 +20,7 @@ def _configs():
     return [
         ModelConfig(name="naive", fit=lambda df, t: NaiveModel().fit(df)),
         ModelConfig(name="poisson", fit=lambda df, t: PoissonModel().fit(df)),
+        ModelConfig(name="bayesian_seq", fit=lambda df, t: BayesianSequentialModel().fit(df, t)),
     ]
 
 
@@ -97,5 +99,5 @@ def test_walk_forward_produces_a_prediction_per_configured_model(repo) -> None:
     )
 
     for ev in evaluations:
-        assert set(ev.predictions.keys()) == {"naive", "poisson", "market_no_vig"}
+        assert set(ev.predictions.keys()) == {"naive", "poisson", "bayesian_seq", "market_no_vig"}
         assert ev.outcome in (0, 1, 2)
