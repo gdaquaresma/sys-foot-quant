@@ -36,3 +36,19 @@ def outcome_probabilities(matrix: np.ndarray) -> tuple[float, float, float]:
     draw = matrix[rows == cols].sum()
     away_win = matrix[rows < cols].sum()
     return float(home_win), float(draw), float(away_win)
+
+
+def low_score_cell_probabilities(matrix: np.ndarray) -> tuple[float, float, float, float]:
+    """(P(0-0), P(1-0), P(0-1), P(1-1)) a partir d'une matrice de score
+    P(X=x, Y=y) deja normalisee (``score_matrix``). C'est exactement le
+    sous-ensemble de cellules cible par la correction Dixon-Coles
+    (docs/research_framework.md, section B1 ; voir aussi
+    ``football_model.dixon_coles``) - utilise a la fois par
+    ``PoissonModel`` (comme point de comparaison Poisson simple) et par
+    ``DixonColesModel`` (avec la matrice deja corrigee par tau)."""
+    return (
+        float(matrix[0, 0]),
+        float(matrix[1, 0]),
+        float(matrix[0, 1]),
+        float(matrix[1, 1]),
+    )

@@ -68,6 +68,16 @@ class MatchEvaluation:
     # (calibration_engine.goodness_of_fit), jamais par les metriques de
     # decision (Brier/log loss, qui restent bases sur ``predictions``).
     lambda_mu: dict[str, tuple[float, float] | None] = field(default_factory=dict)
+    # (P(0-0), P(1-0), P(0-1), P(1-1)) predits, uniquement pour les
+    # modeles qui exposent predict_low_score_probs (PoissonModel,
+    # DixonColesModel) - None sinon. AJOUT PUR pour le protocole B1
+    # (docs/research_framework.md section B1) : ne modifie ni le contenu
+    # ni le calcul de ``predictions``/``lambda_mu`` pour aucun modele
+    # existant. Utilise exclusivement par
+    # calibration_engine.low_score_metrics.
+    low_score_probs: dict[str, tuple[float, float, float, float] | None] = field(
+        default_factory=dict
+    )
 
 
 def _outcome_index(home_goals: int, away_goals: int) -> int:
@@ -132,10 +142,12 @@ def run_walk_forward(
 
         predictions: dict[str, tuple[float, float, float] | None] = {}
         lambda_mu: dict[str, tuple[float, float] | None] = {}
+        low_score_probs: dict[str, tuple[float, float, float, float] | None] = {}
         if len(train_df) == 0:
             for cfg in model_configs:
                 predictions[cfg.name] = None
                 lambda_mu[cfg.name] = None
+                low_score_probs[cfg.name] = None
         else:
             for cfg in model_configs:
                 model = cfg.fit(train_df, decision_time)
@@ -144,12 +156,17 @@ def run_walk_forward(
                 lambda_mu[cfg.name] = (
                     predict_lm(home_team_id, away_team_id) if predict_lm is not None else None
                 )
+                predict_lsp = getattr(model, "predict_low_score_probs", None)
+                low_score_probs[cfg.name] = (
+                    predict_lsp(home_team_id, away_team_id) if predict_lsp is not None else None
+                )
 
         if include_market_benchmark:
             predictions["market_no_vig"] = market_benchmark_probs(
                 repository, match_id, decision_time
             )
             lambda_mu["market_no_vig"] = None
+            low_score_probs["market_no_vig"] = None
 
         evaluations.append(
             MatchEvaluation(
@@ -162,6 +179,7 @@ def run_walk_forward(
                 outcome=outcome,
                 predictions=predictions,
                 lambda_mu=lambda_mu,
+                low_score_probs=low_score_probs,
             )
         )
 
@@ -183,6 +201,26 @@ def to_probs_and_outcomes(
         rows.append(p)
         outcomes.append(ev.outcome)
     return np.array(rows), np.array(outcomes)
+
+
+def to_low_score_probs_and_goals(
+    evaluations: list[MatchEvaluation], model_name: str
+) -> tuple[list[tuple[float, float, float, float]], np.ndarray, np.ndarray]:
+    """Extrait les (P(0-0), P(1-0), P(0-1), P(1-1)) predits et les buts
+    reellement observes, pour les matchs ou ``model_name`` expose
+    predict_low_score_probs (voir calibration_engine.low_score_metrics,
+    protocole B1)."""
+    probs = []
+    home_goals = []
+    away_goals = []
+    for ev in evaluations:
+        p = ev.low_score_probs.get(model_name)
+        if p is None:
+            continue
+        probs.append(p)
+        home_goals.append(ev.home_goals)
+        away_goals.append(ev.away_goals)
+    return probs, np.array(home_goals), np.array(away_goals)
 
 
 def to_lambda_mu_and_goals(

@@ -1,0 +1,38 @@
+# Scenario dedie a l'hypothese B1 (Dixon-Coles), docs/research_framework.md
+# section B1 et docs/decisions/0005-protocole-generateur-dixon-coles.md.
+#
+# Meme structure que configs/stage2_walk_forward.yaml (scenario "constant",
+# sans derive), avec correlation basse-score ajoutee via dixon_coles_rho.
+#
+# Valeur de rho : -0.13, ordre de grandeur cite par Dixon & Coles (1997)
+# pour le football anglais (litterature : rho typiquement entre -0.1 et
+# -0.15 dans les championnats europeens elite) - choix DOCUMENTE et
+# PRE-ENREGISTRE avant toute execution du walk-forward, jamais ajuste sur
+# les resultats obtenus.
+#
+# n_matches=3000 (plutot que 900 comme le scenario "constant" de
+# reference) : choix fait AVANT d'executer le walk-forward de decision,
+# a partir d'une analyse de puissance statistique separee (voir
+# tests/integration/test_generator_dixon_coles_sanity.py) qui montre qu'a
+# n=900, un chi-deux restreint aux 4 cellules bas-score ne detecte
+# l'effet de rho=-0.13 qu'a p~0.07 (signal reel mais insuffisamment
+# puissant) alors qu'a n=3000 l'effet est net (p<0.01). Ce choix est donc
+# une decision de puissance a priori, pas un ajustement post-hoc sur le
+# resultat du test B1 lui-meme (jamais execute avant que ce choix soit fixe).
+
+synthetic_data:
+  seed: 2024
+  n_teams: 14
+  n_matches: 3000
+  start_date: "2021-08-01T00:00:00+00:00"
+  days_between_matches: 1.0
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+  team_attack_log_std: 0.35
+  team_defense_log_std: 0.35
+  market_margin: 0.05
+  market_noise_concentration: 40.0
+  dixon_coles_rho: -0.13
+
+decision_offset_hours_before_kickoff: 2.0

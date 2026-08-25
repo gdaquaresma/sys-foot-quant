@@ -87,6 +87,24 @@ class SyntheticDataConfig(BaseModel):
             "'informe'). Valeur fixee une fois, non optimisee."
         ),
     )
+    dixon_coles_rho: float = Field(
+        0.0,
+        description=(
+            "Parametre de correlation basse-score rho (Dixon & Coles, 1997), "
+            "applique a la loi JOINTE des buts (les lois marginales restent "
+            "Poisson(lambda)/Poisson(mu)) - voir "
+            "docs/decisions/0005-protocole-generateur-dixon-coles.md pour le "
+            "protocole complet. 0.0 (defaut) = comportement RIGOUREUSEMENT "
+            "IDENTIQUE aux etapes 1-5 deja validees (deux tirages rng.poisson() "
+            "independants, aucune branche nouvelle du code n'est empruntee). "
+            "Une valeur non nulle bascule sur un tirage joint via la matrice de "
+            "score corrigee par tau(x,y;rho) - voir "
+            "data_engine/synthetic/generator.py. Aucune borne de validite n'est "
+            "imposee ici : elle depend de (lambda, mu) par match et est "
+            "verifiee explicitement a la generation (echec bruyant, jamais un "
+            "ecretage silencieux)."
+        ),
+    )
 
 
 class BacktestStageOneConfig(BaseModel):

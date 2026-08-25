@@ -39,6 +39,15 @@ utilises pour generer les buts), perturbees par un bruit de Dirichlet
 controle (marche "informe mais imparfait"), puis une marge (overround)
 connue est appliquee. C'est la correction du defaut de l'etape 2 initiale
 ou les cotes etaient generees independamment de la force des equipes.
+
+Correlation basse-score (hypothese B1, Dixon-Coles) : ``config.dixon_coles_rho``
+(defaut 0.0) controle une correlation controlee entre les buts domicile et
+exterieur sur les quatre cellules de score bas (0-0, 1-0, 0-1, 1-1), via le
+facteur correctif tau(x,y;rho) de Dixon & Coles (1997). A 0.0, le
+comportement est RIGOUREUSEMENT IDENTIQUE aux etapes 1-5 (deux tirages
+``rng.poisson()`` independants) - aucune nouvelle branche de code n'est
+empruntee. Voir docs/decisions/0005-protocole-generateur-dixon-coles.md
+pour le protocole complet.
 """
 
 from __future__ import annotations
@@ -74,6 +83,108 @@ _BASE_AWAY_LAMBDA = 1.10
 # (produit de deux Poisson independants) et teste separement des deux
 # cotes.
 _TRUE_PROB_MAX_GOALS = 15
+
+# --- Dixon-Coles (hypothese B1) ----------------------------------------
+#
+# Correction de correlation basse-score (Dixon & Coles, 1997) : les lois
+# MARGINALES de buts restent Poisson(lambda)/Poisson(mu) - seule la loi
+# JOINTE est reponderee par tau(x,y;rho) sur les quatre cellules 0-0,
+# 1-0, 0-1, 1-1 (tau=1 partout ailleurs). Voir
+# docs/decisions/0005-protocole-generateur-dixon-coles.md pour le
+# protocole complet et le choix de rho.
+#
+# Ces fonctions sont volontairement dupliquees plutot qu'importees de
+# football_model.dixon_coles : le Data Engine ne doit pas dependre du
+# Football Model (meme principe deja applique a
+# ``_true_outcome_probabilities`` ci-dessus, voir son commentaire).
+_DIXON_COLES_MAX_GOALS = 15
+_DIXON_COLES_RHO_EPS = 1e-9
+
+
+def _dixon_coles_tau(x: int, y: int, lam: float, mu: float, rho: float) -> float:
+    """Facteur correctif tau(x,y), defini uniquement sur les quatre
+    cellules bas-score - vaut 1 ailleurs (aucune correction)."""
+    if x == 0 and y == 0:
+        return 1.0 - lam * mu * rho
+    if x == 1 and y == 0:
+        return 1.0 + mu * rho
+    if x == 0 and y == 1:
+        return 1.0 + lam * rho
+    if x == 1 and y == 1:
+        return 1.0 - rho
+    return 1.0
+
+
+def _dixon_coles_rho_bounds(lam: float, mu: float) -> tuple[float, float]:
+    """Intervalle de rho garantissant tau(x,y) >= 0 sur les quatre
+    cellules bas-score pour ce couple (lam, mu) precis."""
+    lo = max(-1.0 / lam, -1.0 / mu)
+    hi = min(1.0, 1.0 / (lam * mu))
+    return lo, hi
+
+
+def _validate_dixon_coles_rho(rho: float, lam: float, mu: float) -> None:
+    """Verifie explicitement la validite de ``rho`` pour ce match precis.
+    Leve une erreur plutot que d'ecreter silencieusement (voir ADR 0005,
+    point 3) : un rho hors bornes sur un cas extreme doit etre traite en
+    amont (rho plus modere, ou bornes de derive/force plus resserrees
+    pour ce scenario), jamais masque au vol dans la boucle de generation.
+    """
+    lo, hi = _dixon_coles_rho_bounds(lam, mu)
+    if not (lo <= rho <= hi):
+        raise ValueError(
+            f"dixon_coles_rho={rho} hors de l'intervalle de validite "
+            f"[{lo:.6f}, {hi:.6f}] pour lam={lam:.6f}, mu={mu:.6f} "
+            f"(tau(x,y) deviendrait negatif sur au moins une cellule "
+            f"bas-score). Choisir un rho plus modere ou resserrer les "
+            f"bornes de derive/force du scenario - aucun ecretage "
+            f"silencieux n'est applique."
+        )
+
+
+def _dixon_coles_score_matrix(
+    lam: float, mu: float, rho: float, max_goals: int = _DIXON_COLES_MAX_GOALS
+) -> np.ndarray:
+    """Matrice de score jointe P(X=x, Y=y) corrigee par tau(x,y;rho),
+    RENORMALISEE explicitement pour rester une distribution de probabilite
+    exacte (somme = 1 a la precision flottante pres) - voir ADR 0005,
+    point 2, pour la justification de cette renormalisation (absente de
+    l'article academique original, mais requise ici puisque ce generateur
+    doit produire une loi de probabilite exacte, pas une approximation)."""
+    goals = np.arange(0, max_goals + 1)
+    p_home = scipy_poisson.pmf(goals, lam)
+    p_away = scipy_poisson.pmf(goals, mu)
+    matrix = np.outer(p_home, p_away)
+    matrix = matrix / matrix.sum()  # normalise la base independante avant tau
+
+    corrected = matrix.copy()
+    for x, y in ((0, 0), (1, 0), (0, 1), (1, 1)):
+        corrected[x, y] = matrix[x, y] * _dixon_coles_tau(x, y, lam, mu, rho)
+
+    total = corrected.sum()
+    if total <= 0:
+        raise ValueError(
+            f"Masse totale non positive apres correction tau (rho={rho}, "
+            f"lam={lam}, mu={mu}) - devrait etre impossible si "
+            f"_validate_dixon_coles_rho a ete appele avant."
+        )
+    return corrected / total
+
+
+def _dixon_coles_outcome_probabilities(
+    lam: float, mu: float, rho: float
+) -> tuple[float, float, float]:
+    """(P(domicile), P(nul), P(exterieur)) sous la correction Dixon-Coles,
+    pour le marche synthetique "pleinement informe" (Option A validee -
+    voir ADR 0005, point 4)."""
+    matrix = _dixon_coles_score_matrix(lam, mu, rho, max_goals=_TRUE_PROB_MAX_GOALS)
+    n = matrix.shape[0]
+    rows, cols = np.indices((n, n))
+    home_win = float(matrix[rows > cols].sum())
+    draw = float(matrix[rows == cols].sum())
+    away_win = float(matrix[rows < cols].sum())
+    total = home_win + draw + away_win
+    return (home_win / total, draw / total, away_win / total)
 
 
 @dataclass(frozen=True)
@@ -171,8 +282,22 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
 
         lam_home = _BASE_HOME_LAMBDA * attack_h_eff * defense_a_eff
         lam_away = _BASE_AWAY_LAMBDA * attack_a_eff * defense_h_eff
-        home_goals = int(rng.poisson(lam=lam_home))
-        away_goals = int(rng.poisson(lam=lam_away))
+
+        if config.dixon_coles_rho != 0.0:
+            # Hypothese B1 (Dixon-Coles) : tirage JOINT via la matrice de
+            # score corrigee par tau(x,y;rho), remplace les deux tirages
+            # rng.poisson() independants. N'est JAMAIS emprunte quand
+            # dixon_coles_rho=0.0 (defaut) - le chemin ci-dessous (branche
+            # ``else``) reste rigoureusement identique, ligne pour ligne,
+            # au comportement valide aux etapes 1-5.
+            _validate_dixon_coles_rho(config.dixon_coles_rho, lam_home, lam_away)
+            score_probs = _dixon_coles_score_matrix(lam_home, lam_away, config.dixon_coles_rho)
+            flat_index = rng.choice(score_probs.size, p=score_probs.ravel())
+            home_goals_idx, away_goals_idx = np.unravel_index(flat_index, score_probs.shape)
+            home_goals, away_goals = int(home_goals_idx), int(away_goals_idx)
+        else:
+            home_goals = int(rng.poisson(lam=lam_home))
+            away_goals = int(rng.poisson(lam=lam_away))
         confirmation_delay = config.result_confirmation_delay_hours + float(
             rng.uniform(0.0, 0.5)
         )
@@ -191,7 +316,19 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
         # controle, puis une marge connue est appliquee. Voir
         # market_engine.overround.remove_overround_proportional pour la
         # verification mathematique que cette marge est bien reconstructible.
-        true_probs = np.array(_true_outcome_probabilities(lam_home, lam_away))
+        # Option A (validee, ADR 0005 point 4) : quand une correlation
+        # basse-score est simulee, le marche synthetique "vrai" doit lui
+        # aussi integrer tau(x,y;rho) - sinon meme le marche "informe"
+        # laisserait un edge structurel artificiel sur les scores bas,
+        # cree par une INCOHERENCE generateur/marche plutot que par le
+        # modele teste. A rho=0.0, chemin inchange (identique aux etapes
+        # 1-5).
+        if config.dixon_coles_rho != 0.0:
+            true_probs = np.array(
+                _dixon_coles_outcome_probabilities(lam_home, lam_away, config.dixon_coles_rho)
+            )
+        else:
+            true_probs = np.array(_true_outcome_probabilities(lam_home, lam_away))
 
         # Plancher realiste applique UNIQUEMENT a la generation du marche
         # (pas aux buts, ni a true_team_strength, ni au diagnostic de

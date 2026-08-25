@@ -35,7 +35,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from sys_foot_quant.football_model.scoring import outcome_probabilities, score_matrix
+from sys_foot_quant.football_model.scoring import (
+    low_score_cell_probabilities,
+    outcome_probabilities,
+    score_matrix,
+)
 from sys_foot_quant.football_model.weighting import flat_weights
 
 _EPS = 1e-9
@@ -173,3 +177,17 @@ class PoissonModel:
         pour une interface uniforme avec NaiveModel/EloModel dans le
         walk-forward (``FittedPredictor.predict``)."""
         return self.predict_outcome_probabilities(home_team_id, away_team_id)
+
+    def predict_low_score_probs(
+        self, home_team_id: int, away_team_id: int, max_goals: int = 20
+    ) -> tuple[float, float, float, float]:
+        """(P(0-0), P(1-0), P(0-1), P(1-1)) sous l'hypothese Poisson simple
+        (buts domicile/exterieur independants). Point de comparaison pour
+        le protocole B1 (Dixon-Coles, docs/research_framework.md) -
+        AJOUT PUR : n'affecte ``fit``/``predict``/``predict_lambda_mu``/
+        ``predict_outcome_probabilities`` d'aucune maniere, ces methodes
+        restent rigoureusement inchangees."""
+        lam, mu = self.predict_lambda_mu(home_team_id, away_team_id)
+        matrix = score_matrix(lam, mu, max_goals=max_goals)
+        matrix = matrix / matrix.sum()
+        return low_score_cell_probabilities(matrix)
