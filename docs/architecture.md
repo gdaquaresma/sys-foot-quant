@@ -36,13 +36,18 @@ du projet, implementee dans un unique composant : le Repository
 | `calibration_engine` (Brier, log loss, reliability, tests de significativite, Chi-Deux) | Implemente | 2 |
 | `market_engine` (snapshot, retrait de marge proportionnel + Shin, comparaison) | Implemente | 2 (benchmark) / 3 (complet) |
 | `value_engine` (edge, EV, CLV, selection - AUCUNE selection sur EV seule) | Implemente | 3 |
-| `risk_engine` | Non implemente | 4 |
+| `risk_engine` (bankroll, Flat Betting, Kelly informatif + quality gates, limites, metriques de risque, Monte Carlo) | Implemente (Flat Betting seul active en production - Kelly verrouille, voir `risk_engine/kelly.py`) | 4 |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
 
 Detail des etapes : voir `docs/research_framework.md` (section H) pour le
 protocole ayant guide l'etape 2, et les scripts `scripts/run_stage2_walk_forward.py`
 / `scripts/run_stage3_value_engine.py` pour les resultats empiriques (tous
-sur donnees synthetiques - voir avertissements dans chaque script).
+sur donnees synthetiques - voir avertissements dans chaque script). Le
+Risk Engine (etape 4) n'a pas de script de resultats empiriques dedie :
+ses simulations Monte Carlo sont theoriques (comparaison de strategies de
+mise sur un flux de paris hypothetique), pas une evaluation sur le
+dataset synthetique des etapes 1-3 - voir rapport d'etape 4 (message de
+livraison) pour le detail.
 
 ## 3. Ce qui est implemente a l'etape 1
 
