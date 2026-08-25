@@ -32,7 +32,7 @@ du projet, implementee dans un unique composant : le Repository
 | `common` | Implemente | 1 |
 | `data_engine` (schemas, synthetique, stockage PIT) | Implemente (etendu etape 2 : force d'equipe + derive simulees ; etape 3 : plancher realiste du marche synthetique) | 1 |
 | `backtesting_engine` (boucle chronologique minimale + walk-forward) | Implemente | 1 (boucle) / 2 (walk-forward) |
-| `football_model` (Poisson simple, attaque/defense, A1, A2, benchmarks naif/Elo, B2 bayesien sequentiel, B1 Dixon-Coles, controles negatifs E1/E7) | Implemente (A1 reste INDETERMINE ; B2 VALIDE contre A1 sur synthetique ; B1 (Dixon-Coles) VALIDE contre poisson_simple sur le sous-ensemble bas-score, voir rapport etape 5 ; B3 non implemente, voir docs/research_framework.md) | 2 (base) / 5 (B1, B2, E1, E7) |
+| `football_model` (Poisson simple, attaque/defense, A1, A2, benchmarks naif/Elo, B2 bayesien sequentiel, B1 Dixon-Coles, controles negatifs E1/E7) | Implemente (A1 reste INDETERMINE ; B2 VALIDE contre A1 sur synthetique ; B1 (Dixon-Coles) VALIDE contre poisson_simple sur le sous-ensemble bas-score - validation du MECANISME sur donnees SYNTHETIQUES uniquement, ne constitue PAS une preuve d'amelioration sur donnees reelles, a re-tester des la connexion d'une source reelle - voir rapport etape 5 ; B3 non implemente, voir docs/research_framework.md) | 2 (base) / 5 (B1, B2, E1, E7) |
 | `calibration_engine` (Brier, log loss, reliability, tests de significativite, Chi-Deux) | Implemente | 2 |
 | `market_engine` (snapshot, retrait de marge proportionnel + Shin, comparaison) | Implemente | 2 (benchmark) / 3 (complet) |
 | `value_engine` (edge, EV, CLV, selection - AUCUNE selection sur EV seule) | Implemente | 3 |

@@ -1,9 +1,15 @@
 # ADR 0005 - Protocole de generation d'un scenario a correlation basse-score (prealable a B1 / Dixon-Coles)
 
 ## Statut
-**Propose - NON implemente, en attente de validation explicite.** Aucun
-code n'a ete modifie pour produire ce document (`data_engine/synthetic/generator.py`
-reste exactement dans l'etat valide aux etapes 2-5).
+**Accepte et implemente.** Protocole valide par l'utilisateur puis mis en
+oeuvre integralement (generateur, `DixonColesModel`, metriques bas-score,
+walk-forward) - voir docs/research_framework.md section B1 pour le
+resultat du test hors echantillon (VALIDE sur donnees synthetiques,
+etape 5). Ce document reste la reference du protocole tel que concu et
+suivi ; seule une erreur de formulation qualitative (voir correction
+ci-dessous) a ete identifiee et corrigee apres implementation - la
+formule et le code restent conformes a la version initiale de ce
+document.
 
 ## Contexte
 `docs/research_framework.md` (section B1) classe la correction Dixon-Coles
@@ -45,12 +51,27 @@ P(X=x, Y=y) = tau(x,y) * Poisson(x; lambda) * Poisson(y; mu)
 
 `rho` est un scalaire unique (typiquement negatif, de l'ordre de -0.1 a
 -0.2 dans les ajustements empiriques originaux de Dixon & Coles sur le
-football anglais) : `rho < 0` rend 0-0 et 1-1 MOINS probables, et 1-0/0-1
-PLUS probables que sous l'hypothese d'independance - la lecture
-qualitative donnee par les auteurs est qu'une equipe qui prend l'avantage
-tot change la dynamique du match (l'equipe menee attaque davantage),
-rendant les scores serres asymetriques moins frequents que ne le predit
-un Poisson pur.
+football anglais).
+
+**Correction (post-implementation, valeur qualitative initialement
+inversee dans ce document)** : `rho < 0` rend 0-0 et 1-1 PLUS probables,
+et 1-0/0-1 MOINS probables que sous l'hypothese d'independance - c'est
+l'inverse de ce qu'affirmait la version initiale de ce paragraphe. La
+FORMULE tau ci-dessus etait, elle, correcte des le depart (c'est
+directement ce qui a ete implemente et teste, voir
+`football_model/dixon_coles.py` et `tests/unit/test_dixon_coles.py`) ;
+seule cette phrase d'interpretation qualitative etait erronee. Verifie
+lors de l'implementation par calcul direct de tau pour un rho negatif
+typique, puis confirme contre la litterature secondaire (Dixon & Coles,
+1997) : l'effet empirique documente par les auteurs est que le Poisson
+independant SOUS-estime la frequence des matchs nuls a score bas (0-0,
+1-1), pas qu'il la surestime. La lecture qualitative "une equipe qui
+prend l'avantage tot change la dynamique du match" reste plausible comme
+intuition causale, mais dans le sens ou elle rend un score serre
+asymetrique (1-0, 0-1) moins susceptible de se maintenir tel quel
+jusqu'au coup de sifflet final (vers un retour a 0-0/1-1 ou une
+progression vers un score plus large), pas dans le sens initialement
+ecrit ici.
 
 Contrainte de validite : tau(x,y) >= 0 pour les quatre cellules impose
 `rho` dans l'intervalle `[max(-1/lambda, -1/mu), 1/(lambda*mu)]`. Pour nos
