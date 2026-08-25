@@ -1,0 +1,35 @@
+# Scenario dedie au re-test A1-recence (docs/research_framework.md,
+# echange de validation du protocole - definition football-realiste de
+# la forme recente, remplacant l'ancienne decroissance calendaire deja
+# jugee dominee par poisson_simple).
+#
+# Meme structure que configs/stage2_walk_forward.yaml (scenario
+# "constant", sans derive) - stage2_walk_forward.yaml n'est PAS reutilise
+# directement pour ne jamais toucher aux resultats deja valides des
+# etapes 2/5 (A1 45j / A2 / B2), meme principe que
+# configs/stage5_dixon_coles.yaml pour B1.
+#
+# n_matches=3000 (plutot que 900) : choix de puissance a priori, par
+# analogie directe avec la decision deja prise et documentee pour B1
+# (configs/stage5_dixon_coles.yaml) - la comparaison de 3 fenetres
+# (3/5/7) avec un split a trois voies (rodage/validation/test) reduit
+# fortement la taille de chaque sous-echantillon final ; 900 matchs
+# rendrait le sous-echantillon de test trop petit pour un test de
+# significativite exploitable. Choix fixe AVANT toute execution du
+# walk-forward de decision, jamais ajuste sur ses resultats.
+
+synthetic_data:
+  seed: 2024
+  n_teams: 14
+  n_matches: 3000
+  start_date: "2021-08-01T00:00:00+00:00"
+  days_between_matches: 1.0
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+  team_attack_log_std: 0.35
+  team_defense_log_std: 0.35
+  market_margin: 0.05
+  market_noise_concentration: 40.0
+
+decision_offset_hours_before_kickoff: 2.0

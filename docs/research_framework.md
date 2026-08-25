@@ -115,6 +115,64 @@ preuve d'aucun edge sur le football.
   avec vs sans décroissance temporelle, comme deux configurations
   benchmarkées l'une contre l'autre), pas une extension séparée.
 
+- **Résultat empirique (étape 2, puis re-test étape 5) :**
+  - Version initiale testée à l'étape 2 (`poisson_A1_decay`, décroissance
+    exponentielle calendaire, demi-vie 45 jours gelée a priori) :
+    significativement DOMINÉE par `poisson_simple` sur les deux scénarios
+    synthétiques (constant et dérive) — voir
+    `scripts/run_stage2_walk_forward.py` et
+    `scripts/run_stage5_baseline_benchmark.py`.
+  - Ce résultat a été jugé peu concluant sur le mécanisme lui-même : une
+    décroissance calendaire à demi-vie unique ne traduit pas fidèlement
+    l'intuition football ("une équipe change — joueurs, entraîneur,
+    système — donc un résultat ancien devient vite peu représentatif,
+    indépendamment du nombre de jours calendaires écoulés"). Un
+    protocole de re-test a donc été explicitement validé et exécuté à
+    l'étape 5 avec une définition football-réaliste de la forme
+    récente : fenêtre glissante à nombre FIXE de matchs (poids plat
+    dans la fenêtre, nul au-delà), et non plus une décroissance en
+    jours calendaires (`football_model/recent_form.py`,
+    `scripts/run_stage5_a1_recency.py`).
+  - **Verdict du re-test (données synthétiques, walk-forward à trois
+    voies rodage/validation/test, sélection de fenêtre confinée
+    strictement à la validation) :**
+    - **Q1 — la forme récente (fenêtre courte seule) apporte-t-elle une
+      information supplémentaire au Poisson simple ? REJETÉ.** Même la
+      meilleure fenêtre retenue sur validation (7 matchs, sur les deux
+      scénarios) reste significativement PIRE que `poisson_simple` sur
+      le test, y compris dans le scénario à dérive réelle où un
+      bénéfice était pourtant plausible a priori — le bruit introduit
+      par une fenêtre courte l'emporte sur le signal de forme récente
+      captée.
+    - **Q2 — quelle fenêtre fonctionne le mieux (informationnel,
+      sélection validation uniquement) : 7 matchs**, sur les deux
+      scénarios (jamais la fenêtre de référence 5, ni 3).
+    - **Q3 — une faible mémoire de l'historique long (shrinkage
+      bayésien empirique, `prior_k=2.0` fixé a priori) améliore-t-elle
+      la fenêtre 5 seule ? VALIDÉ** (significatif sur les deux
+      scénarios) — **mais ce constat ne doit pas être lu comme "la
+      forme récente + mémoire bat le Poisson simple"** : comparée
+      directement à `poisson_simple`, `forme_5_memoire` reste
+      significativement PIRE sur les deux scénarios. Le shrinkage
+      réduit le bruit de la fenêtre courte sans le supprimer.
+    - **Q4 — la dernière confrontation directe (poids fixe 0.10)
+      apporte-t-elle quelque chose au Poisson simple ? INDÉTERMINÉ**
+      (IC95% incluant 0 sur les deux scénarios) — aucun signal
+      détecté, ni positif ni négatif.
+  - **Conclusion consolidée A1 : REJETÉ** pour toute variante testée
+    de "forme récente" comme amélioration du Poisson simple, sur
+    données synthétiques — que ce soit la décroissance calendaire
+    (étape 2) ou la fenêtre glissante à nombre fixe de matchs, avec ou
+    sans mémoire longue (étape 5). Cette conclusion remplace le statut
+    précédent "INDÉTERMINÉ" affiché dans `docs/architecture.md` (qui ne
+    reflétait qu'une non-signification, jamais un test explicite de la
+    définition football-réaliste demandée). `poisson_simple` reste la
+    baseline officielle, aucune configuration ci-dessus n'est promue
+    automatiquement. Aucune combinaison n'a été testée (aucune brique
+    autre que Q3 n'a individuellement validé, et Q3 ne bat pas la
+    baseline en absolu) — voir `scripts/run_stage5_a1_recency.py` pour
+    le détail complet et les chiffres.
+
 ### A2. Home Field Advantage (HFA) dynamique plutôt que constante globale
 
 - **Mécanisme supposé** : l'avantage du terrain n'est pas une constante

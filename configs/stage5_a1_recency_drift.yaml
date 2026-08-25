@@ -1,0 +1,45 @@
+# Scenario "derive reelle" jumeau de configs/stage5_a1_recency_constant.yaml,
+# pour le re-test A1-recence (meme principe que
+# configs/stage2_walk_forward_drift.yaml vis-a-vis de
+# configs/stage2_walk_forward.yaml). stage2_walk_forward_drift.yaml reste
+# inchange (deja valide, utilise par A1/A2/B2/benchmark de reference).
+#
+# days_between_matches=0.3 (au lieu de 1.0) : choix DELIBERE, fixe AVANT
+# execution du walk-forward de decision, pour une raison technique
+# precise et non un ajustement sur les resultats. Le taux de derive par
+# equipe (team_*_drift_log_std_per_day=0.0015) n'a ete valide/teste qu'a
+# l'horizon reel de configs/stage2_walk_forward_drift.yaml (900 matchs a
+# 1 jour d'intervalle, donc ~899 jours de derive cumulee maximale). En
+# gardant days_between_matches=1.0 avec n_matches=3000 (choix de
+# puissance statistique, meme principe que stage5_dixon_coles.yaml),
+# l'horizon calendaire cumule serait ~2999 jours a taux de derive
+# INCHANGE : pour une equipe tiree dans la queue de la distribution
+# (rate ~ 3 sigma), le multiplicateur exp(rate*jours) devient
+# astronomique (>1e5) et degenere le calcul de probabilite vraie
+# (troncature de Poisson -> masse totale nulle -> ZeroDivisionError,
+# rencontre concretement lors de la premiere execution de ce protocole).
+# La solution retenue est de resserrer l'ESPACEMENT des matchs
+# (days_between_matches=0.3) plutot que d'affaiblir le taux de derive
+# lui-meme (qui resterait alors non comparable a la valeur deja
+# documentee/validee) : l'horizon calendaire cumule final redevient
+# ~899.7 jours (0.3 * 2999), identique a celui deja valide, tout en
+# obtenant les 3000 matchs necessaires a la puissance statistique du
+# protocole de selection de fenetre.
+
+synthetic_data:
+  seed: 2024
+  n_teams: 14
+  n_matches: 3000
+  start_date: "2021-08-01T00:00:00+00:00"
+  days_between_matches: 0.3
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+  team_attack_log_std: 0.35
+  team_defense_log_std: 0.35
+  team_attack_drift_log_std_per_day: 0.0015
+  team_defense_drift_log_std_per_day: 0.0015
+  market_margin: 0.05
+  market_noise_concentration: 40.0
+
+decision_offset_hours_before_kickoff: 2.0
