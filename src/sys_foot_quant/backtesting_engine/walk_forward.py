@@ -35,6 +35,7 @@ import pandas as pd
 from sys_foot_quant.common.time_utils import to_utc
 from sys_foot_quant.data_engine.storage.repository import DuckDBRepository
 from sys_foot_quant.market_engine.overround import remove_overround_proportional
+from sys_foot_quant.market_engine.snapshot import latest_odds_as_of
 
 _HOME, _DRAW, _AWAY = 0, 1, 2
 
@@ -86,14 +87,8 @@ def market_benchmark_probs(
     (marche pas encore ouvert) ou si les trois selections ne sont pas
     toutes presentes dans le dernier snapshot.
     """
-    snapshots = repository.get_as_of("odds_snapshots", decision_time)
-    match_snapshots = snapshots[snapshots["match_id"] == match_id]
-    if match_snapshots.empty:
-        return None
-    latest_time = match_snapshots["knowledge_time"].max()
-    latest = match_snapshots[match_snapshots["knowledge_time"] == latest_time]
-    odds = dict(zip(latest["selection"], latest["odds_value"]))
-    if not {"home", "draw", "away"}.issubset(odds):
+    odds = latest_odds_as_of(repository, match_id, decision_time)
+    if odds is None or not {"home", "draw", "away"}.issubset(odds):
         return None
     fair = remove_overround_proportional(odds)
     return (fair["home"], fair["draw"], fair["away"])
