@@ -136,3 +136,25 @@ def poisson_goodness_of_fit(
         is_valid=min_expected >= _MIN_EXPECTED_COUNT,
         table=table,
     )
+
+
+def contribution_table(result: GoodnessOfFitResult) -> pd.DataFrame:
+    """Decompose la statistique Chi-Deux par categorie, triee par
+    contribution decroissante : ``(observe - attendu)^2 / attendu``.
+
+    Sert a diagnostiquer QUELLES categories de score expliquent
+    principalement un Chi-Deux eleve, avant toute conclusion sur la cause
+    (modele mal specifie vs anomalie du generateur). Voir
+    docs/research_framework.md et le rapport de diagnostic associe : sur
+    le scenario de derive, un chi2 eleve pour ``poisson_simple`` s'est
+    revele explique par un exces simultane de scores 0-0 et de scores
+    eleves (signature classique de sous-dispersion du modele quand la
+    vraie force des equipes est plus heterogene, a un instant donne, que
+    ce que le modele - qui ne suit pas la derive - parvient a capturer).
+    """
+    table = result.table.copy()
+    table["contribution"] = (table["observed"] - table["expected"]) ** 2 / table["expected"]
+    table["contribution_share"] = (
+        table["contribution"] / result.statistic if result.statistic > 0 else 0.0
+    )
+    return table.sort_values("contribution", ascending=False).reset_index(drop=True)

@@ -33,6 +33,7 @@ from sys_foot_quant.backtesting_engine.walk_forward import (  # noqa: E402
     to_probs_and_outcomes,
 )
 from sys_foot_quant.calibration_engine.goodness_of_fit import (  # noqa: E402
+    contribution_table,
     poisson_goodness_of_fit,
 )
 from sys_foot_quant.calibration_engine.metrics import brier_score, log_loss  # noqa: E402
@@ -188,6 +189,15 @@ def main(
             f"{name:<16} chi2={gof.statistic:>8.2f} dof={gof.dof:>3} "
             f"p_value={gof.p_value:.4f} n={gof.n_matches:<4} -> {validity}"
         )
+        if gof.p_value < 0.05:
+            top3 = contribution_table(gof).iloc[:3]
+            typer.echo(f"  -> p<0.05 : categories expliquant le plus le chi2 (sur {name}) :")
+            for _, row in top3.iterrows():
+                typer.echo(
+                    f"     {row['category']:>6}  observe={row['observed']:>4.0f}  "
+                    f"attendu={row['expected']:>7.2f}  "
+                    f"part_du_chi2={row['contribution_share']:.1%}"
+                )
 
 
 if __name__ == "__main__":

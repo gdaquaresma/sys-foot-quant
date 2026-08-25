@@ -5,7 +5,10 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from sys_foot_quant.calibration_engine.goodness_of_fit import poisson_goodness_of_fit
+from sys_foot_quant.calibration_engine.goodness_of_fit import (
+    contribution_table,
+    poisson_goodness_of_fit,
+)
 
 
 def test_rejects_empty_input() -> None:
@@ -103,3 +106,48 @@ def test_statistic_always_non_negative_and_p_value_in_unit_interval(lambdas) -> 
     result = poisson_goodness_of_fit(lambdas_mus, home, away, max_goals_per_side=3)
     assert result.statistic >= 0
     assert 0.0 <= result.p_value <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# contribution_table : decomposition du Chi-Deux par categorie, utilisee
+# pour diagnostiquer QUELLES categories expliquent un chi2 eleve (voir le
+# rapport de diagnostic de la correction de l'etape 2).
+# ---------------------------------------------------------------------------
+
+
+def test_contribution_table_is_sorted_descending() -> None:
+    rng = np.random.default_rng(11)
+    lambdas_mus = [(1.3, 1.1)] * 300
+    home = rng.poisson(1.3, size=300)
+    away = rng.poisson(1.1, size=300)
+    result = poisson_goodness_of_fit(lambdas_mus, home, away, max_goals_per_side=3)
+
+    table = contribution_table(result)
+    assert list(table["contribution"]) == sorted(table["contribution"], reverse=True)
+
+
+def test_contribution_table_sums_to_statistic() -> None:
+    rng = np.random.default_rng(12)
+    lambdas_mus = [(1.5, 0.9)] * 400
+    home = rng.poisson(1.5, size=400)
+    away = rng.poisson(0.9, size=400)
+    result = poisson_goodness_of_fit(lambdas_mus, home, away, max_goals_per_side=3)
+
+    table = contribution_table(result)
+    assert table["contribution"].sum() == pytest.approx(result.statistic, rel=1e-9)
+    assert table["contribution_share"].sum() == pytest.approx(1.0, rel=1e-9)
+
+
+def test_contribution_table_flags_the_deliberately_mismatched_category() -> None:
+    # Modele predit systematiquement (lambda=0.2, mu=0.2) mais la realite
+    # est un score fixe 5-5 pour chaque match : la categorie "autre"
+    # (5-5 est hors grille pour max_goals_per_side=3) doit dominer trivialement.
+    n = 100
+    lambdas_mus = [(0.2, 0.2)] * n
+    home = np.full(n, 5)
+    away = np.full(n, 5)
+    result = poisson_goodness_of_fit(lambdas_mus, home, away, max_goals_per_side=3)
+
+    table = contribution_table(result)
+    assert table.iloc[0]["category"] == "autre"
+    assert table.iloc[0]["contribution_share"] > 0.9
