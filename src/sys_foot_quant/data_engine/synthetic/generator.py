@@ -193,20 +193,34 @@ def generate_synthetic_dataset(config: SyntheticDataConfig) -> SyntheticDataset:
         # verification mathematique que cette marge est bien reconstructible.
         true_probs = np.array(_true_outcome_probabilities(lam_home, lam_away))
 
+        # Plancher realiste applique UNIQUEMENT a la generation du marche
+        # (pas aux buts, ni a true_team_strength, ni au diagnostic de
+        # Chi-Deux qui reconstruit lam_home/lam_away independamment) :
+        # aucun bookmaker reel n'affiche une probabilite implicite en
+        # dessous de quelques pourcents sur un marche 1X2 offert. Sans ce
+        # plancher, un match tres desequilibre (derive cumulee extreme)
+        # peut donner une probabilite vraie quasi nulle sur une issue, ce
+        # qui degenere le bruit de Dirichlet (alpha quasi nul) en cotes
+        # irrealistes (jusqu'a plusieurs centaines de milliers). Trouve
+        # lors de la validation de l'etape 3 (Value Engine, ou l'EV brute
+        # amplifie ce probleme) - invisible sur les metriques de
+        # probabilite bornees [0,1] de l'etape 2 (Brier/log loss).
+        true_probs_for_market = np.clip(true_probs, 0.01, None)
+        true_probs_for_market = true_probs_for_market / true_probs_for_market.sum()
+
         for offset_hours in config.odds_snapshot_offsets_hours:
             snapshot_time = kickoff - timedelta(hours=offset_hours)
-            noisy_probs = rng.dirichlet(alpha=true_probs * config.market_noise_concentration)
+            noisy_probs = rng.dirichlet(alpha=true_probs_for_market * config.market_noise_concentration)
             implied_with_margin = noisy_probs * (1.0 + config.market_margin)
-            # Garde-fou rare : pour un match tres desequilibre, le bruit de
-            # Dirichlet peut occasionnellement placer une probabilite tres
-            # proche de 1, ce qui, une fois la marge appliquee, depasserait
-            # 1 et rendrait la cote decimale invalide (<= 1). On ecrete
+            # Garde-fou final (defense en profondeur) : meme avec le
+            # plancher ci-dessus, le bruit de Dirichlet peut placer une
+            # probabilite tres proche de 1 (ou tres proche de 0), ce qui
+            # rendrait la cote decimale invalide ou irrealiste. On ecrete
             # directement la probabilite impliquee finale (sans
             # renormaliser - renormaliser apres ecretage reintroduirait le
-            # meme probleme en gonflant a nouveau la valeur ecretee). Cela
-            # ne modifie qu'une fraction infime des observations les plus
-            # extremes et est documente comme tel.
-            implied_with_margin = np.clip(implied_with_margin, 1e-6, 0.999)
+            # probleme en gonflant a nouveau la valeur ecretee). Plage
+            # choisie pour rester dans des cotes plausibles (~1.005 a 200).
+            implied_with_margin = np.clip(implied_with_margin, 0.005, 0.995)
             for selection, prob in zip(_SELECTIONS, implied_with_margin):
                 odds.append(
                     OddsSnapshot(

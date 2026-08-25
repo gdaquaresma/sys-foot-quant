@@ -9,6 +9,8 @@ data/raw/*.parquet
 data/curated/*.parquet
 data/cache/*
 data/raw_stage2*/
+data/raw_stage3*/
+data/value_logs/
 !data/raw/.gitkeep
 !data/curated/.gitkeep
 !data/cache/.gitkeep
