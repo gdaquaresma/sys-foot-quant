@@ -11,6 +11,21 @@ l'étape 2 (Poisson + calibration + benchmarks).
 
 **Aucun code n'a été modifié pour produire ce document.**
 
+**Historique des révisions**
+
+- Version initiale (étape 1.5) : classification des hypothèses A à H à
+  partir des 4 livres de vulgarisation + de la synthèse croisée et de son
+  audit critique.
+- Révision post-audit primaire : un audit indépendant a relu les 5 sources
+  primaires *intégrales* (Epstein, Miller & Davidow, Appelbaum, Dolan,
+  Miech — pas seulement la synthèse) et vérifié chaque hypothèse contre le
+  texte original. Résultat consigné dans `docs/research_framework_audit.md`.
+  **Aucune classification n'a été modifiée par cet audit** — il confirme le
+  classement existant et ajoute des nuances méthodologiques et des
+  précisions de preuve, intégrées ci-dessous aux endroits concernés (§B1,
+  §B3, §E, §G1, §G2). Se référer à `research_framework_audit.md` pour le
+  détail complet de la vérification section par section.
+
 ---
 
 ## 0. Avertissement épistémique sur le corpus
@@ -199,13 +214,24 @@ afin de ne pas re-faire ce travail à l'étape 5.
   pur, car un but change la dynamique du match (l'équipe menée attaque
   davantage). Dixon-Coles introduit un paramètre de corrélation τ pour ces
   scores bas, plus un paramètre de dépréciation temporelle ξ.
-- **Statut dans les sources** : absent des quatre livres originaux (l'audit
-  du document de synthèse le confirme explicitement : "Dixon-Coles est
-  absent" — c'est une importation académique externe faite par la synthèse,
-  pas une théorie des auteurs). Dolan ne le mentionne pas non plus
-  explicitement, mais le recommande comme "module externe obligatoire"
-  dans son cahier des charges (lui aussi une extrapolation de l'auteur du
-  document, pas de Dolan).
+- **Statut dans les sources** : absent des trois guides de paris sportifs du
+  corpus (Dolan, Miech, Appelbaum — confirmé par lecture intégrale de leur
+  texte primaire) ; absent également de Miller & Davidow. L'audit
+  (`research_framework_audit.md`, §B) précise un point que la formulation
+  "absent des quatre livres" masquait : Epstein, le cinquième auteur du
+  corpus, ne traite d'aucun sport à score continu (football ou autre) — son
+  livre couvre le Blackjack, les dés, les cartes et la théorie des jeux
+  abstraite. Son silence sur Dixon-Coles n'a donc pas la même valeur
+  probante que celui des quatre guides de paris sportifs : ce n'est pas un
+  auteur qui aurait pu en parler et ne l'a pas fait, c'est un auteur dont le
+  champ ne recouvre jamais ce sujet. La conclusion opérationnelle reste
+  inchangée (Dixon-Coles est une importation académique externe, absente de
+  toute théorie transmise par un auteur du corpus), mais elle repose sur le
+  silence des quatre sources sportives, pas sur un "consensus des cinq
+  sources" qui surpondérerait artificiellement le silence d'Epstein. Dolan
+  ne le mentionne pas non plus explicitement, mais le recommande comme
+  "module externe obligatoire" dans son cahier des charges (lui aussi une
+  extrapolation de l'auteur du document de synthèse, pas de Dolan).
 - **Variables nécessaires** : mêmes données que le Poisson simple
   (`match_results`), plus l'estimation des paramètres τ et ξ par maximum de
   vraisemblance sur les scores bas.
@@ -269,10 +295,17 @@ afin de ne pas re-faire ce travail à l'étape 5.
   xG élimine une partie de la variance/chance du score brut et reflète
   mieux la performance sous-jacente.
 - **Statut dans les sources** : absent des quatre livres (confirmé
-  explicitement par l'audit : "totalement absent... il est intellectuellement
-  malhonnête de l'attribuer aux théories des livres"). C'est une pure
+  explicitement par l'audit du document de synthèse : "totalement absent...
+  il est intellectuellement malhonnête de l'attribuer aux théories des
+  livres"), confirmation vérifiée par lecture intégrale des textes primaires
+  eux-mêmes (aucune des cinq sources ne mentionne le xG). C'est une pure
   importation de la littérature moderne, non testée par aucune des sources
-  fournies.
+  fournies. Comme pour B1 (voir remarque ci-dessus), le silence d'Epstein
+  spécifiquement ne doit pas être compté comme un cinquième témoignage
+  indépendant de même poids que celui des quatre guides de paris sportifs :
+  son livre ne traite d'aucun sport à score continu, donc il ne pouvait de
+  toute façon pas mentionner le xG, qu'il en ait du mérite ou non pour le
+  football.
 - **Variables nécessaires** : source de données xG externe (type Opta/FBref
   ou équivalent), non prévue dans notre Data Engine actuel — c'est un
   connecteur de données entièrement nouveau à construire.
@@ -613,6 +646,26 @@ Davidow et Epstein dénoncent dans le corpus lui-même. Chacune doit être
 testée **individuellement**, en ajout marginal à la meilleure configuration
 déjà validée en section A, jamais en groupe.
 
+**Contrôle méthodologique additionnel — test de "gliding" (Miller &
+Davidow).** En plus du test en trois points déjà retenu pour qualifier un
+"angle" exploitable (prévisible, quantifiable, non intégré dans la ligne),
+Miller & Davidow proposent un critère de validation supplémentaire pour
+distinguer un véritable angle d'une "tendance" fallacieuse : l'effet doit
+varier de façon **continue** avec la variable causale invoquée ("gliding"),
+et non présenter un seuil arbitraire (cutoff) sans justification causale
+graduelle. Un effet qui n'apparaît qu'à partir d'un seuil précis (ex. "3ᵉ
+match en 7 jours", "défaite par ≥4 buts") sans intensification progressive
+autour de ce seuil est suspect ; un effet qui croît continûment avec la
+variable causale est plus crédible. Ce contrôle s'applique en particulier à
+E1 (seuil "3 matchs/7 jours") et E6 (seuil "≥4 buts") ci-dessous, dont les
+seuils numériques n'ont pas encore été testés pour continuité : le protocole
+hors-échantillon de chaque variable devra vérifier, en plus de la
+significativité au-dessus/en-dessous du seuil retenu, que l'effet ne
+présente pas une discontinuité artificielle autour de ce seuil. Ceci ne
+change aucune classification ci-dessous — c'est une exigence de protocole
+supplémentaire à appliquer au moment du test, pas un résultat déjà obtenu.
+(Source : `research_framework_audit.md`, §E.)
+
 | Hypothèse | Mécanisme | Donnée requise (déjà dispo ?) | H0 | Overfitting | Classe |
 |---|---|---|---|---|---|
 | **E1. Fatigue de calendrier chargé** (3ᵉ match en 7 jours) | Perte d'espérance de buts marqués (~15% cité, non sourcé formellement) | Dates de matchs (`kickoff_time`, dispo) — calculable sans nouvelle donnée | Aucune perte significative d'espérance de buts hors échantillon | Modéré (seuil "3 matchs/7 jours" à fixer a priori) | Intéressante |
@@ -722,6 +775,28 @@ s'appliquent à *toutes* les hypothèses ci-dessus :
    résultat. Ceci est déjà cohérent avec notre discipline de Repository
    point-in-time (étape 1), mais s'applique aussi à la *fenêtre de test*
    elle-même, pas seulement aux données visibles à chaque décision.
+   **Précision (Epstein, ch. 11)** : Epstein distingue explicitement deux
+   situations qui ne portent pas le même risque. (a) Un jeu à probabilité
+   connue avec un seuil d'arrêt fixé *a priori* (ex. une simulation qui
+   s'arrête dès qu'une trajectoire atteint un objectif de capital
+   prédéterminé) n'est pas un test d'hypothèse — l'arrêt n'y introduit
+   aucun biais, car ce n'est pas une hypothèse statistique qui est mise à
+   l'épreuve, seulement une somme qui se conclut automatiquement en
+   atteignant une valeur préétablie. (b) Un test d'hypothèse statistique où
+   l'expérimentateur choisit d'arrêter la collecte de données en fonction
+   du résultat déjà observé introduit, lui, un biais de rejet artificiel de
+   l'hypothèse nulle — c'est ce cas précis que la règle ci-dessus vise.
+   Concrètement pour notre architecture : le walk-forward du Calibration
+   Engine (comparer Poisson simple vs Poisson+A1 sur un échantillon de
+   test) relève du cas (b) et doit donc fixer sa fenêtre de test a priori,
+   comme déjà prescrit ; la simulation Monte Carlo du Risk Engine (D3),
+   qui caractérise une distribution de résultats sous paramètres
+   contrôlés plutôt que de tester une hypothèse sur nos propres données,
+   relève davantage du cas (a) et n'est pas exposée au même risque. Cette
+   distinction ne change ni le protocole du Calibration Engine ni celui du
+   Risk Engine déjà décrits plus haut — elle clarifie seulement *où* le
+   risque d'arrêt optionnel s'applique avec toute sa force dans le
+   pipeline. (Source : `research_framework_audit.md`, §G1.)
 2. **Empilement de filtres contextuels (section E)** : la synthèse et
    Dolan mettent tous deux en garde contre l'overfitting par accumulation
    de variables situationnelles. Règle opérationnelle : chaque variable de
@@ -729,6 +804,27 @@ s'appliquent à *toutes* les hypothèses ci-dessus :
    meilleure configuration déjà validée en section A, avec sa propre
    fenêtre hors échantillon dédiée. Ne jamais construire un modèle
    multi-filtres directement.
+   **Grille de validation additionnelle (Appelbaum, ch. 8 "Learn from the
+   Past")** : avant qu'une variable de la section E ne soit considérée
+   comme un candidat sérieux (même à l'issue d'un protocole hors-échantillon
+   positif), elle doit satisfaire trois critères empruntés à Appelbaum pour
+   juger un "betting system" :
+   1. **Une hypothèse causale motivée *a priori*** — le mécanisme doit être
+      explicable avant de regarder les résultats, jamais reconstruit après
+      coup pour justifier un chiffre qui "marche".
+   2. **Un échantillon suffisamment large** — repère numérique explicite
+      donné par la source : au moins une centaine d'observations
+      (matchs). Un taux de réussite impressionnant sur un petit échantillon
+      (ex. "9 sur 10") est explicitement moins fiable qu'un taux plus
+      modeste sur un grand échantillon.
+   3. **Une stabilité pluriannuelle** — un effet concentré sur une ou deux
+      saisons puis disparu (le marché s'ajuste) doit être traité avec
+      suspicion même si le cumul reste positif sur la période totale.
+   Cette grille ne remplace pas le protocole hors-échantillon déjà prévu
+   (walk-forward, benchmark, H0 explicite pour chaque variable de la
+   section E) — elle s'y ajoute comme critère de robustesse minimal avant
+   toute adoption. Elle ne change aucune classification actuelle. (Source :
+   `research_framework_audit.md`, §G2.)
 3. **Petits échantillons anecdotiques du corpus lui-même** : plusieurs
    "résultats" cités dans les livres (162 matchs, 200 situations RLM,
    quelques exemples de matchs uniques pour le modèle hockey/baseball) ne
