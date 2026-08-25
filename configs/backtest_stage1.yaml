@@ -1,0 +1,15 @@
+# Configuration de reference pour l'etape 1 (infrastructure uniquement).
+# Aucune donnee reelle n'est configuree : uniquement un generateur
+# synthetique deterministe (seed fixe).
+
+synthetic_data:
+  seed: 42
+  n_teams: 8
+  n_matches: 60
+  start_date: "2024-08-01T00:00:00+00:00"
+  days_between_matches: 1.5
+  result_confirmation_delay_hours: 2.0
+  fixture_announcement_days_before: 14.0
+  odds_snapshot_offsets_hours: [72.0, 24.0, 1.0]
+
+decision_offset_hours_before_kickoff: 1.0

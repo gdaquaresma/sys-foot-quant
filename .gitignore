@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.hypothesis/
+data/raw/*.parquet
+data/curated/*.parquet
+data/cache/*
+!data/raw/.gitkeep
+!data/curated/.gitkeep
+!data/cache/.gitkeep
