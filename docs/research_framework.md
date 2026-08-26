@@ -391,6 +391,54 @@ afin de ne pas re-faire ce travail à l'étape 5.
   étape 5, et conditionne l'ajout d'une source de données qui n'existe pas
   encore dans notre schéma.
 
+- **Résultat empirique (étape 5, données réelles Understat) :**
+  - **Source des données** : Understat (gratuit, non officiel), trois
+    championnats 2025/26 complets (Ligue 1 306 matchs, Premier League 380,
+    Liga 380 — 1066 matchs), récupérés via le navigateur de l'utilisateur
+    et vérifiés intacts (aucun doublon de `match_id`, aucun score/xG
+    manquant, nombre de matchs et d'équipes conforme à l'attendu pour
+    chaque championnat) — voir `research/xg_feasibility/runs/` et le
+    contrôle d'intégrité exécuté par `scripts/run_stage5_b3_xg_walkforward.py`.
+  - **Modèle testé** : `XGModel` (`football_model/xg_model.py`), extension
+    isolée de la même famille que `DixonColesModel`/`RecentFormModel` —
+    formulation mathématique strictement identique à `poisson_simple`
+    (pas de HFA par équipe, pas de shrinkage, aucun hyperparamètre libre),
+    seule la source des "buts" utilisée pour estimer attaque/défense
+    change (xG historique au lieu des buts réels).
+  - **Point-in-time** : deux flux de connaissance indépendants par match
+    (`backtesting_engine/real_data_walk_forward.py`) — score réel connu à
+    kickoff+2h (convention déjà utilisée pour le générateur synthétique),
+    xG connu à kickoff+48h. **Ce délai de 48h est une hypothèse
+    conservatrice documentée, pas un fait vérifié** : Understat ne publie
+    aucun horodatage officiel de publication par match. Ceci concerne la
+    latence de publication d'une donnée déjà passée, pas une fuite
+    d'information — l'invariant strict (aucun match à l'instant T ou après
+    n'influence sa propre prédiction) est garanti par construction et
+    vérifié par `tests/leakage/test_real_data_walk_forward_point_in_time.py`.
+  - **Protocole** : scission chronologique à trois voies par championnat
+    (rodage 40% / validation 30% / test 30%) ; `XGModel` n'ayant aucun
+    hyperparamètre à sélectionner, la validation ne sert que de premier
+    regard informatif — seul le test hors échantillon détermine le
+    verdict. Métrique : Brier score, bootstrap apparié, IC95%, présenté
+    comme `xg_model - poisson_simple` (négatif = xG meilleur).
+  - **Résultats (test, IC95% de la différence de Brier)** :
+    - Ligue 1 : diff moyenne -0.0177, IC95%=[-0.0429, +0.0071] → indéterminé
+    - Premier League : diff moyenne -0.0103, IC95%=[-0.0344, +0.0132] → indéterminé
+    - Liga : diff moyenne +0.0004, IC95%=[-0.0291, +0.0284] → indéterminé
+  - **Verdict : INDÉTERMINÉ**, sur les trois championnats et en agrégé.
+    Le signe de la différence est cohérent (xG légèrement meilleur ou
+    neutre, jamais significativement pire) mais aucun des trois
+    championnats ne montre une amélioration statistiquement significative
+    hors échantillon. `poisson_simple` reste la baseline officielle,
+    aucune promotion automatique.
+  - **Limite explicite** : ce résultat est une validation du **mécanisme**
+    sur les données historiques Understat actuellement disponibles — il ne
+    constitue PAS une preuve de stabilité des valeurs xG dans le temps
+    (aucune mesure empirique de révision rétroactive n'a encore été faite,
+    voir `research/xg_feasibility/` priorité 2). Aucune variante hybride
+    xG/buts réels n'a été testée : `research_framework.md` ne fixait aucun
+    poids a priori pour cette variante avant ce test.
+
 ---
 
 ## C. MARKET ENGINE — Hors scope étape 2, catalogué pour l'étape 3
