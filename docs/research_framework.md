@@ -423,6 +423,46 @@ afin de ne pas re-faire ce travail à l'étape 5.
 - **Classification : Intéressante**, à traiter comme alternative à A1
   plutôt que comme extension supplémentaire. Reste étape 5.
 
+- **Résultat empirique — RE-TEST SUR DONNÉES RÉELLES, COMPARAISON DIRECTE
+  À `poisson_simple` (étape 5, suite à B1/A2/B3/B3.2/C7)** : B2
+  (`BayesianSequentialModel`) n'avait été comparé qu'à A1 sur données
+  SYNTHÉTIQUES (`scripts/run_stage5_b2_walk_forward.py`, B2 meilleur qu'A1
+  mais A1 a depuis été définitivement REJETÉ contre `poisson_simple`,
+  toutes variantes confondues) — jamais confronté directement à
+  `poisson_simple`, ni sur synthétique ni sur réel. Ce re-test
+  (`scripts/run_stage5_b2_bayesian_real.py`) comble ce manque, avec
+  `BayesianSequentialModel` strictement inchangé et son design
+  intégralement figé (`prior_strength=DEFAULT_PRIOR_STRENGTH=10.0`, même
+  conjugaison Gamma-Poisson, même règle de mise à jour séquentielle —
+  vérifié identique au code utilisé pour le test synthétique avant
+  exécution).
+  - **Protocole** : mêmes données Understat que B1/A2/B3/B3.2/C7 (3
+    championnats × 2 saisons 2024/25+2025/26), rodage 40% / validation
+    30% / test 30% par championnat et par saison (saisons regroupées pour
+    le résultat par championnat, détail par saison conservé pour la
+    stabilité temporelle). Test évalué une seule fois.
+  - **Résultats (test regroupé par championnat, diff = `Brier_B2 -
+    Brier_poisson_simple`)** :
+    - Ligue 1 : diff moyenne -0.0114, IC95%=[-0.0232, +0.0005] (2024/25
+      seul : -0.0050 ; 2025/26 seul : -0.0179) → indéterminé (proche de
+      la significativité mais IC95% incluant 0)
+    - Premier League : diff moyenne -0.0037, IC95%=[-0.0119, +0.0053]
+      (2024/25 seul : -0.0004 ; 2025/26 seul : -0.0070) → indéterminé
+    - Liga : diff moyenne -0.0011, IC95%=[-0.0115, +0.0091] (2024/25
+      seul : +0.0094 ; 2025/26 seul : -0.0115) → indéterminé
+  - **Verdict : REJETÉ.** Aucun des trois championnats n'atteint une
+    amélioration significative de `poisson_simple` (tous les IC95%
+    incluent 0), conformément aux critères fixés avant calcul — 640
+    matchs de test évalués au total. Le signe de la différence favorise
+    systématiquement B2 (négatif) sur 5 des 6 couples championnat/saison,
+    mais jamais de façon statistiquement significative une fois regroupé.
+  - **Portée** : `poisson_simple` reste la baseline officielle, inchangée.
+    `BayesianSequentialModel` reste dans le code à titre expérimental
+    (comme `XGModel`/`DixonColesModel`), sans promotion. Aucune nouvelle
+    recherche sur la mise à jour bayésienne séquentielle (nouveau prior,
+    nouvelle vraisemblance, nouvelle règle de mise à jour) n'est prévue
+    sans nouvelle décision explicite.
+
 ### B3. Intégration du xG (Expected Goals)
 
 - **Mécanisme supposé** : utiliser le xG plutôt que (ou en complément de)
