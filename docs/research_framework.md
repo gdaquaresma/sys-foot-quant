@@ -697,6 +697,52 @@ afin de ne pas re-faire ce travail à l'étape 5.
   peu coûteux à tester, mais dépend crucialement d'un choix a priori
   discipliné des paires testées.
 
+- **Résultat empirique C7 — PHASE 1 UNIQUEMENT (existence de la
+  corrélation, pas rentabilité d'un combiné réel)** :
+  - **Paire d'événements testée, fixée avant tout calcul** :
+    A = « l'équipe à domicile est favorite selon `poisson_simple`
+    (point-in-time, comparaison stricte `P(victoire domicile) >
+    P(victoire extérieur)`, aucun autre modèle, aucun seuil de
+    magnitude) » ; B = « Over 2.5 buts (`home_goals + away_goals >= 3`) ».
+    Aucune autre paire, aucun autre seuil Over/Under, aucun seuil de
+    probabilité de favori n'a été testé.
+  - **Protocole** : rodage de `poisson_simple` (40% de chaque saison,
+    même convention que B3/B3.2), estimation sur la saison 2024/25,
+    confirmation sur la saison 2025/26 (consultée une seule fois, méthode
+    non réajustée) — `scripts/run_stage5_c7_correlated_events.py`. Test de
+    différence de proportions (Chi-deux, `two_by_two_association_test`,
+    `calibration_engine/significance.py`) par championnat et par saison.
+  - **Réserve de transparence** : ces deux saisons ont déjà servi à B3 et
+    B3.2, mais pour une question différente (performance comparée de
+    modèles buts/xG, pas corrélation d'issues de match) — aucun résultat
+    ni métrique de B3/B3.2 n'a été réutilisé pour définir ou ajuster ce
+    protocole, mais ce n'est donc pas, au sens strict, un jeu de données
+    vierge.
+  - **Résultats (test du 27/08/2026, diff = `P(B|A) - P(B|¬A)`)** :
+    - Ligue 1 : estimation diff=-0.005, IC95%=[-0.150, +0.140] ;
+      confirmation diff=-0.037, IC95%=[-0.190, +0.116] → non positif
+    - Premier League : estimation diff=+0.060, IC95%=[-0.070, +0.189] ;
+      confirmation diff=+0.054, IC95%=[-0.084, +0.193] → non positif
+    - Liga : estimation diff=+0.101, IC95%=[-0.037, +0.240] ;
+      confirmation diff=+0.089, IC95%=[-0.049, +0.227] → non positif
+  - **Verdict C7 (phase 1) : REJETÉ**, cohérent sur les trois championnats
+    et les deux saisons — aucun intervalle de confiance n'exclut 0.
+  - **Ce que ce résultat permet de conclure** : dans nos données actuelles,
+    aucune corrélation exploitable n'a été détectée entre « favori à
+    domicile selon `poisson_simple` » et « Over 2.5 buts » — la condition
+    nécessaire au mécanisme de mauvaise tarification de combiné décrit
+    dans le corpus n'est pas remplie pour cette paire d'événements précise.
+  - **Ce que ce résultat NE permet PAS de conclure** : rien sur la
+    rentabilité réelle d'un pari combiné en général (seule cette paire
+    d'événements précise a été testée, pas C7 dans l'absolu, ni les
+    marchés liés en général) ; rien non plus sur une éventuelle phase 2
+    (EV réel sur cotes de combinés) — notre schéma de données ne contient
+    aucune cote de marché combiné (seul le 1X2 est modélisé), une
+    extension du Data Engine serait nécessaire et n'est pas engagée.
+  - **Statut** : phase 1 close sur ce verdict REJETÉ pour cette paire
+    d'événements. Aucune autre paire, aucun autre seuil, aucune phase 2
+    ne sont testés sans nouvelle décision explicite de l'utilisateur.
+
 ---
 
 ## D. RISK ENGINE — Hors scope étape 2, catalogué pour l'étape 4

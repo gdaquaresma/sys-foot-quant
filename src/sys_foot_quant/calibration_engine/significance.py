@@ -98,6 +98,79 @@ def two_sample_bootstrap_test(
     }
 
 
+def two_by_two_association_test(
+    labels_a: np.ndarray, labels_b: np.ndarray, small_cell_threshold: int = 5
+) -> dict[str, float | int | str]:
+    """Test d'association entre deux variables binaires appariees sur les
+    memes observations (ex : "favori pre-match" et "Over 2.5 buts" pour le
+    meme match - hypothese C7, docs/research_framework.md section C7).
+
+    Construit le tableau de contingence 2x2 (A et B, A et non-B, non-A et
+    B, non-A et non-B) et retourne P(B), P(B|A), P(B|non-A), leur
+    difference, un intervalle de confiance a 95% (approximation normale de
+    Wald, erreur-type non regroupee - methode standard pour un intervalle
+    de difference de deux proportions), et une p-value bilaterale :
+    - test du Chi-deux (2x2, sans correction de continuite) si les quatre
+      effectifs de cellule sont >= ``small_cell_threshold`` ;
+    - test exact de Fisher sinon (effectif trop faible pour l'approximation
+      asymptotique du Chi-deux).
+    """
+    a = np.asarray(labels_a, dtype=bool)
+    b = np.asarray(labels_b, dtype=bool)
+    if a.shape != b.shape:
+        raise ValueError("labels_a et labels_b doivent avoir la meme taille (observations appariees).")
+    n = a.size
+    if n == 0:
+        raise ValueError("Echantillon vide.")
+
+    n_a, n_not_a = int(a.sum()), int((~a).sum())
+    if n_a == 0 or n_not_a == 0:
+        raise ValueError("Les deux groupes (A et non-A) doivent contenir au moins une observation.")
+
+    n_a_b = int((a & b).sum())
+    n_a_notb = n_a - n_a_b
+    n_nota_b = int((~a & b).sum())
+    n_nota_notb = n_not_a - n_nota_b
+
+    p_b = float(b.sum()) / n
+    p_b_given_a = n_a_b / n_a
+    p_b_given_not_a = n_nota_b / n_not_a
+    diff = p_b_given_a - p_b_given_not_a
+
+    se = float(
+        np.sqrt(
+            p_b_given_a * (1 - p_b_given_a) / n_a
+            + p_b_given_not_a * (1 - p_b_given_not_a) / n_not_a
+        )
+    )
+    z_975 = 1.959963984540054
+    ci_low = diff - z_975 * se
+    ci_high = diff + z_975 * se
+
+    table = [[n_a_b, n_a_notb], [n_nota_b, n_nota_notb]]
+    min_cell = min(n_a_b, n_a_notb, n_nota_b, n_nota_notb)
+    if min_cell < small_cell_threshold:
+        _, p_value = stats.fisher_exact(table)
+        test_used = "fisher_exact"
+    else:
+        _, p_value, _, _ = stats.chi2_contingency(table, correction=False)
+        test_used = "chi2"
+
+    return {
+        "n": n,
+        "n_a": n_a,
+        "n_not_a": n_not_a,
+        "p_b": p_b,
+        "p_b_given_a": p_b_given_a,
+        "p_b_given_not_a": p_b_given_not_a,
+        "diff": diff,
+        "ci_low": float(ci_low),
+        "ci_high": float(ci_high),
+        "p_value": float(p_value),
+        "test_used": test_used,
+    }
+
+
 def paired_t_test(diffs: np.ndarray) -> dict[str, float]:
     """Test t apparie classique (test t a un echantillon sur les
     differences), fourni en verification croisee du bootstrap."""

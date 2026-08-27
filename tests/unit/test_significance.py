@@ -6,6 +6,7 @@ import pytest
 from sys_foot_quant.calibration_engine.significance import (
     paired_bootstrap_test,
     paired_t_test,
+    two_by_two_association_test,
     two_sample_bootstrap_test,
 )
 
@@ -95,3 +96,51 @@ def test_two_sample_bootstrap_handles_different_sample_sizes() -> None:
     result = two_sample_bootstrap_test(a, b, n_resamples=1000, seed=7)
     assert np.isfinite(result["mean_diff"])
     assert result["ci_low"] <= result["mean_diff"] <= result["ci_high"]
+
+
+def test_two_by_two_detects_strong_positive_association() -> None:
+    a = np.array([True] * 60 + [False] * 60)
+    b = np.array([True] * 55 + [False] * 5 + [False] * 55 + [True] * 5)
+    result = two_by_two_association_test(a, b)
+    assert result["diff"] > 0
+    assert result["ci_low"] > 0.0
+    assert result["p_value"] < 0.01
+    assert result["test_used"] == "chi2"
+
+
+def test_two_by_two_no_association_when_independent() -> None:
+    a = np.array([True, False] * 100)
+    b = np.array([True, True, False, False] * 50)
+    result = two_by_two_association_test(a, b)
+    assert result["ci_low"] <= 0.0 <= result["ci_high"]
+
+
+def test_two_by_two_uses_fisher_exact_for_small_cells() -> None:
+    a = np.array([True] * 4 + [False] * 40)
+    b = np.array([True] * 3 + [False] * 1 + [False] * 40)
+    result = two_by_two_association_test(a, b, small_cell_threshold=5)
+    assert result["test_used"] == "fisher_exact"
+
+
+def test_two_by_two_rejects_mismatched_lengths() -> None:
+    with pytest.raises(ValueError):
+        two_by_two_association_test(np.array([True, False]), np.array([True]))
+
+
+def test_two_by_two_rejects_empty_input() -> None:
+    with pytest.raises(ValueError):
+        two_by_two_association_test(np.array([]), np.array([]))
+
+
+def test_two_by_two_rejects_degenerate_single_group() -> None:
+    with pytest.raises(ValueError):
+        two_by_two_association_test(np.array([True, True, True]), np.array([True, False, True]))
+
+
+def test_two_by_two_reports_correct_conditional_probabilities() -> None:
+    a = np.array([True, True, True, True, False, False, False, False])
+    b = np.array([True, True, False, False, True, False, False, False])
+    result = two_by_two_association_test(a, b, small_cell_threshold=0)
+    assert result["p_b_given_a"] == pytest.approx(0.5)
+    assert result["p_b_given_not_a"] == pytest.approx(0.25)
+    assert result["diff"] == pytest.approx(0.25)
