@@ -203,6 +203,42 @@ preuve d'aucun edge sur le football.
 - **Classification : Fondation** (avec shrinkage) / **Intéressante** (HFA
   brut par équipe sans shrinkage — à ne pas tester tel quel).
 
+- **Résultat empirique — RE-TEST SUR DONNÉES RÉELLES (étape 5, suite à
+  B1/B3/B3.2/C7)** : A2 (`PoissonModel(use_team_hfa=True)`) avait été
+  testé sur données SYNTHÉTIQUES à l'étape 2 (`run_stage2_walk_forward.py`,
+  config `poisson_A2_hfa`) mais jamais confronté à `poisson_simple` sur
+  données réelles — tous les scripts réels précédents (B1/B3/B3.2/C7)
+  désactivaient explicitement le HFA par équipe des deux côtés pour
+  isoler leur propre question. Ce re-test
+  (`scripts/run_stage5_a2_hfa_real.py`) comble ce manque, avec
+  `PoissonModel` strictement inchangé et `hfa_shrinkage_k=10.0` réutilisé
+  tel quel (figé à l'étape 2, jamais réajusté).
+  - **Protocole** : mêmes données Understat que B1/B3/B3.2/C7 (3
+    championnats × 2 saisons 2024/25+2025/26), rodage 40% / validation
+    30% / test 30% par championnat et par saison (saisons regroupées pour
+    le résultat par championnat, détail par saison conservé pour
+    vérifier la stabilité temporelle).
+  - **Résultats (test regroupé par championnat, diff = `Brier_A2 -
+    Brier_poisson_simple`)** :
+    - Ligue 1 : diff moyenne -0.0006, IC95%=[-0.0094, +0.0079] (2024/25
+      seul : +0.0040 ; 2025/26 seul : -0.0053) → indéterminé
+    - Premier League : diff moyenne -0.0019, IC95%=[-0.0078, +0.0046]
+      (2024/25 seul : -0.0015 ; 2025/26 seul : -0.0023) → indéterminé
+    - Liga : diff moyenne +0.0022, IC95%=[-0.0065, +0.0110] (2024/25
+      seul : -0.0076 ; 2025/26 seul : +0.0119) → indéterminé
+  - **Verdict : REJETÉ.** Aucun des trois championnats n'atteint une
+    amélioration significative de `poisson_simple` (tous les IC95%
+    incluent 0), conformément aux critères fixés avant calcul — 640
+    matchs de test évalués au total. Le signe de la différence est même
+    instable d'une saison à l'autre pour Ligue 1 et Liga, signe
+    supplémentaire d'absence de signal stable plutôt que d'un effet réel
+    trop faible pour être détecté.
+  - **Portée** : `poisson_simple` (HFA global unique) reste la baseline
+    officielle, inchangée. `PoissonModel(use_team_hfa=True)` reste
+    disponible dans le code (paramètre existant, pas un nouveau modèle),
+    sans statut particulier ni promotion — aucune nouvelle recherche sur
+    le HFA par équipe n'est prévue sans nouvelle décision explicite.
+
 ### A3. Modèle Power Rating (Dolan) comme variante d'Elo
 
 - **Mécanisme supposé** : note numérique par équipe, ajustée du contexte
