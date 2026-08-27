@@ -312,6 +312,47 @@ afin de ne pas re-faire ce travail à l'étape 5.
   l'étape 2 — au contraire, l'audit lui-même le classe "B — à tester",
   jamais "fondation".
 
+- **Résultat empirique — RE-TEST SUR DONNÉES RÉELLES (étape 5, suite à
+  B3/B3.2/C7)** : `DixonColesModel` avait été VALIDÉ sur données
+  SYNTHÉTIQUES dédiées uniquement (`scripts/run_stage5_b1_dixon_coles.py`,
+  ρ=-0.13 injecté artificiellement) — `docs/architecture.md` documentait
+  explicitement que cela ne constituait pas une preuve sur données
+  réelles. Ce re-test (`scripts/run_stage5_b1_dixon_coles_real.py`)
+  utilise les mêmes données Understat que B3/B3.2/C7 (3 championnats × 2
+  saisons 2024/25 + 2025/26, buts réels uniquement, aucun xG), avec
+  `DixonColesModel` strictement inchangé (ρ ré-estimé par maximum de
+  vraisemblance à chaque fit walk-forward, mécanisme déjà validé, pas une
+  nouvelle procédure) et `poisson_simple` comme référence.
+  - **Protocole** : rodage 40% / validation 30% / test 30%, par
+    championnat et par saison (deux saisons traitées indépendamment puis
+    jeux de test regroupés par championnat), `use_team_hfa=False` des
+    deux côtés (isolation stricte de la question testée, même choix que
+    le script synthétique).
+  - **Résultats (test, diff = `dixon_coles - poisson_simple`, Brier)** :
+    - Ligue 1 : diff moyenne +0.0029, IC95%=[+0.0004, +0.0053] →
+      `poisson_simple` significativement meilleur
+    - Premier League : diff moyenne -0.0009, IC95%=[-0.0044, +0.0028] →
+      indéterminé
+    - Liga : diff moyenne -0.0000, IC95%=[-0.0012, +0.0012] → indéterminé
+  - **Sous-ensemble bas-score (0-0/1-0/0-1/1-1)**, ciblé par le mécanisme
+    tau(x,y;ρ) : aucun signal cohérent avec une amélioration (Ligue 1
+    diff +0.0033, Premier League +0.0014, Liga -0.0003 — jamais
+    significatif, jamais cohéremment négatif).
+  - **Verdict : REJETÉ.** Aucun des trois championnats ne montre
+    `dixon_coles` significativement meilleur que `poisson_simple` sur
+    données réelles — absence d'amélioration cohérente, conformément aux
+    critères fixés avant calcul. `poisson_simple` reste la baseline
+    officielle, inchangée.
+  - **Portée** : ce résultat REJETÉ, obtenu sur données réelles, prime sur
+    le résultat VALIDÉ obtenu précédemment sur données synthétiques
+    dédiées — le mécanisme de corrélation basse-score que Dixon-Coles
+    corrige, bien que réel dans le générateur synthétique conçu pour
+    l'exhiber, ne s'est pas manifesté de façon exploitable dans les
+    résultats réels actuellement disponibles. `DixonColesModel` reste dans
+    le code à titre expérimental et de référence (comme `XGModel`), sans
+    promotion, aucune nouvelle recherche de correction basse-score n'est
+    prévue sans nouvelle décision explicite.
+
 ### B2. Mise à jour bayésienne dynamique de la force des équipes
 
 - **Mécanisme supposé** : au lieu d'estimer la force d'attaque/défense sur
