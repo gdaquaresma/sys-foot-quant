@@ -159,8 +159,11 @@ preuve d'aucun edge sur le football.
       apporte-t-elle quelque chose au Poisson simple ? INDÉTERMINÉ**
       (IC95% incluant 0 sur les deux scénarios) — aucun signal
       détecté, ni positif ni négatif.
-  - **Conclusion consolidée A1 : REJETÉ** pour toute variante testée
-    de "forme récente" comme amélioration du Poisson simple, sur
+  - **Conclusion consolidée A1 : REJETÉ — infériorité significative
+    confirmée** (force du verdict : preuve statistique directe contre le
+    candidat, pas une simple absence de preuve — voir section "Force des
+    conclusions / limites de puissance" en fin de document) pour toute
+    variante testée de "forme récente" comme amélioration du Poisson simple, sur
     données synthétiques — que ce soit la décroissance calendaire
     (étape 2) ou la fenêtre glissante à nombre fixe de matchs, avec ou
     sans mémoire longue (étape 5). Cette conclusion remplace le statut
@@ -226,13 +229,18 @@ preuve d'aucun edge sur le football.
       (2024/25 seul : -0.0015 ; 2025/26 seul : -0.0023) → indéterminé
     - Liga : diff moyenne +0.0022, IC95%=[-0.0065, +0.0110] (2024/25
       seul : -0.0076 ; 2025/26 seul : +0.0119) → indéterminé
-  - **Verdict : REJETÉ.** Aucun des trois championnats n'atteint une
-    amélioration significative de `poisson_simple` (tous les IC95%
-    incluent 0), conformément aux critères fixés avant calcul — 640
-    matchs de test évalués au total. Le signe de la différence est même
-    instable d'une saison à l'autre pour Ligue 1 et Liga, signe
-    supplémentaire d'absence de signal stable plutôt que d'un effet réel
-    trop faible pour être détecté.
+  - **Verdict : REJETÉ — absence de preuve d'amélioration selon le
+    protocole, pas réfutation.** Aucun des trois championnats n'atteint
+    une amélioration significative de `poisson_simple`, mais aucun
+    n'atteint non plus une infériorité significative : les trois IC95%
+    incluent 0, conformément aux critères fixés avant calcul — 640
+    matchs de test évalués au total. Le signe de la différence est
+    instable d'une saison à l'autre pour Ligue 1 et Liga. Ce résultat ne
+    doit pas être lu comme une preuve que le HFA par équipe n'a aucun
+    effet réel : la puissance statistique des échantillons utilisés
+    (voir section "Force des conclusions / limites de puissance" en fin
+    de document) ne permet de trancher que pour des effets relativement
+    marqués — un effet réel plus modeste reste possible et non exclu.
   - **Portée** : `poisson_simple` (HFA global unique) reste la baseline
     officielle, inchangée. `PoissonModel(use_team_hfa=True)` reste
     disponible dans le code (paramètre existant, pas un nouveau modèle),
@@ -374,11 +382,23 @@ afin de ne pas re-faire ce travail à l'étape 5.
     tau(x,y;ρ) : aucun signal cohérent avec une amélioration (Ligue 1
     diff +0.0033, Premier League +0.0014, Liga -0.0003 — jamais
     significatif, jamais cohéremment négatif).
-  - **Verdict : REJETÉ.** Aucun des trois championnats ne montre
-    `dixon_coles` significativement meilleur que `poisson_simple` sur
-    données réelles — absence d'amélioration cohérente, conformément aux
-    critères fixés avant calcul. `poisson_simple` reste la baseline
-    officielle, inchangée.
+  - **Verdict : REJETÉ — avec une nuance importante sur la force de la
+    preuve.** Seule la **Ligue 1** porte une preuve statistique directe
+    contre `dixon_coles` (IC95% entièrement positif, infériorité
+    significative confirmée) ; Premier League et Liga sont chacune une
+    simple **absence de preuve d'amélioration** (IC95% incluant 0), pas
+    une infériorité démontrée. Le verdict agrégé REJETÉ reflète donc
+    1 championnat sur 3 avec une infériorité significative, complété par
+    2 championnats sans signal dans un sens ou l'autre — conformément aux
+    critères d'agrégation fixés avant calcul, mais à ne pas lire comme
+    "trois preuves contre `dixon_coles`". `poisson_simple` reste la
+    baseline officielle, inchangée. Voir aussi la section "Force des
+    conclusions / limites de puissance" en fin de document : ce résultat
+    isolé de Ligue 1 est le seul de toute la campagne réelle à atteindre
+    la significativité individuelle, ce qui invite à une prudence
+    supplémentaire compte tenu du nombre de tests menés sur le même pool
+    de données (aucune correction pour tests multiples n'a été appliquée
+    au niveau du programme).
   - **Portée** : ce résultat REJETÉ, obtenu sur données réelles, prime sur
     le résultat VALIDÉ obtenu précédemment sur données synthétiques
     dédiées — le mécanisme de corrélation basse-score que Dixon-Coles
@@ -450,12 +470,21 @@ afin de ne pas re-faire ce travail à l'étape 5.
       (2024/25 seul : -0.0004 ; 2025/26 seul : -0.0070) → indéterminé
     - Liga : diff moyenne -0.0011, IC95%=[-0.0115, +0.0091] (2024/25
       seul : +0.0094 ; 2025/26 seul : -0.0115) → indéterminé
-  - **Verdict : REJETÉ.** Aucun des trois championnats n'atteint une
-    amélioration significative de `poisson_simple` (tous les IC95%
-    incluent 0), conformément aux critères fixés avant calcul — 640
-    matchs de test évalués au total. Le signe de la différence favorise
-    systématiquement B2 (négatif) sur 5 des 6 couples championnat/saison,
-    mais jamais de façon statistiquement significative une fois regroupé.
+  - **Verdict : REJETÉ — absence de preuve d'amélioration, avec une
+    tendance favorable mais non significative.** Aucun des trois
+    championnats n'atteint une amélioration significative de
+    `poisson_simple` (tous les IC95% incluent 0), conformément aux
+    critères fixés avant calcul — 640 matchs de test évalués au total.
+    Le signe de la différence favorise systématiquement B2 (négatif) sur
+    5 des 6 couples championnat/saison, et la Ligue 1 regroupée
+    (IC95%=[-0.0232, +0.0005]) frôle le seuil de significativité sans
+    l'atteindre. Ce résultat est le plus proche de la significativité de
+    toute la campagne réelle : il ne doit pas être interprété comme une
+    preuve d'absence d'effet, mais comme une hypothèse **non démontrée à
+    la puissance actuelle** — le candidat le plus susceptible de changer
+    de statut si une nouvelle saison de données réelles devenait
+    disponible (voir section "Force des conclusions / limites de
+    puissance" en fin de document).
   - **Portée** : `poisson_simple` reste la baseline officielle, inchangée.
     `BayesianSequentialModel` reste dans le code à titre expérimental
     (comme `XGModel`/`DixonColesModel`), sans promotion. Aucune nouvelle
@@ -547,7 +576,14 @@ afin de ne pas re-faire ce travail à l'étape 5.
     neutre, jamais significativement pire) mais aucun des trois
     championnats ne montre une amélioration statistiquement significative
     hors échantillon. `poisson_simple` reste la baseline officielle,
-    aucune promotion automatique.
+    aucune promotion automatique. **Ce test est notamment sous-puissant**
+    pour les tailles d'effet réellement observées (n≈92-114 matchs de
+    test par championnat sur une seule saison, écart-type par match
+    élevé pour cette paire de modèles) : un effet réel de l'ordre de
+    0.01-0.02 avait une chance sérieuse de rester invisible même s'il
+    existait — voir section "Force des conclusions / limites de
+    puissance" en fin de document. INDÉTERMINÉ signifie ici données
+    insuffisantes pour trancher, pas absence d'effet démontrée.
   - **Limite explicite** : ce résultat est une validation du **mécanisme**
     sur les données historiques Understat actuellement disponibles — il ne
     constitue PAS une preuve de stabilité des valeurs xG dans le temps
@@ -563,10 +599,20 @@ afin de ne pas re-faire ce travail à l'étape 5.
   (~0.93) mais que `XGModel` bat significativement `poisson_simple`
   précisément sur le sous-ensemble des matchs où `poisson_simple` se
   trompe (agrégé sur 320 matchs : diff moyenne -0.0362,
-  IC95%=[-0.0608, -0.0139], p=0.001). Cette analyse a généré l'hypothèse
-  d'un modèle hybride, testée séparément en B3.2 ci-dessous — elle
-  n'a valeur que de générateur d'hypothèse, jamais de confirmation
-  (mêmes données que le test B3 déjà consulté).
+  IC95%=[-0.0608, -0.0139], p=0.001). **Nature exacte de ce résultat** :
+  c'est une **observation statistique établie sur un sous-groupe défini
+  a posteriori** (le sous-groupe "poisson_simple se trompe" n'est
+  identifiable qu'après avoir observé l'issue réelle des matchs, jamais
+  avant le coup d'envoi) — la p-value et l'IC95% sont statistiquement
+  corrects pour cette question rétrospective précise, mais ce résultat
+  ne constitue **ni une règle utilisable en production, ni une preuve
+  que mélanger xG et Poisson fonctionne** : aucune stratégie
+  d'exploitation ex-ante (un moyen d'anticiper, avant le match, que
+  `poisson_simple` va probablement se tromper) n'a été identifiée, ni
+  même esquissée. Cette analyse a généré l'hypothèse d'un modèle hybride
+  inconditionnel, testée séparément en B3.2 ci-dessous — elle n'a valeur
+  que de générateur d'hypothèse, jamais de confirmation (mêmes données
+  que le test B3 déjà consulté).
 
 - **Résultat empirique B3.2 (hypothèse hybride, jeu de données VIERGE) :**
   - **Modèle testé** : `HybridXGModel` (`football_model/hybrid_xg_model.py`)
@@ -589,7 +635,12 @@ afin de ne pas re-faire ce travail à l'étape 5.
     - Liga : diff moyenne -0.0048, IC95%=[-0.0161, +0.0064] → indéterminé
   - **Verdict B3.2 : INDÉTERMINÉ**, sur les trois championnats et en
     agrégé (320 matchs de test). Direction incohérente entre championnats,
-    aucun IC95% n'exclut 0.
+    aucun IC95% n'exclut 0. Comme pour B3, cette taille d'échantillon
+    (n≈92-114 par championnat, une seule saison) offre une puissance
+    limitée pour des effets de l'ordre de 0.01-0.02 — INDÉTERMINÉ signifie
+    ici données insuffisantes/incohérentes pour trancher, pas la preuve
+    que le mélange xG/Poisson n'apporte rien (voir section "Force des
+    conclusions / limites de puissance" en fin de document).
   - **Même réserve point-in-time que B3** : le délai de connaissance xG
     (kickoff+48h) reste une hypothèse conservatrice documentée, pas une
     garantie historique auditée auprès d'Understat — distinct d'une fuite
@@ -597,12 +648,17 @@ afin de ne pas re-faire ce travail à l'étape 5.
     tests dédiés).
 
 - **CONCLUSION OFFICIELLE B3 / B3.2 (figée, ne pas rouvrir sans nouvelle
-  donnée ou nouvelle décision explicite de l'utilisateur)** : le xG
-  contient un signal potentiellement complémentaire aux buts réels
-  (voir analyse de complémentarité ci-dessus), mais les données
+  donnée ou nouvelle décision explicite de l'utilisateur)** : l'analyse de
+  complémentarité constitue une **observation statistique établie sur son
+  échantillon conditionnel** (le xG bat significativement `poisson_simple`
+  précisément quand ce dernier se trompe), **mais sans stratégie
+  d'exploitation ex-ante identifiée** — ce n'est ni une méthode prête à
+  être intégrée, ni une preuve que l'hybride xG fonctionne. Les données
   actuellement disponibles ne permettent pas de démontrer qu'un modèle xG
   seul (`XGModel`, B3) ou un mélange Poisson/xG (`HybridXGModel`, B3.2)
-  améliore significativement la baseline Poisson hors échantillon.
+  améliore significativement la baseline Poisson hors échantillon ; ces
+  deux résultats sont des hypothèses **non démontrées**, pas réfutées
+  (voir section "Force des conclusions / limites de puissance").
   - `poisson_simple` reste le **modèle de référence / baseline
     officielle** — comportement inchangé, jamais remplacé par du xG.
   - `XGModel` est **conservé comme modèle complémentaire indépendant** —
@@ -842,8 +898,10 @@ afin de ne pas re-faire ce travail à l'étape 5.
       confirmation diff=+0.054, IC95%=[-0.084, +0.193] → non positif
     - Liga : estimation diff=+0.101, IC95%=[-0.037, +0.240] ;
       confirmation diff=+0.089, IC95%=[-0.049, +0.227] → non positif
-  - **Verdict C7 (phase 1) : REJETÉ**, cohérent sur les trois championnats
-    et les deux saisons — aucun intervalle de confiance n'exclut 0.
+  - **Verdict C7 (phase 1) : REJETÉ — absence d'association démontrée pour
+    cette paire précise, sans généralisation aux autres marchés/parlays**,
+    cohérent sur les trois championnats et les deux saisons — aucun
+    intervalle de confiance n'exclut 0.
   - **Ce que ce résultat permet de conclure** : dans nos données actuelles,
     aucune corrélation exploitable n'a été détectée entre « favori à
     domicile selon `poisson_simple` » et « Over 2.5 buts » — la condition
@@ -1163,6 +1221,60 @@ s'appliquent à *toutes* les hypothèses ci-dessus :
    réutilisée telle quelle comme paramètre de notre système — chaque seuil
    doit être ré-estimé sur nos propres données football, jamais importé
    directement d'un livre parlant de NFL ou de hockey.
+
+---
+
+## G2. Force des conclusions / limites de puissance (audit post-campagne réelle)
+
+Cette section fait suite à un audit méthodologique critique de l'ensemble
+des expériences réelles A1/A2/B1/B2/B3/B3.2/C7, mené après la clôture de
+la campagne sur le pool de données actuel. Elle ne change **aucun**
+chiffre, protocole ou verdict déjà obtenus — elle en précise uniquement la
+force scientifique réelle, pour éviter toute lecture qui surinterpréterait
+un résultat non significatif comme une preuve d'absence d'effet.
+
+1. **Absence de significativité ≠ preuve d'absence d'effet.** Sur les
+   hypothèses testées sur données réelles, seule **A1** (deux fois, sur
+   synthétique) et **B1 en Ligue 1 spécifiquement** portent une preuve
+   statistique directe *contre* le candidat (IC95% entièrement du côté
+   défavorable). Pour A2, B2, B3, B3.2, C7, et B1 en Premier League/Liga,
+   l'IC95% inclut 0 : c'est une **absence de preuve d'amélioration**, pas
+   une démonstration de nullité. Les libellés de verdict de chaque section
+   ci-dessus ont été précisés en conséquence.
+2. **B3 et B3.2 sont particulièrement sous-puissants pour des effets
+   faibles.** Ces deux tests portent sur une seule saison (n≈92-114 matchs
+   de test par championnat) et comparent des modèles aux prédictions
+   nettement plus divergentes que, par exemple, poisson_simple vs
+   Dixon-Coles. En inversant la formule de l'intervalle bootstrap déjà
+   publié (`SE = largeur_IC / (2×1.96)`, puis `écart-type par match =
+   SE × √n`), l'écart-type des différences appariées par match observé
+   dans ces deux expériences atteint 0.08-0.16 selon le championnat — ce
+   qui, à ces tailles d'échantillon, place l'effet minimum détectable à
+   80% de puissance au-delà de 0.03-0.04. C'est **supérieur à tous les
+   diffs numériquement observés dans B3/B3.2**. Un effet réel de
+   0.01-0.02 (l'ordre de grandeur systématiquement mesuré) avait donc une
+   chance sérieuse de rester invisible même s'il existait.
+3. **Les tests multiples au niveau du programme réduisent la confiance à
+   accorder à un résultat isolé comme B1 Ligue 1.** Sept familles
+   d'hypothèses ont été testées, chacune décomposée par championnat
+   (~21 tests de niveau championnat au total), toutes à α=0.05, sans
+   correction pour comparaisons multiples au niveau du projet. Sous
+   l'hypothèse illustrative (conservatrice, ces tests n'étant pas
+   strictement indépendants) qu'aucun effet réel n'existerait nulle part,
+   la probabilité d'observer au moins un résultat nominalement
+   significatif par pur hasard sur ~21 tests serait d'environ 66%. Le
+   seul résultat individuellement significatif de toute la campagne
+   réelle (B1, Ligue 1) est donc statistiquement compatible avec un faux
+   positif accumulé — ce qui n'invalide pas ce résultat, mais invite à ne
+   pas lui accorder plus de poids qu'à un signal isolé parmi beaucoup de
+   tests, conformément à la règle déjà en place exigeant la cohérence sur
+   les trois championnats pour toute promotion.
+4. **Aucune correction statistique rétroactive n'est appliquée aux
+   résultats déjà obtenus.** Cette section est une clarification de
+   lecture, pas un recalcul : tous les chiffres, IC95%, p-values et
+   verdicts d'agrégation publiés dans les sections A à C7 restent
+   exactement ceux obtenus lors de chaque exécution, et aucun protocole
+   historique n'est rouvert par cet audit.
 
 ---
 
