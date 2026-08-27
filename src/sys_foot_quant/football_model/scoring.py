@@ -38,6 +38,16 @@ def outcome_probabilities(matrix: np.ndarray) -> tuple[float, float, float]:
     return float(home_win), float(draw), float(away_win)
 
 
+def total_variation_distance(p: tuple[float, float, float], q: tuple[float, float, float]) -> float:
+    """Distance de variation totale entre deux distributions 1X2,
+    ``0.5 * sum(|p_k - q_k|)`` - bornee dans [0, 1], vaut 0 ssi p == q.
+    Meme formule que celle deja calculee (en ligne, sur DataFrame) par
+    ``scripts/run_stage5_b3_xg_complementarity.py`` - extraite ici comme
+    fonction pure reutilisable (hypothese B3.3,
+    docs/research_framework.md)."""
+    return 0.5 * (abs(p[0] - q[0]) + abs(p[1] - q[1]) + abs(p[2] - q[2]))
+
+
 def low_score_cell_probabilities(matrix: np.ndarray) -> tuple[float, float, float, float]:
     """(P(0-0), P(1-0), P(0-1), P(1-1)) a partir d'une matrice de score
     P(X=x, Y=y) deja normalisee (``score_matrix``). C'est exactement le

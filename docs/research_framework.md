@@ -668,6 +668,67 @@ afin de ne pas re-faire ce travail à l'étape 5.
     expérimental — non promu comme modèle officiel, aucune recherche
     d'un autre poids `w` n'est prévue sans nouvelle décision explicite.
 
+### B3.3. Gate de désaccord Poisson/xG (exploitation ex-ante du signal de complémentarité)
+
+- **Question testée** : le désaccord pré-match entre `poisson_simple` et
+  `XGModel` (mesuré par la distance de variation totale, TVD, entre leurs
+  deux distributions 1X2) constitue-t-il un signal ex-ante exploitable de
+  la fiabilité relative des deux modèles, transformant le signal de
+  complémentarité rétrospectif (B3) en amélioration réelle du Brier score ?
+- **Mécanisme retenu après examen critique (spécification validée avant
+  tout code)** : argument de régression vers la moyenne de la finition —
+  un désaccord élevé signale que le profil de buts réels d'une équipe
+  diverge de son profil de qualité d'occasions (xG), et le xG, moins
+  sujet au bruit de conversion, serait alors le signal le plus fiable.
+  Explicitement jugé **défendable mais non acquis** : le désaccord peut
+  aussi n'être que du bruit d'estimation sans pouvoir prédictif — c'est
+  précisément la question tranchée par ce test, pas une hypothèse validée
+  a priori.
+- **`GateDisagreementModel`** (`football_model/gate_disagreement_model.py`)
+  : `w = TVD(p_poisson, p_xg)`, `p_final = (1-w)·p_poisson + w·p_xg`.
+  **Zéro paramètre libre** — `w` est directement la mesure de désaccord,
+  sans seuil ni coefficient à calibrer. Une seule mesure de désaccord
+  retenue (TVD), décidée avant tout calcul (L2 et divergence de
+  Jensen-Shannon examinées et écartées en spécification, aucun avantage
+  démontré pour ce problème). N'importe ni ne modifie `PoissonModel` ni
+  `XGModel`.
+- **Protocole** : mêmes données que B1/A2/B2/B3/B3.2 (3 championnats × 2
+  saisons 2024/25+2025/26), rodage 40% / calibration 30% (purement
+  diagnostique — vérification de la distribution de TVD, aucun ajustement
+  du gate) / test 30%, saisons regroupées par championnat au niveau du
+  test, évalué une seule fois.
+- **Diagnostic de calibration (informationnel, aucun ajustement)** : TVD
+  moyenne observée 0.07-0.11 selon championnat/saison — désaccord
+  généralement modeste, cohérent avec la forte corrélation d'erreur
+  déjà mesurée en B3 (~0.93) : le gate reste proche de `poisson_simple`
+  sur la majorité des matchs et ne s'approche significativement de `XGModel`
+  que sur une minorité de matchs à fort désaccord.
+- **Résultats (test regroupé par championnat, diff = `Brier_gate -
+  Brier_poisson_simple`)** :
+  - Ligue 1 : diff moyenne -0.0004, IC95%=[-0.0035, +0.0026] → indéterminé
+  - Premier League : diff moyenne -0.0019, IC95%=[-0.0040, +0.0002] →
+    indéterminé (proche du seuil, p=0.089)
+  - Liga : diff moyenne -0.0023, IC95%=[-0.0050, +0.0003] → indéterminé
+    (proche du seuil, p=0.080)
+  - 640 matchs de test évalués au total.
+- **Verdict : REJETÉ — absence de preuve d'amélioration, pas réfutation.**
+  Aucun des trois championnats n'atteint une amélioration significative,
+  mais le signe est négatif (favorable au gate) et cohérent sur les
+  **trois** championnats — la direction la plus cohérente de toute la
+  famille de tests xG (B3, B3.2, B3.3), sans jamais franchir le seuil de
+  significativité. `poisson_simple` reste la baseline officielle,
+  inchangée.
+- **Réponse à la question posée** : **non, cette règle simple ne
+  transforme pas, à ce stade et avec ce corpus, le signal xG rétrospectif
+  en amélioration démontrée du Brier score.** Le résultat est directionnellement
+  encourageant (cohérence des trois signes, deux championnats proches du
+  seuil) mais ne constitue pas une preuve — voir section "Force des
+  conclusions / limites de puissance". Conformément au protocole validé,
+  aucune variante (autre mesure de désaccord, seuil, pondération) n'est
+  testée à la suite de ce résultat.
+- **Statut** : `GateDisagreementModel` conservé dans le code à titre
+  expérimental, comme `HybridXGModel`, non promu. Aucun B3.4 n'est engagé.
+
 ---
 
 ## C. MARKET ENGINE — Hors scope étape 2, catalogué pour l'étape 3

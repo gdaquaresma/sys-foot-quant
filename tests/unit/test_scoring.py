@@ -5,7 +5,11 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from sys_foot_quant.football_model.scoring import outcome_probabilities, score_matrix
+from sys_foot_quant.football_model.scoring import (
+    outcome_probabilities,
+    score_matrix,
+    total_variation_distance,
+)
 
 
 def test_score_matrix_shape() -> None:
@@ -67,3 +71,46 @@ def test_outcome_probabilities_are_non_negative_and_bounded(lam: float, mu: floa
     home_win, draw, away_win = outcome_probabilities(m)
     for p in (home_win, draw, away_win):
         assert -1e-9 <= p <= 1.0 + 1e-9
+
+
+def test_total_variation_distance_zero_for_identical_distributions() -> None:
+    p = (0.5, 0.3, 0.2)
+    assert total_variation_distance(p, p) == pytest.approx(0.0)
+
+
+def test_total_variation_distance_matches_hand_computation() -> None:
+    p = (0.6, 0.2, 0.2)
+    q = (0.3, 0.3, 0.4)
+    expected = 0.5 * (abs(0.6 - 0.3) + abs(0.2 - 0.3) + abs(0.2 - 0.4))
+    assert total_variation_distance(p, q) == pytest.approx(expected)
+    assert total_variation_distance(p, q) == pytest.approx(0.3)
+
+
+def test_total_variation_distance_is_symmetric() -> None:
+    p = (0.6, 0.2, 0.2)
+    q = (0.3, 0.3, 0.4)
+    assert total_variation_distance(p, q) == pytest.approx(total_variation_distance(q, p))
+
+
+def test_total_variation_distance_maximal_for_disjoint_support() -> None:
+    p = (1.0, 0.0, 0.0)
+    q = (0.0, 0.0, 1.0)
+    assert total_variation_distance(p, q) == pytest.approx(1.0)
+
+
+@given(
+    p_home=st.floats(min_value=0.0, max_value=1.0),
+    p_draw=st.floats(min_value=0.0, max_value=1.0),
+    q_home=st.floats(min_value=0.0, max_value=1.0),
+    q_draw=st.floats(min_value=0.0, max_value=1.0),
+)
+@settings(max_examples=100)
+def test_total_variation_distance_bounded_in_zero_one_for_valid_distributions(
+    p_home: float, p_draw: float, q_home: float, q_draw: float
+) -> None:
+    if p_home + p_draw > 1.0 or q_home + q_draw > 1.0:
+        return
+    p = (p_home, p_draw, 1.0 - p_home - p_draw)
+    q = (q_home, q_draw, 1.0 - q_home - q_draw)
+    tvd = total_variation_distance(p, q)
+    assert -1e-9 <= tvd <= 1.0 + 1e-9
