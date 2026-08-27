@@ -439,6 +439,62 @@ afin de ne pas re-faire ce travail à l'étape 5.
     xG/buts réels n'a été testée : `research_framework.md` ne fixait aucun
     poids a priori pour cette variante avant ce test.
 
+- **Analyse de complémentarité (post-B3, même saison 2025/26,
+  exploratoire — pas une hypothèse confirmatoire)** :
+  `scripts/run_stage5_b3_xg_complementarity.py` a montré que `XGModel` et
+  `poisson_simple` ont des erreurs fortement corrélées dans l'ensemble
+  (~0.93) mais que `XGModel` bat significativement `poisson_simple`
+  précisément sur le sous-ensemble des matchs où `poisson_simple` se
+  trompe (agrégé sur 320 matchs : diff moyenne -0.0362,
+  IC95%=[-0.0608, -0.0139], p=0.001). Cette analyse a généré l'hypothèse
+  d'un modèle hybride, testée séparément en B3.2 ci-dessous — elle
+  n'a valeur que de générateur d'hypothèse, jamais de confirmation
+  (mêmes données que le test B3 déjà consulté).
+
+- **Résultat empirique B3.2 (hypothèse hybride, jeu de données VIERGE) :**
+  - **Modèle testé** : `HybridXGModel` (`football_model/hybrid_xg_model.py`)
+    — mélange linéaire de probabilités 1X2,
+    `p_final = (1-w) * p_poisson + w * p_xg`, extension isolée n'important
+    ni ne modifiant `PoissonModel`/`XGModel`.
+  - **Isolation des données** : saison 2024/25 des trois mêmes championnats
+    (1066 matchs neufs), entièrement disjointe de la saison 2025/26 utilisée
+    par B3 et par l'analyse de complémentarité — aucun match commun, aucune
+    réutilisation, vérifié avant exécution
+    (`scripts/run_stage5_b3_2_hybrid_xg.py`).
+  - **Protocole à deux étapes strictement séparées** : étape A (validation
+    30% de la saison 2024/25) — sélection de `w` parmi {0.25, 0.50, 0.75}
+    par Brier moyen le plus bas sur les trois championnats, **w=0.50
+    retenu** ; étape B (test final 30%, `w` figé) — une seule exécution,
+    jamais reconsidérée.
+  - **Résultats (test final, IC95% de `hybrid - poisson_simple`)** :
+    - Ligue 1 : diff moyenne +0.0039, IC95%=[-0.0129, +0.0200] → indéterminé
+    - Premier League : diff moyenne -0.0063, IC95%=[-0.0157, +0.0029] → indéterminé
+    - Liga : diff moyenne -0.0048, IC95%=[-0.0161, +0.0064] → indéterminé
+  - **Verdict B3.2 : INDÉTERMINÉ**, sur les trois championnats et en
+    agrégé (320 matchs de test). Direction incohérente entre championnats,
+    aucun IC95% n'exclut 0.
+  - **Même réserve point-in-time que B3** : le délai de connaissance xG
+    (kickoff+48h) reste une hypothèse conservatrice documentée, pas une
+    garantie historique auditée auprès d'Understat — distinct d'une fuite
+    de données (invariant PIT garanti par construction et vérifié par
+    tests dédiés).
+
+- **CONCLUSION OFFICIELLE B3 / B3.2 (figée, ne pas rouvrir sans nouvelle
+  donnée ou nouvelle décision explicite de l'utilisateur)** : le xG
+  contient un signal potentiellement complémentaire aux buts réels
+  (voir analyse de complémentarité ci-dessus), mais les données
+  actuellement disponibles ne permettent pas de démontrer qu'un modèle xG
+  seul (`XGModel`, B3) ou un mélange Poisson/xG (`HybridXGModel`, B3.2)
+  améliore significativement la baseline Poisson hors échantillon.
+  - `poisson_simple` reste le **modèle de référence / baseline
+    officielle** — comportement inchangé, jamais remplacé par du xG.
+  - `XGModel` est **conservé comme modèle complémentaire indépendant** —
+    pas fusionné automatiquement avec `poisson_simple`.
+  - `HybridXGModel` est **conservé dans le code pour traçabilité et
+    reproductibilité de l'expérience B3.2**, statut strictement
+    expérimental — non promu comme modèle officiel, aucune recherche
+    d'un autre poids `w` n'est prévue sans nouvelle décision explicite.
+
 ---
 
 ## C. MARKET ENGINE — Hors scope étape 2, catalogué pour l'étape 3
