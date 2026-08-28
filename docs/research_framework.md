@@ -3125,3 +3125,219 @@ plutôt que par seuil.
 
 **Arrêt.** E7 est terminé conformément au protocole. Aucune expérience
 suivante n'est lancée automatiquement.
+
+## S. Expérience E8 — validation walk-forward hors échantillon de la distribution corrigée (E7)
+
+**Contexte.** E7 a montré une amélioration significative de la distribution
+du total de buts après correction scalaire (`c = E[total_réel]/E[λ+μ]`,
+ajustée sur le split calibration, évaluée sur le split test). Mais `c`
+était ajusté **une seule fois, sur l'ensemble poolé** (3 championnats
+confondus) du split calibration, puis appliqué tel quel à tout le split
+test. E8 vérifie si ce résultat tient sous un protocole véritablement
+walk-forward, où le facteur de correction de chaque match de test n'utilise
+que l'information réellement disponible avant ce match.
+
+### 1. Inspection du pipeline E7 et des frontières temporelles — un risque de fuite identifié
+
+Calcul direct des bornes calendaires du split rodage/calibration/test
+(40/30/30, chronologique, **par championnat-saison**) :
+
+| Championnat | Saison | Calibration | Test |
+|---|---|---|---|
+| ligue1 | 2024/25 | 2024-12-08 → 2025-03-02 | 2025-03-02 → 2025-05-17 |
+| premier_league | 2024/25 | 2024-12-14 → 2025-02-26 | 2025-02-26 → 2025-05-25 |
+| liga | 2024/25 | 2024-12-07 → 2025-03-09 | 2025-03-09 → 2025-05-25 |
+| ligue1 | 2025/26 | 2025-11-30 → 2026-03-01 | 2026-03-01 → 2026-05-17 |
+| premier_league | 2025/26 | 2025-12-13 → 2026-02-21 | 2026-02-22 → 2026-05-24 |
+| liga | 2025/26 | 2025-12-12 → 2026-03-08 | 2026-03-08 → 2026-05-24 |
+
+Le découpage est chronologique **à l'intérieur** de chaque
+championnat-saison, mais **pas globalement** : la calibration de `liga`
+2024/25 s'étend jusqu'au 2025-03-09, soit **après** le début du test de
+`premier_league` 2024/25 (2025-02-26). Le facteur `c` poolé d'E7, ajusté
+sur la calibration poolée des trois championnats, incorpore donc, pour une
+partie des matchs de test, des informations issues de matchs
+**postérieurs** provenant d'un autre championnat. Ce n'est pas une fuite
+du résultat du match test lui-même, mais cela viole la règle stricte
+demandée ici ("aucune donnée d'un match ultérieur, aucun paramètre
+calibré sur le futur") lorsqu'on l'applique globalement plutôt que
+championnat par championnat. C'est exactement le risque de "fausse
+validation" anticipé par le protocole (point 7).
+
+### 2. Correction méthodologique appliquée par E8
+
+Pour chaque match de test `m` (trié par `decision_time` = kickoff − 2h,
+règle identique partout ailleurs dans le projet, réutilisée sans
+modification via `DECISION_OFFSET_HOURS`), le facteur `c(m)` est réestimé
+à partir du **seul sous-ensemble du jeu de calibration** (jamais le test,
+jamais un autre jeu) dont `decision_time < decision_time(m)` —
+exclusivement. Ceci garantit, par construction et indépendamment de tout
+chevauchement calendaire entre championnats, qu'aucune information
+postérieure au match évalué n'influence son propre facteur de correction.
+Aucune nouvelle méthode de calibration n'est introduite : c'est
+strictement la même formule qu'E7 (`c = E[total_réel]/E[λ+μ]`), réévaluée
+de façon expansive et propre à chaque match.
+
+**Règle d'exclusion (définie avant observation des résultats)** : un match
+de test est exclu si moins de 30 matchs de calibration antérieurs sont
+disponibles pour estimer `c(m)` (seuil usuel minimal pour une estimation
+raisonnablement stable d'un ratio de moyennes). Sur les données réelles,
+**0 match exclu** pour les trois modèles (640/640 matchs de test évalués
+dans tous les cas) — dès le premier match de test, plus de 30 matchs de
+calibration antérieurs poolés étaient déjà disponibles.
+
+### 3. Tests de cohérence et anti-fuite
+
+Reprend sans modification les vérifications d'E7 (non-négativité, somme=1,
+monotonicité Over/Under, reproduction exacte). Tests anti-fuite dédiés
+écrits avant l'exécution réelle : démonstration qu'un match de calibration
+déplacé après `as_of_time` ne change jamais `c(m)` (y compris avec une
+valeur de total de buts délibérément aberrante), qu'un match de test
+n'entre jamais dans le calcul de `c(m)` (vérifié à la fois par test
+synthétique et par inspection statique de la signature de
+`fit_scale_correction_as_of`), et balayage aléatoire (`hypothesis`, 150
+tirages) confirmant qu'un déplacement temporel d'une ligne de calibration
+vers le futur ne peut jamais augmenter le nombre de matchs utilisés, et
+vers le passé ne peut jamais le diminuer.
+
+### 4. Stabilité chronologique du facteur c(m) (section 6 du protocole)
+
+| Modèle | n | moyenne | médiane | écart-type | min | max | CV |
+|---|---|---|---|---|---|---|---|
+| poisson_simple / dixon_coles | 640 | 0.9130 | 0.9139 | 0.0233 | 0.8891 | 0.9399 | 0.0255 |
+| xg_model | 640 | 0.8236 | 0.8247 | 0.0134 | 0.8100 | 0.8408 | 0.0162 |
+
+Par saison :
+
+| Modèle | Saison | n | moyenne | écart-type | min | max |
+|---|---|---|---|---|---|---|
+| poisson_simple / dixon_coles | 2024/25 | 320 | 0.9362 | 0.0007 | 0.9331 | 0.9399 |
+| poisson_simple / dixon_coles | 2025/26 | 320 | 0.8897 | 0.0009 | 0.8891 | 0.8947 |
+| xg_model | 2024/25 | 320 | 0.8369 | 0.0008 | 0.8342 | 0.8408 |
+| xg_model | 2025/26 | 320 | 0.8103 | 0.0009 | 0.8100 | 0.8151 |
+
+**Le facteur est très stable dans le temps** (coefficient de variation
+global ≤2.6% pour les trois modèles) : la quasi-totalité de sa variation
+provient d'un **écart modeste et net entre les deux saisons** (écart-type
+intra-saison quasi nul, 0.0007-0.0009), pas d'une dérive continue ou
+erratique à l'intérieur d'une saison. Aucune instabilité sérieuse
+détectée.
+
+### 5. Résultats — évaluation walk-forward stricte (aucune exclusion)
+
+**Global (TEST, n=640, walk-forward, IC95% bootstrap apparié sur le diff
+Brier corrigé_walk-forward − brut) :**
+
+| Modèle | Brier brut | Brier corrigé WF | diff (IC95%) | p | log loss brut | log loss corrigé WF | biais E[Total] brut | biais corrigé WF |
+|---|---|---|---|---|---|---|---|---|
+| poisson_simple | 0.8283 | 0.8234 | [-0.0080, -0.0018] | 0.0008 | 1.8394 | 1.8214 | +0.2720 | +0.0279 |
+| dixon_coles | 0.8294 | 0.8244 | [-0.0081, -0.0019] | 0.0006 | 1.8442 | 1.8255 | +0.2720 | +0.0279 |
+| xg_model | 0.8384 | 0.8212 | [-0.0237, -0.0108] | <0.0001 | 1.8807 | 1.8139 | +0.5655 | +0.0274 |
+
+**L'amélioration statistiquement démontrée en E7 tient sous protocole
+walk-forward strict**, pour les trois modèles (IC95% du Brier entièrement
+négatif au niveau global). Comme attendu d'un protocole plus strict que
+celui d'E7 (chaque match utilise moins de calibration que la version
+poolée globalement), le biais résiduel de l'espérance totale n'est pas
+ramené aussi près de zéro qu'en E7 (walk-forward : +0.027 à +0.028 contre
+E7 poolé : entre -0.04 et -0.02) mais reste très largement inférieur au
+biais brut (+0.27 à +0.57) — la correction reste donc très majoritairement
+efficace, avec un résidu honnête et attendu compte tenu de la contrainte
+temporelle plus stricte.
+
+**Queue P(≥6)** : quasi parfaitement corrigée pour les trois modèles
+(0.0738-0.0780 corrigée contre 0.0703 observée, contre 0.1062-0.1414
+brute) — la correction de la queue haute, résultat central d'E7, se
+confirme intégralement en walk-forward.
+
+**Décomposition Over/Under (Brier, log loss, biais, calibration,
+résolution — dérivées exclusivement de la distribution, aucune
+calibration indépendante par seuil) — global, priorité Over 2.5 :**
+
+| Modèle | Seuil | Brier brut | Brier corrigé WF | diff (IC95%) | biais brut | biais corrigé WF |
+|---|---|---|---|---|---|---|
+| poisson_simple | O2.5 | 0.2527 | 0.2487 | [-0.0087, +0.0007] | +0.0667 | +0.0083 |
+| dixon_coles | O2.5 | 0.2527 | 0.2487 | [-0.0087, +0.0007] | +0.0667 | +0.0083 |
+| xg_model | O2.5 | 0.2643 | 0.2466 | [-0.0274, -0.0081] | +0.1363 | +0.0105 |
+| poisson_simple | O3.5 | 0.2153 | 0.2067 | [-0.0128, -0.0041] | +0.0870 | +0.0290 |
+| xg_model | O3.5 | 0.2297 | 0.2041 | [-0.0348, -0.0161] | +0.1575 | +0.0270 |
+
+Le biais Over/Under est réduit sur les 9 combinaisons (modèle × seuil) ;
+la significativité globale de l'amélioration du Brier de seuil (au niveau
+global poolé) est démontrée pour xg_model sur les trois seuils et pour
+poisson_simple/dixon_coles sur Over 3.5 uniquement (IC95% entièrement
+négatif) — Over 1.5/2.5 pour poisson_simple/dixon_coles restent en
+"absence de preuve" au niveau du seuil isolé (IC95% contenant 0), bien que
+le Brier à 7 catégories (dont ces seuils sont dérivés) soit lui
+significativement amélioré : cohérent avec le fait que la métrique à 7
+catégories a davantage de puissance statistique qu'un seuil binaire isolé.
+
+**Stabilité par championnat et par saison (walk-forward)** : le résultat
+global tient sur les deux saisons prises séparément (IC95% du Brier
+entièrement négatif pour les trois modèles, p<0.05 sauf poisson_simple/
+dixon_coles en 2024/25 où p≈0.03-0.04, tout de même significatif). Par
+championnat, `liga` montre systématiquement une amélioration significative
+pour les trois modèles ; `premier_league` montre une amélioration
+significative pour xg_model uniquement (poisson_simple/dixon_coles :
+IC95% contenant 0, absence de preuve, jamais d'inversion) ; `ligue1`
+montre une amélioration significative pour xg_model, une absence de
+preuve proche du seuil pour poisson_simple/dixon_coles (p≈0.086-0.087).
+**Aucune des 18 combinaisons (3 modèles × 6 découpes championnat/saison)
+n'affiche d'inversion** (IC95% entièrement positif) — condition centrale
+de la grille de verdict.
+
+### 6. Grille de verdict (définie avant observation des résultats)
+
+| Modèle | Verdict |
+|---|---|
+| poisson_simple | **A — VALIDATION RÉUSSIE** |
+| dixon_coles | **A — VALIDATION RÉUSSIE** |
+| xg_model | **A — VALIDATION RÉUSSIE** |
+
+Critère appliqué mécaniquement : amélioration démontrée au niveau global
+(IC95% du Brier entièrement ≤0), aucune inversion dans les 18 découpes
+championnat/saison testées, et coefficient de variation du facteur c(m)
+très inférieur au seuil de 10% pré-enregistré (2.55%/2.55%/1.62%).
+
+### 7. Limites
+
+- Le résidu de biais walk-forward (+0.027 à +0.028) n'est pas nul :
+  attendu, puisque chaque match de test utilise moins de calibration que
+  la version poolée d'E7 (surtout en tout début de fenêtre de test).
+- Les découpes fines par championnat pour poisson_simple/dixon_coles
+  (Premier League, Ligue 1) restent en "absence de preuve" plutôt qu'en
+  amélioration démontrée — échantillons de n=184-228, cohérent avec les
+  limites de puissance déjà documentées en section G2.
+- La règle d'exclusion (n≥30) n'a jamais été activée sur ce corpus ; sa
+  pertinence sur un corpus plus restreint ou débutant plus tôt dans une
+  saison n'est pas testée ici.
+- Aucune conclusion de rentabilité n'est tirée ; aucune règle de pari,
+  ROI, yield, Kelly, staking, seuil de cote, sélection de bookmaker n'est
+  calculée à cette étape.
+
+### 8. Verdict final
+
+**La distribution de buts corrigée par E7 est-elle suffisamment robuste
+en walk-forward pour devenir le moteur officiel de probabilités de
+buts ?**
+
+**Oui.** Sous un protocole walk-forward strict — où le facteur de
+correction de chaque match de test est réestimé exclusivement à partir des
+matchs de calibration réellement antérieurs, corrigeant le risque de fuite
+inter-championnats identifié dans le pipeline poolé d'E7 — l'amélioration
+démontrée en E7 **tient intégralement** : Brier global significativement
+amélioré pour les trois modèles, queue haute quasi parfaitement corrigée,
+aucune inversion sur aucune des 18 découpes testées, et facteur de
+correction stable dans le temps (CV ≤2.6%). Verdict A (validation réussie)
+pour `poisson_simple`, `dixon_coles` et `xg_model`.
+
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés ; la
+distribution de score corrigée par facteur d'échelle walk-forward peut
+donc servir de fondation officielle pour dériver les probabilités de buts
+et tous les marchés Over/Under associés. Conformément au cadrage du
+protocole, cette conclusion reste strictement une conclusion de
+**calibration** — aucune règle de pari, ROI, yield, Kelly, staking, ou
+recherche de value n'est validée par ce rapport.
+
+**Arrêt.** E8 est terminé conformément au protocole. Aucune expérience
+suivante n'est lancée automatiquement.
