@@ -2682,3 +2682,210 @@ ce résultat sur ce corpus : un tel désaccord n'a **pas** historiquement
 correspondu à une fréquence réelle proche de l'opinion du modèle. Aucune
 conclusion de rentabilité n'est tirée ; `poisson_simple` et `xg_model`
 restent inchangés.
+
+---
+
+## Q. Expérience E6 — le marché Over/Under 2.5 apporte-t-il une information incrémentale sur le total de buts ?
+
+Question centrale, reformulée après E5 : pas « peut-on battre le marché »,
+mais **« le marché contient-il une information sur le total de buts que
+notre modèle ne possède pas déjà ? »** `poisson_simple` et `xg_model`
+restent inchangés ; aucun nouveau modèle ; aucune nouvelle calibration
+(réutilise exactement la courbe isotonique d'E2/E3 et les cotes marché
+point-in-time d'E5, sans recalcul).
+
+### Inspection préalable des outils existants
+
+- `calibration_engine.decomposition.brier_decomposition` (E2/E3) :
+  directement applicable pour comparer le pouvoir de discrimination de la
+  probabilité modèle calibrée et de la probabilité marché sur le même
+  événement (Over 2.5) — réutilisée sans modification.
+- `calibration_engine.significance.two_sample_bootstrap_test` (déjà
+  utilisé au diagnostic post-E1, partie 4) : l'outil exact pour la
+  question centrale d'E6 — comparer deux groupes non appariés définis par
+  une variable, en contrôlant (par stratification) une autre variable.
+  Réutilisée sans modification pour les deux tests d'information
+  incrémentale (sections 5 et 6).
+- `market_engine.overround.remove_overround_proportional` (E1/E5) :
+  formule de marché inchangée.
+- Seuils de coupure des tests conditionnels : 50 % pour la probabilité de
+  marché (le seuil naturel de décision Over/Under) et 2.5 buts pour
+  l'espérance du modèle (la ligne du marché elle-même) — jamais
+  recherchés, jamais optimisés après observation.
+
+### Couverture
+
+Mêmes 542/640 matchs du TEST joints à une cote marché point-in-time
+valide qu'en E5, pour chaque modèle (mêmes exclusions déjà documentées).
+
+### Section 2 — corrélations (descriptif, aucune conclusion isolée)
+
+| | `expected_goals` | `p_model_over25` | `p_market_over25` |
+|---|---|---|---|
+| **poisson_simple** — expected_goals | 1.000 | 0.784 | 0.738 |
+| p_model_over25 | 0.784 | 1.000 | 0.556 |
+| p_market_over25 | 0.738 | 0.556 | 1.000 |
+| **xg_model** — expected_goals | 1.000 | 0.812 | 0.790 |
+| p_model_over25 | 0.812 | 1.000 | 0.680 |
+| p_market_over25 | 0.790 | 0.680 | 1.000 |
+
+La probabilité de marché est **fortement corrélée à l'espérance de buts
+du modèle** (0.74-0.79) — cohérent avec le fait que les deux estiment la
+même grandeur sous-jacente. Conformément à la consigne, cette corrélation
+seule ne permet aucune conclusion sur la redondance ou la complémentarité
+— c'est l'objet des sections suivantes.
+
+### Section 3 — tranches fixes d'espérance de buts (GLOBAL)
+
+| Tranche | `poisson_simple` n | Total réel | Over25 réel | p_model | p_market | `xg_model` n | Total réel | Over25 réel | p_model | p_market |
+|---|---|---|---|---|---|---|---|---|---|---|
+| <2.0 | 10 | 2.400 | 40.0% | 49.1% | 36.7% | 0 | — | — | — | — |
+| 2.0-2.5 | 70 | 2.414 | 44.3% | 50.0% | 44.4% | 5 | 1.800 | 20.0% | 29.8% | 36.8% |
+| 2.5-3.0 | 170 | 2.671 | 51.2% | 50.7% | 50.6% | 102 | 2.441 | 46.1% | 48.2% | 44.6% |
+| 3.0-3.5 | 163 | 2.828 | 57.1% | 56.1% | 55.5% | 212 | 2.726 | 53.8% | 53.4% | 51.8% |
+| ≥3.5 | 129 | 3.101 | 57.4% | 56.8% | 62.9% | 223 | 3.013 | 57.0% | 58.1% | 60.6% |
+
+À espérance comparable, `p_market` et `p_model` restent proches l'un de
+l'autre dans les tranches centrales, mais **le marché s'écarte
+nettement au-dessus du modèle dans la tranche ≥3.5** pour les deux
+modèles (poisson : 62.9 % vs 56.8 % ; xg : 60.6 % vs 58.1 %) — une
+première indication descriptive (pas encore une conclusion) que le
+marché pourrait voir quelque chose de plus dans les matchs à forte
+espérance.
+
+### Section 5 — test d'information incrémentale : le marché apporte-t-il quelque chose au modèle ?
+
+À l'intérieur de chaque tranche fixe d'espérance, comparaison (bootstrap
+non apparié) entre les matchs où `p_market_over25` < 50 % et ≥ 50 % :
+
+| Tranche | `poisson_simple` diff (haut−bas) | IC95% | `xg_model` diff (haut−bas) | IC95% |
+|---|---|---|---|---|
+| 2.0-2.5 | +0.002 | [-0.26, +0.28] | — (n_bas=5, n_haut=0) | — |
+| 2.5-3.0 | +0.081 | [-0.07, +0.23] | +0.026 | [-0.20, +0.25] |
+| 3.0-3.5 | +0.107 | [-0.10, +0.31] | +0.089 | [-0.05, +0.23] |
+| ≥3.5 | +0.246 | [-0.40, +0.63] (n_bas=3) | +0.178 | [-0.15, +0.48] (n_bas=10) |
+
+**Aucun IC95% n'est entièrement positif au niveau global** — le signal
+n'est pas statistiquement démontré à ces tailles d'échantillon. Mais la
+direction est **remarquablement cohérente : les 7 tranches interprétables
+(sur les deux modèles) montrent toutes un diff positif** (marché plus
+haut → fréquence réelle plus haute), jamais négatif — un signe directionnel
+net, bien qu'individuellement non significatif.
+
+### Section 6 — test inverse : le modèle apporte-t-il quelque chose au marché ?
+
+À l'intérieur de chaque tranche fixe de probabilité marché, comparaison
+entre les matchs où `expected_goals` < 2.5 et ≥ 2.5.
+
+**Résultat structurel important, non anticipé** : dans la majorité des
+tranches de probabilité marché (notamment 50-55 %, 55-60 %, ≥60 %), le
+groupe « espérance < 2.5 » est **quasi vide ou vide** (n=0 à 14 selon la
+tranche, contre 60 à 171 pour le groupe ≥2.5) — parce que l'espérance
+prédite par les deux modèles est rarement inférieure à 2.5 sur ce corpus
+(cohérent avec le biais de surestimation déjà établi en K/L/E4 : espérance
+moyenne ~3.1-3.4). **Le seuil naturel de 2.5 (la ligne du marché
+elle-même), bien que non arbitraire, crée un déséquilibre structurel qui
+rend ce test peu interprétable sur la majorité des tranches** — un résultat
+en soi, pas un artefact caché : la variable de conditionnement du modèle
+(l'espérance) ne se répartit pas symétriquement autour de cette valeur.
+Les quelques cellules interprétables donnent des résultats **incohérents
+entre eux** (`poisson_simple` : IC95% négatif significatif à 55-60% ;
+`xg_model` : IC95% positif significatif à <45%, négatif significatif à
+45-50%) - pas de conclusion nette possible sur cette direction.
+
+### Section 7 — discrimination (réutilisation directe)
+
+| Portée | `poisson_simple` résolution modèle | résolution marché | `xg_model` résolution modèle | résolution marché |
+|---|---|---|---|---|
+| GLOBAL | 0.0016 | **0.0062** | 0.0061 | **0.0062** |
+| Liga | 0.0028 | **0.0152** | 0.0105 | **0.0152** |
+| Ligue 1 | 0.0031 | **0.0194** | 0.0098 | **0.0194** |
+| Premier League | 0.0000 | **0.0058** | 0.0025 | **0.0058** |
+| 2024/25 | 0.0019 | **0.0071** | **0.0081** | 0.0071 |
+| 2025/26 | 0.0041 | **0.0110** | 0.0065 | **0.0110** |
+
+**La résolution (discrimination) du marché est égale ou supérieure à
+celle du modèle sur 11 des 12 combinaisons** (seule exception : `xg_model`
+en 2024/25, où le modèle dépasse légèrement le marché) — cohérent avec
+tous les résultats précédents (E1 diagnostic, E5) : le marché discrimine
+au moins aussi bien, généralement mieux, que nos modèles sur cet
+événement. **Réserve de comparabilité** : la fiabilité (biais) du modèle
+apparaît systématiquement meilleure que celle du marché dans ce tableau,
+mais ce n'est **pas une comparaison équitable** — la probabilité modèle a
+été explicitement recalibrée par régression isotonique **sur cette
+population de test** (E2/E3), alors que la probabilité marché est
+seulement débarrassée de l'overround, jamais recalibrée de la même façon.
+Cette asymétrie mécanique favorise la fiabilité du modèle par
+construction et ne doit pas être lue comme une supériorité réelle de
+calibration.
+
+### Stabilité par championnat et saison
+
+Le schéma global se reproduit dans le détail (voir sortie complète du
+script) : la plupart des tests conditionnels par sous-groupe portent sur
+des cellules à très faible effectif (n=1 à 3 sur l'un des deux côtés dans
+la majorité des cas où un IC95% ressort significatif) - ces résultats
+« significatifs » isolés sont **explicitement signalés incertains** et ne
+doivent pas être lus comme des preuves. **Une seule cellule atteint une
+significativité avec un effectif raisonnable des deux côtés** : `xg_model`,
+Ligue 1, tranche d'espérance 3.0-3.5, marché <50% (n=22) vs ≥50% (n=45) —
+diff=+0.395, IC95%=[+0.15, +0.60], p=0.0016 (encore signalée « incertitude
+élevée » par le seuil de 30 déjà documenté, mais nettement mieux pourvue
+que les autres). Un seul résultat individuel parmi ~50 cellules testées ne
+constitue pas une preuve robuste (risque de faux positif sur tests
+multiples, jamais corrigé formellement ici) - rapporté pour complétude,
+pas comme un signal retenu.
+
+### Limites méthodologiques
+
+- **Confusion résiduelle intra-tranche** : la stratification par tranches
+  fixes ne contrôle qu'approximativement la variable de conditionnement -
+  une corrélation résiduelle entre espérance et probabilité marché peut
+  subsister à l'intérieur d'une même tranche (l'espérance et la
+  probabilité marché sont corrélées à 0.74-0.79, voir section 2). Les
+  tests de ce rapport ne prétendent pas à un contrôle causal parfait.
+- Le test inverse (section 6) est structurellement déséquilibré sur ce
+  corpus (espérance rarement <2.5) - limite intrinsèque, pas corrigée
+  après coup (aucun nouveau seuil recherché, conformément au protocole).
+- Comparaison de fiabilité modèle/marché asymétrique (modèle calibré sur
+  cette population, marché non recalibré) - déjà signalée ci-dessus.
+- Cellules à faible effectif nombreuses dans la ventilation par
+  championnat/saison - signalées systématiquement, jamais masquées ni
+  fusionnées.
+- Aucun test corrigé pour comparaisons multiples (nombreuses cellules
+  testées) - la lecture privilégie la cohérence directionnelle d'ensemble
+  plutôt que des cellules individuelles isolées.
+
+### Réponse à la question posée (grille A/B/C du protocole)
+
+**Ni A (complémentarité démontrée) ni B (information du modèle
+démontrée) au sens statistique strict à ces tailles d'échantillon — le
+tableau d'ensemble penche vers C (redondance), avec une réserve
+directionnelle notable en faveur du marché.**
+
+- **A - Information complémentaire du marché** : non démontrée
+  statistiquement (aucun IC95% entièrement positif au niveau global), mais
+  le signe est **positif sur les 7 tests interprétables sans exception** -
+  un indice directionnel cohérent, pas une preuve.
+- **B - Information complémentaire du modèle** : non établie - le test
+  inverse est structurellement dégénéré sur la majorité des tranches de
+  ce corpus, et les rares cellules interprétables donnent des résultats
+  contradictoires entre les deux modèles.
+- **C - Redondance** : c'est la lecture la plus soutenue par l'ensemble
+  des résultats - forte corrélation entre espérance et probabilité
+  marché (0.74-0.79), et surtout **la résolution du marché égale ou
+  dépasse celle du modèle sur 11 des 12 combinaisons testées**, cohérent
+  avec le diagnostic post-E1 et E5 (le marché discrimine au moins aussi
+  bien que nos modèles).
+
+**Verdict de synthèse** : le marché et le modèle capturent majoritairement
+le même signal sous-jacent. Il n'est pas démontré que le marché contient
+une information incrémentale statistiquement établie sur ce corpus et à
+ces tailles d'échantillon, mais tout le faisceau d'indices disponible
+(direction systématiquement favorable au marché en section 5, résolution
+du marché égale ou supérieure en section 7, cohérence avec E5 et le
+diagnostic post-E1) pointe vers **le marché au moins aussi informé que le
+modèle, jamais l'inverse** - aucune preuve, dans ce rapport, que le modèle
+détient une information sur le total de buts que le marché ne posséderait
+pas déjà. Aucune conclusion de rentabilité n'est tirée ; `poisson_simple`
+et `xg_model` restent inchangés.
