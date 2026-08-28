@@ -2105,3 +2105,124 @@ spécifiquement. Ce diagnostic caractérise la plausibilité d'une telle
 correction ; il ne la met pas en œuvre ni ne démontre son efficacité hors
 échantillon — conformément au protocole, aucune recalibration n'est
 implémentée à ce stade.
+
+---
+
+## M. Expérience E2 — recalibration isotonique des probabilités Over/Under
+
+Prolonge directement la section L : une recalibration apprise
+**uniquement sur le passé** améliore-t-elle les probabilités Over/Under
+sur des matchs **futurs, hors échantillon, sans fuite** ? `poisson_simple`
+et `xg_model` restent **strictement inchangés** — seule une couche de
+recalibration post-hoc est testée, appliquée à leurs probabilités déjà
+produites. `scripts/run_stage10_over_under_recalibration.py`.
+
+### Inspection préalable et choix de la méthode (avant implémentation)
+
+Inventaire des mécanismes de calibration déjà présents : `reliability_bins`
+et `brier_decomposition` (section L) réutilisés sans modification ;
+`football_model.elo.EloModel` (calibration empirique par tranches, sans
+contrainte de monotonicité) étudié mais **non réutilisé** — l'appliquer ici
+reviendrait à construire un nouveau modèle. **Une seule méthode retenue** :
+la **régression isotonique** (`scipy.optimize.isotonic_regression`, PAVA —
+déjà une dépendance du projet, aucune nouvelle dépendance), choisie et
+justifiée *avant* tout calcul pour trois raisons : (1) monotone par
+construction, donc ne peut pas dégrader le pouvoir de discrimination au
+sens du **rang** des probabilités ; (2) aucune forme paramétrique
+supposée, adaptée au biais en « S » déjà documenté (contrairement à un
+Platt scaling, qui suppose une sigmoïde) ; (3) aucun hyperparamètre à
+ajuster — PAVA est déterministe une fois les données de calibration
+fixées. Aucune variante, aucune autre méthode testée, aucune sélection
+fondée sur le résultat.
+
+### Protocole
+
+Walk-forward strict, **même découpage 40/30/30 que B1/A2/B2/B3.3** (rodage
+jeté, calibration, test), même corpus (3 championnats × 2 saisons). La
+courbe isotonique est ajustée **uniquement sur la calibration** (n=640
+pooled) et évaluée **uniquement sur le test** (n=640 pooled), jamais
+l'inverse — vérifié par des tests anti-fuite dédiés
+(`tests/leakage/test_over_under_recalibration_point_in_time.py`) montrant
+que la courbe ajustée est rigoureusement indépendante du contenu du test.
+Une courbe séparée par (modèle, seuil).
+
+### Résultats (TEST uniquement, n=640 par combinaison)
+
+| Modèle | Seuil | Brier avant→après | log loss avant→après | biais avant→après | fiabilité avant→après | résolution avant→après | IC95% (diff Brier) | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| `poisson_simple` | 1.5 | 0.1892→0.1866 | 0.574→0.561 | +0.048→+0.041 | 0.0042→0.0018 | 0.0022→0.0021 | [-0.0060,+0.0007] p=0.122 | **ABSENCE DE PREUVE** |
+| `poisson_simple` | 2.5 | 0.2527→0.2467 | 0.700→0.686 | +0.067→+0.015 | 0.0092→0.0008 | 0.0046→0.0017 | [-0.0144,+0.0021] p=0.154 | **ABSENCE DE PREUVE** |
+| `poisson_simple` | 3.5 | 0.2153→0.2053 | 0.622→0.639 | +0.087→+0.017 | 0.0144→0.0016 | 0.0059→0.0019 | [-0.0192,-0.0007] p=0.035 | **AMÉLIORATION DÉMONTRÉE** |
+| `xg_model` | 1.5 | 0.1932→0.1881 | 0.591→0.643 | +0.095→+0.043 | 0.0097→0.0049 | 0.0025→0.0010 | [-0.0091,-0.0012] p=0.012 | **AMÉLIORATION DÉMONTRÉE** |
+| `xg_model` | 2.5 | 0.2643→0.2456 | 0.727→0.684 | +0.136→+0.020 | 0.0203→0.0013 | 0.0058→0.0056 | [-0.0285,-0.0090] p<0.0001 | **AMÉLIORATION DÉMONTRÉE** |
+| `xg_model` | 3.5 | 0.2297→0.2052 | 0.651→0.607 | +0.158→+0.011 | 0.0278→0.0028 | 0.0029→0.0031 | [-0.0360,-0.0127] p<0.0001 | **AMÉLIORATION DÉMONTRÉE** |
+
+**4 des 6 combinaisons montrent une amélioration statistiquement
+démontrée** (les 3 seuils pour `xg_model`, et Over 3.5 pour
+`poisson_simple`) ; les 2 restantes (`poisson_simple` Over 1.5/2.5)
+montrent un diff négatif (favorable) mais une absence de preuve — jamais
+une dégradation démontrée sur aucune des 6 combinaisons. Le biais moyen
+est réduit massivement dans tous les cas (ex. `xg_model` Over 3.5 :
++0.158 → +0.011), cohérent avec la chute de la fiabilité (le terme de
+biais de la décomposition de Brier) sur toutes les combinaisons.
+
+### Deux nuances honnêtes, non lissées
+
+1. **Le log loss ne s'améliore pas toujours alors que le Brier
+   s'améliore** (`poisson_simple` Over 3.5 : 0.622→0.639 ; `xg_model`
+   Over 1.5 : 0.591→0.643). Cause identifiée dans les tables de
+   calibration détaillées : la fonction isotonique produit un escalier
+   avec des paliers proches de 0 ou 1 dans certaines tranches peu
+   peuplées du test, et le log loss pénalise beaucoup plus fortement
+   qu'un Brier une prédiction extrême qui se révèle fausse. Le protocole
+   demandait Brier ET log loss avant/après explicitement : les deux sont
+   rapportés sans en écarter un parce qu'il est défavorable.
+2. **La « résolution » mesurée diminue parfois après recalibration**,
+   notamment pour `poisson_simple` (Over 2.5 : 0.0046→0.0017 ; Over 3.5 :
+   0.0059→0.0019) — alors que la section L avait établi que la résolution
+   est mathématiquement **indépendante du rang** sous une transformation
+   monotone. Ce n'est pas une contradiction, mais une précision
+   importante : cette garantie porte sur le **rang** des prédictions, pas
+   sur la valeur mesurée par `brier_decomposition`, qui rebinne les
+   probabilités **transformées** en tranches de largeur fixe. Or PAVA,
+   ajusté sur un ensemble de calibration modeste (n=640) et un signal
+   bruité, produit ici une fonction très **aplatie** (paliers larges,
+   ex. 630/640 points du test regroupés dans une seule tranche
+   [0.5-0.6] pour `poisson_simple` Over 2.5) : le rang exact est
+   préservé, mais la **variété** des valeurs prédites s'effondre, ce qui
+   réduit la résolution telle que mesurée ici. `xg_model` pool beaucoup
+   moins (tables « après » nettement plus étalées) et voit sa résolution
+   globalement préservée (0.0058→0.0056, 0.0029→0.0031) ou seulement
+   partiellement réduite (0.0025→0.0010) — cohérent avec un signal moins
+   bruité en calibration pour ce modèle. Le gain de Brier reste net dans
+   les deux cas car la chute de fiabilité dépasse largement la baisse de
+   résolution.
+
+### Limites méthodologiques
+
+- Un seul découpage 40/30/30, une seule graine de bootstrap (`seed=0`,
+  10 000 rééchantillonnages) — pas de répétition sur plusieurs
+  découpages temporels alternatifs (hors périmètre, aucune variante
+  n'a été testée conformément au protocole).
+- n=640 par combinaison (test) reste modeste — cohérent avec le fait que
+  seuls 2 des 6 verdicts individuels de `poisson_simple` atteignent la
+  significativité malgré un diff systématiquement favorable.
+- Aucune conclusion de rentabilité : ce protocole ne compare à aucune
+  cote de marché (aucune cote Over/Under réelle disponible, comme établi
+  aux sections K/L) — seule la fiabilité probabiliste face au résultat
+  réel est évaluée, conformément à l'objectif énoncé (« obtenir des
+  probabilités de buts fiables », pas battre le marché).
+
+### Réponse à la question posée
+
+**Oui, sur ce corpus et avec cette méthode unique, une recalibration
+apprise uniquement sur le passé améliore mesurablement les probabilités
+Over/Under de `xg_model` sur les trois seuils (démontré), et celles de
+`poisson_simple` sur Over 3.5 (démontré) — jamais une dégradation
+démontrée sur aucune des six combinaisons.** `poisson_simple` sur Over
+1.5/2.5 reste une amélioration non démontrée (diff favorable, IC95%
+couvrant 0), pas un échec de la méthode. `poisson_simple` et `xg_model`
+restent inchangés ; cette expérience caractérise uniquement une couche de
+recalibration séparée, jamais intégrée au système de prédiction en
+production à ce stade. Conformément au protocole, aucune autre méthode,
+aucun hyperparamètre, aucune comparaison au marché n'ont été testés.
