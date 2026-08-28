@@ -1374,3 +1374,195 @@ Prochaine étape naturelle : construire la configuration de base (Poisson +
 A1 + A2) et le protocole de walk-forward comparatif décrit ci-dessus,
 **uniquement sur demande explicite** — ce document reste une analyse, pas
 une implémentation.
+
+---
+
+## I. Phase économique — Expérience 1 : `poisson_simple` vs marché B365 (1X2)
+
+Première expérience économique réelle du projet, menée après la clôture de
+la campagne de modélisation (A1-C7, section G2) et la construction de
+l'infrastructure de cotes réelles Football-Data.co.uk
+(`docs/decisions/0006-football-data-point-in-time.md`). Question unique,
+pré-enregistrée : *« Le modèle `poisson_simple` produit-il, ex ante, des
+probabilités suffisamment différentes du marché B365 pour identifier une
+value mesurable sur le marché 1X2 ? »*
+
+**Modèle** : `PoissonModel(use_team_hfa=False)`, benchmark officiel figé,
+**inchangé**. **Marché** : Bet365 (`B365H`/`B365D`/`B365A`) uniquement,
+1X2 uniquement, aucune colonne de clôture/agrégat/autre bookmaker/autre
+marché. **Règle temporelle** : uniquement la règle conservatrice déjà
+implémentée et documentée (`time_resolution.conservative_knowledge_time_utc`)
+— aucun nouvel offset, aucune hypothèse alternative testée ; les matchs du
+lundi, mardi et vendredi sont explicitement exclus et comptabilisés (la
+source ne permet pas de garantir une fenêtre de connaissance strictement
+antérieure au coup d'envoi pour ces jours). La cote Football-Data n'a
+**jamais** un timestamp exact — seule une hypothèse conservatrice
+documentée (`TIMESTAMP_STATUS_HYPOTHETICAL`) est utilisée.
+
+### 1-2. Matchs exploitables et couverture
+
+**1762 matchs économiquement exploitables** sur les 2132 matchs Understat
+du corpus (3 championnats × 2 saisons, 2024/25 + 2025/26) :
+
+| Championnat / saison | Understat | Apparié | Exploitable | Jour ambigu exclu | Historique insuffisant exclu | Non apparié |
+|---|---|---|---|---|---|---|
+| Premier League 2024/25 | 380 | 380 | 327 | 45 | 8 | 0 |
+| Premier League 2025/26 | 380 | 380 | 318 | 54 | 8 | 0 |
+| Ligue 1 2024/25 | 306 | 306 | 258 | 40 | 8 | 0 |
+| Ligue 1 2025/26 | 306 | 298 | 256 | 34 | 8 | 8 |
+| Liga 2024/25 | 380 | 380 | 305 | 69 | 6 | 0 |
+| Liga 2025/26 | 380 | 379 | 298 | 75 | 6 | 1 |
+
+L'exclusion « jour ambigu » (lundi/mardi/vendredi) retire à elle seule
+environ 18 % du corpus apparié — une limite structurelle de la règle
+temporelle conservatrice, pas un artefact du modèle. Les cotes étaient
+complètes à 100 % sur les matchs appariés (0 exclusion pour cote
+incomplète), et aucune violation point-in-time (`knowledge_time >
+decision_time`) n'a été détectée sur le corpus réel (garde-fou vérifié,
+compte = 0 partout).
+
+### 3-4. Comparaison modèle / marché (purement descriptive)
+
+| Portée | n | Brier `poisson_simple` | Brier marché normalisé | Brier marché brut (non standard) | log loss `poisson_simple` | log loss marché normalisé |
+|---|---|---|---|---|---|---|
+| Global | 1762 | 0.6251 | 0.5752 | 0.5757 | 1.3348 | 0.9678 |
+| Liga | 603 | 0.5993 | 0.5568 | 0.5562 | 1.1375 | 0.9425 |
+| Ligue 1 | 514 | 0.6336 | 0.5712 | 0.5711 | 1.4870 | 0.9624 |
+| Premier League | 645 | 0.6425 | 0.5956 | 0.5975 | 1.3979 | 0.9958 |
+| 2024/25 | 890 | 0.6071 | 0.5696 | 0.5700 | 1.2071 | 0.9602 |
+| 2025/26 | 872 | 0.6434 | 0.5810 | 0.5814 | 1.4651 | 0.9755 |
+
+Le marché B365 (probabilités normalisées, marge retirée) domine
+`poisson_simple` sur Brier ET log loss, **sans aucune exception**, dans
+les six découpages (global, 3 championnats, 2 saisons). Le Brier marché
+brut (non standard — les probabilités implicites brutes ne somment pas à
+1, cette valeur ne respecte donc pas la définition originale de Brier
+1950 et n'est fournie qu'à titre indicatif comme demandé) est très proche
+du Brier normalisé, l'overround moyen étant modeste sur ce marché.
+
+**Calibration** (erreur absolue moyenne pondérée par tranche, one-vs-rest,
+10 tranches) — global :
+
+| Issue | `poisson_simple` | Marché normalisé |
+|---|---|---|
+| Domicile | 0.0794 | 0.0252 |
+| Nul | 0.0525 | 0.0057 |
+| Extérieur | 0.0696 | 0.0209 |
+
+Le marché est mieux calibré que `poisson_simple` sur les trois issues, de
+façon cohérente sur chaque championnat et chaque saison pris séparément
+(mêmes tableaux détaillés dans la sortie du script,
+`scripts/run_stage6_economic_b365_ev.py`) — jamais une exception isolée.
+
+**Distribution des edges** (global, `p_model - p_marché`) :
+
+| Issue | edge_raw (moyenne ± écart-type) | edge_norm (moyenne ± écart-type) | EV théorique (moyenne ± écart-type) |
+|---|---|---|---|
+| Domicile | -0.0214 ± 0.1437 | +0.0032 ± 0.1447 | -0.0658 ± 0.3504 |
+| Nul | -0.0433 ± 0.0903 | -0.0296 ± 0.0900 | -0.1666 ± 0.3828 |
+| Extérieur | +0.0091 ± 0.1293 | +0.0265 ± 0.1302 | +0.0029 ± 0.5194 |
+
+`edge_raw` et `edge_norm` sont rapportés tous les deux, sans choisir lequel
+serait « le meilleur », conformément au protocole — ils répondent à deux
+questions différentes (désaccord brut de marché vs désaccord avec le
+marché juste). Les deux versions concordent sur le sens du signal :
+`poisson_simple` sous-estime systématiquement le nul par rapport au
+marché, et son edge sur domicile/extérieur reste proche de 0 en moyenne.
+
+### 5-6. Stratégie unique EV > 0, mise flat 1 unité — performance réalisée
+
+Règle fixée avant observation : pari si `EV_modèle = p_model × cote_B365 -
+1 > 0`, sur chaque (match, issue), mise flat 1 unité, aucun Kelly, aucun
+staking, aucun filtre, aucune grille de seuils.
+
+| Portée | n paris | Gagnants | Taux de réussite | Profit total | ROI |
+|---|---|---|---|---|---|
+| **Global** | **1888** | 712 | 0.377 | **-130.01** | **-0.0689** |
+| Liga | 639 | 242 | 0.379 | -92.88 | -0.1454 |
+| Ligue 1 | 530 | 216 | 0.408 | -26.61 | -0.0502 |
+| Premier League | 719 | 254 | 0.353 | -10.52 | -0.0146 |
+| 2024/25 | 967 | 364 | 0.376 | -40.00 | -0.0414 |
+| 2025/26 | 921 | 348 | 0.378 | -90.01 | -0.0977 |
+| Domicile | 751 | 350 | 0.466 | -70.73 | -0.0942 |
+| Nul | 265 | 61 | 0.230 | -15.59 | -0.0588 |
+| Extérieur | 872 | 301 | 0.345 | -43.69 | -0.0501 |
+
+**ROI négatif sur les 9 découpages sans exception** (3 championnats, 2
+saisons, 3 issues) — présenté ici comme une observation économique de
+premier ordre, avant tout test d'incertitude.
+
+### 7-8. Incertitude statistique et verdict
+
+Bootstrap apparié (`paired_bootstrap_test`, réutilisé sans modification,
+10 000 rééchantillonnages, seed=0) sur le profit par pari (n=1888) :
+
+- profit moyen = **-0.0689** par unité misée
+- **IC95% = [-0.1318, -0.0040]**, entièrement négatif
+- p = 0.0384
+
+L'intervalle de confiance à 95 % du profit moyen est **entièrement
+négatif** → verdict, selon la grille imposée (résolution explicite : IC95%
+entièrement > 0 → PREUVE D'AMÉLIORATION ÉCONOMIQUE ; IC95% entièrement < 0
+→ SIGNAL NÉGATIF ; IC95% couvrant 0 avec ROI > 0 → SIGNAL POSITIF ; IC95%
+couvrant 0 avec ROI ≤ 0 → ABSENCE DE PREUVE) :
+
+## **VERDICT : SIGNAL NÉGATIF**
+
+Avec n=1888 paris, ce signal n'est **pas** sous-puissant (seuil documenté
+de 30 paris minimum très largement dépassé, sur les 9 découpages
+également).
+
+### Limites méthodologiques
+
+- Timestamp Football-Data jamais vérifié — hypothèse conservatrice
+  documentée (`TIMESTAMP_STATUS_HYPOTHETICAL`), jamais présentée comme un
+  fait. Les matchs lundi/mardi/vendredi (~18 % du corpus apparié) sont
+  exclus plutôt que rattachés par hypothèse silencieuse — un biais de
+  couverture potentiel (si ces jours diffèrent structurellement des
+  autres) n'est pas exclu et n'a pas été testé ici (hors périmètre de
+  cette expérience).
+- Le bootstrap utilisé est un rééchantillonnage i.i.d. par pari, **pas**
+  un bootstrap par blocs temporels — aucune méthode de ce type n'est
+  encore disponible dans le projet ; les paris d'une même journée/saison
+  ne sont pas indépendants en toute rigueur (résultats de championnat
+  corrélés), ce qui peut légèrement sous-estimer la largeur réelle de
+  l'IC95%. Le signe du verdict (entièrement négatif) est néanmoins assez
+  net (p=0.0384, cohérent sur les 9 découpages) pour rester robuste à
+  cette réserve.
+- Le corpus 2024/25+2025/26 a déjà servi aux expériences de modélisation
+  A1/A2/B1/B2/B3/B3.2/B3.3/C7 (data snooping documenté) — la règle EV>0
+  reste toutefois une règle économique fixée avant observation du ROI de
+  **cette** expérience spécifique ; aucune variante de seuil n'a été
+  testée ni ne sera testée après ce résultat.
+- Le Brier marché « brut » est non standard (probabilités ne sommant pas à
+  1) et n'est fourni qu'à titre indicatif, jamais utilisé pour le verdict.
+- Comparaison faite uniquement à la cote **prise** (Bet365, hypothèse
+  temporelle conservatrice), jamais à la clôture — conformément à ADR
+  0003, aucune conclusion de CLV n'est tirée ici.
+
+### Réponse à la question posée
+
+*« Sur ce corpus réel et avec cette règle fixée à l'avance, avons-nous un
+signal économique crédible, ou seulement un écart théorique entre modèle
+et marché ? »*
+
+**Ni l'un ni l'autre dans le sens positif : un signal économique crédible,
+mais négatif.** `poisson_simple` n'est pas seulement « pas meilleur » que
+le marché — il est mesurablement **moins bien calibré** (Brier et log loss
+plus mauvais, calibration one-vs-rest plus mauvaise, sur les trois issues
+et sur les six découpages testés, sans exception). L'écart théorique
+positif (EV>0 selon le modèle) ne se traduit **pas** en profit réalisé :
+au contraire, la stratégie EV>0 produit une perte statistiquement
+significative (IC95% entièrement négatif, p=0.0384, n=1888 paris,
+cohérente sur les 3 championnats, les 2 saisons et les 3 issues). Ce
+résultat n'est pas une simple absence de preuve — c'est une preuve directe
+que, sur ce corpus et avec cette règle, **suivre les désaccords de
+`poisson_simple` avec le marché B365 aurait perdu de l'argent**, cohérente
+avec le fait, déjà établi ci-dessus, que le marché reste mieux calibré que
+le modèle.
+
+**`poisson_simple` reste le modèle de référence officiel du système, sans
+aucune modification.** Aucun autre seuil EV, aucun Kelly, aucun staking,
+aucun CLV, aucun autre bookmaker/marché, aucun nouveau modèle (dont B3.3)
+n'ont été testés après ce résultat, conformément au protocole (arrêt
+obligatoire).
