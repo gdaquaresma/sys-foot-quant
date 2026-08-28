@@ -110,3 +110,14 @@ construit.
 - Toute extension future vers un autre bookmaker ou un autre marche devra
   repartir de `_ALLOWED_COLUMNS` (football_data_loader.py) et non
   l'etendre implicitement.
+- **Extension realisee (E5, phase economique)** : `_ALLOWED_COLUMNS`
+  etendue a `B365>2.5`/`B365<2.5` (Over/Under 2.5, meme bookmaker B365,
+  memes colonnes source non-cloture - `B365C>2.5`/`B365C<2.5` explicitement
+  exclues, verifie par test dedie) - completude verifiee a 100% sur les
+  six fichiers reels avant l'extension, meme niveau que B365H/D/A. Aucune
+  nouvelle regle temporelle : le meme mecanisme point-in-time (fuseau
+  horaire, regle de connaissance conservatrice, exclusion
+  lundi/mardi/vendredi) s'applique identiquement, les cotes O/U et 1X2
+  provenant de la meme ligne/du meme moment de collecte. Voir
+  `data_engine/market_odds/over_under_odds.py` et
+  docs/research_framework.md section P (E5) pour l'utilisation complete.

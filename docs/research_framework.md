@@ -2527,3 +2527,158 @@ protocole — mais toute exploitation future devra tenir compte du fait que
 le signal n'est pas structurellement garanti sur tout le corpus. Aucune
 conclusion de rentabilité n'est tirée ici ; `poisson_simple` et
 `xg_model` restent inchangés, aucune nouvelle calibration créée.
+
+---
+
+## P. Expérience E5 — fiabilité des probabilités Over 2.5 calibrées dans les situations de désaccord avec le marché B365
+
+Question centrale : **quand notre modèle et B365 donnent des probabilités
+différentes pour Over 2.5, notre probabilité est-elle encore fiable dans
+les situations de désaccord ?** Pas « le modèle gagne-t-il de l'argent »
+— « le modèle reste-t-il calibré quand son opinion diverge du marché ? »
+`poisson_simple` et `xg_model` restent inchangés ; aucun nouveau modèle.
+
+### Infrastructure ajoutée (documentée avant tout résultat)
+
+Les cotes B365 Over/Under 2.5 n'étaient pas encore lues par le projet
+(seul le 1X2 l'était depuis l'ADR 0006). Extension **explicitement
+anticipée par l'ADR 0006** (« toute extension future... devra repartir de
+`_ALLOWED_COLUMNS` et non l'étendre implicitement ») : `_ALLOWED_COLUMNS`
+de `football_data_loader.py` étendue à `B365>2.5`/`B365<2.5` (complétude
+vérifiée à 100 % sur les six fichiers réels avant l'extension, comme
+B365H/D/A ; colonnes de clôture `B365C>2.5`/`B365C<2.5` explicitement
+exclues, testé). Nouveau module `data_engine/market_odds/over_under_odds.py`
+réutilisant **sans aucune modification** `matching.match_league_season`
+et `time_resolution.conservative_knowledge_time_utc` — même mécanisme
+point-in-time que le 1X2 (E1), aucune nouvelle hypothèse temporelle,
+mêmes exclusions (jour ambigu, cotes incomplètes, violation PIT). La
+probabilité de marché utilise **la formule de retrait d'overround déjà
+existante et inchangée** (`market_engine.overround.remove_overround_proportional`) :
+probabilité implicite brute = 1/cote pour chaque issue, puis
+normalisation à somme 1 (implicite brute / somme des implicites brutes).
+
+Les probabilités **calibrées** sont obtenues en ré-ajustant la même
+courbe isotonique qu'E2/E3 (`fit_isotonic_calibration`, INCHANGÉE)
+uniquement sur la partie calibration du même découpage 40/30/30, appliquée
+au test — reproduction exacte du calcul d'E2/E3, avec conservation du
+`match_id` pour joindre les cotes marché (absent du retour agrégé de
+`evaluate_recalibration`).
+
+### Couverture
+
+Cotes B365 Over/Under 2.5 point-in-time exploitables : **1806/2132**
+(84.7 %, jour ambigu exclu=317, cotes incomplètes exclues=0, non
+appariés=9 — mêmes proportions que le 1X2 en E1, cohérent). Sur les 640
+matchs du TEST, **542 matchs (84.7 %) sont joints** à une cote marché
+valide pour chaque modèle (98 exclus et documentés, faute de cote O/U
+point-in-time).
+
+### Tableau central — fiabilité par tranche de désaccord
+
+`model_market_gap = P_model_calibré − P_marché_normalisé`, tranches
+fixées avant exécution.
+
+| Tranche | `poisson_simple` n | p_model moy. | Over réel | réel−annoncé | `xg_model` n | p_model moy. | Over réel | réel−annoncé |
+|---|---|---|---|---|---|---|---|---|
+| ≤−15 pts | 19 | 56.1 % | 73.7 % | **+0.175** | 3 | 38.2 % | 33.3 % | -0.049 |
+| −15/−10 | 33 | 54.6 % | 63.6 % | +0.090 | 39 | 57.4 % | 61.5 % | +0.041 |
+| −10/−5 | 81 | 54.7 % | 59.3 % | +0.045 | 73 | 55.0 % | 61.6 % | +0.066 |
+| **−5/+5 (accord)** | **286** | **53.5 %** | **53.8 %** | **+0.003** | **293** | **54.4 %** | **54.6 %** | **+0.002** |
+| +5/+10 | 66 | 52.7 % | 43.9 % | -0.088 | 94 | 52.5 % | 40.4 % | **-0.121** |
+| +10/+15 | 44 | 52.1 % | 43.2 % | -0.089 | 37 | 52.2 % | 51.4 % | -0.009 |
+| ≥+15 pts | 13 | 54.1 % | 30.8 % | **-0.234** | 3 | 51.5 % | 66.7 % | +0.152 |
+
+### Lecture — `poisson_simple`
+
+**Schéma quasi parfaitement monotone et symétrique.** Dans la zone
+d'accord (−5/+5, 53 % du test), le modèle est **excellemment calibré**
+(écart de 0.3 point seulement). Mais l'écart réel−annoncé se dégrade
+**progressivement et dans le sens attendu** à mesure que le désaccord
+grandit dans chaque direction : quand `poisson_simple` est plus pessimiste
+que le marché (gap négatif), la réalité est **encore plus haute** que ce
+que le modèle annonce (jusqu'à +17.5 points à ≤−15) ; quand il est plus
+optimiste que le marché (gap positif), la réalité est **plus basse** que
+ce qu'il annonce (jusqu'à −23.4 points à ≥+15). **Le désaccord de
+`poisson_simple` avec le marché ne se valide donc PAS** — il pointe
+plutôt vers une direction où le modèle est en réalité moins fiable, pas
+plus informé. Ce résultat **confirme et prolonge** la partie 4 du
+diagnostic post-E1 (aucune information indépendante détectée dans le
+désaccord poisson/marché sur le 1X2) avec des probabilités calibrées et
+un marché différent (Over 2.5).
+
+### Lecture — `xg_model`
+
+Plus bruité, notamment dans les tranches extrêmes (n=3 des deux côtés,
+non interprétables). Sur la tranche la mieux peuplée de désaccord
+(+5/+10, n=94, la plus grande tranche de désaccord positif des deux
+modèles), le même phénomène apparaît nettement : réel−annoncé = **-0.121**
+— le modèle surestime quand il est plus optimiste que le marché, comme
+`poisson_simple`. La tranche +10/+15 (n=37) ne suit pas ce schéma
+(-0.009, proche de 0) et les tranches extrêmes (n=3) sont trop peu
+peuplées pour trancher. Le tableau reste **cohérent avec la même
+conclusion générale que `poisson_simple`** sur sa zone de désaccord la
+plus fiable statistiquement, sans la même netteté sur l'ensemble du
+spectre.
+
+### Comparaison de Brier par tranche (caractérisation, pas un test de rentabilité)
+
+Sur les 14 combinaisons (2 modèles × 7 tranches), **aucun IC95% bootstrap
+n'est entièrement d'un côté de 0** — aucune tranche ne montre le modèle
+significativement meilleur OU pire que le marché en Brier, à ces tailles
+d'échantillon (les tranches extrêmes, n=3 à 19, sont explicitement
+signalées « incertitude élevée »). Ceci ne contredit pas le tableau de
+fiabilité ci-dessus (qui porte sur le biais de calibration, pas sur le
+Brier global de la tranche) — conformément à la consigne, cette
+comparaison caractérise les situations de désaccord, elle ne constitue
+pas un nouveau test « battre le marché ».
+
+### Concentration (part du test par tranche)
+
+| Tranche | `poisson_simple` | `xg_model` |
+|---|---|---|
+| ≤−15 pts | 3.5 % | 0.6 % |
+| −15/−10 | 6.1 % | 7.2 % |
+| −10/−5 | 14.9 % | 13.5 % |
+| −5/+5 | **52.8 %** | **54.1 %** |
+| +5/+10 | 12.2 % | 17.3 % |
+| +10/+15 | 8.1 % | 6.8 % |
+| ≥+15 pts | 2.4 % | 0.6 % |
+
+Plus de la moitié du test se situe dans la zone d'accord (−5/+5) pour les
+deux modèles ; les désaccords forts (≥15 points, dans un sens ou l'autre)
+restent rares (0.6 % à 3.5 % selon le modèle et la direction) — cohérent
+avec le faible effectif des tranches extrêmes et la réserve
+« incertitude élevée » qui les accompagne.
+
+### Limites méthodologiques
+
+- Tranches extrêmes à très faible effectif (n=3 pour `xg_model` aux deux
+  bouts, n=13-19 pour `poisson_simple`) — rapportées avec leur taille,
+  jamais fusionnées, mais leur lecture individuelle reste fragile.
+- Un seul découpage temporel (le même que E2/E3), aucune répétition sur
+  des découpages alternatifs.
+- Aucune conclusion de value/rentabilité : ni l'écart de calibration ni
+  la comparaison de Brier par tranche ne sont transformés en règle de
+  pari à ce stade.
+- Extension de `football_data_loader.py` documentée dans l'ADR 0006 mais
+  non ré-auditée aussi exhaustivement que le fut le 1X2 initial (E1) -
+  la complétude à 100 % a toutefois été vérifiée directement sur les six
+  fichiers avant l'extension.
+
+### Réponse à la question posée
+
+**Non, le modèle ne conserve pas sa calibration quand son opinion diverge
+fortement du marché — au contraire, la fiabilité se dégrade de façon
+quasi monotone avec l'ampleur du désaccord, pour `poisson_simple` de
+façon particulièrement nette et symétrique.** Dans la zone d'accord
+(la majorité des matchs), les deux modèles calibrés sont excellemment
+fiables (écart <0.3 point). Mais plus le modèle s'éloigne du marché, plus
+son biais de calibration grandit **dans le sens qui invalide son
+opinion divergente** : un désaccord positif franc (`poisson_simple` en
+particulier) est suivi d'une fréquence réelle d'Over 2.5 **inférieure**
+à ce qu'il annonce, pas supérieure. C'est l'exemple donné en tête de
+protocole (« modèle 62 %, marché 53 % ») qui est directement infirmé par
+ce résultat sur ce corpus : un tel désaccord n'a **pas** historiquement
+correspondu à une fréquence réelle proche de l'opinion du modèle. Aucune
+conclusion de rentabilité n'est tirée ; `poisson_simple` et `xg_model`
+restent inchangés.

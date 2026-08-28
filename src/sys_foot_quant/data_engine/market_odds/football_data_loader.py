@@ -1,14 +1,18 @@
-"""Import des cotes reelles Football-Data.co.uk, marche 1X2, bookmaker
-Bet365 uniquement (etape 4, phase economique -
-docs/decisions/0006-football-data-point-in-time.md).
+"""Import des cotes reelles Football-Data.co.uk, bookmaker Bet365
+uniquement, marches 1X2 ET Over/Under 2.5 (etape 4, phase economique -
+docs/decisions/0006-football-data-point-in-time.md ; extension Over/Under
+2.5 - E5, docs/decisions/0006, section "Extension future").
 
 Perimetre strictement respecte : seules les colonnes ``Date``, ``Time``,
 ``HomeTeam``, ``AwayTeam``, ``FTHG``, ``FTAG``, ``FTR``, ``B365H``,
-``B365D``, ``B365A`` sont lues. AUCUNE colonne de cloture (suffixe ``C``,
-ex. ``B365CH``), AUCUN agregat de marche (``Max``/``Avg``), AUCUN autre
-bookmaker n'est touche - meme si present dans le fichier source. La liste
-``_ALLOWED_COLUMNS`` ci-dessous est la SEULE surface de lecture autorisee,
-verifiee par test (aucune colonne ``*C`` ne peut y figurer).
+``B365D``, ``B365A``, ``B365>2.5``, ``B365<2.5`` sont lues. AUCUNE colonne
+de cloture (suffixe ``C``, ex. ``B365CH``, ``B365C>2.5``), AUCUN agregat
+de marche (``Max``/``Avg``), AUCUN autre bookmaker n'est touche - meme si
+present dans le fichier source. La liste ``_ALLOWED_COLUMNS`` ci-dessous
+est la SEULE surface de lecture autorisee, verifiee par test (aucune
+colonne de cloture ne peut y figurer, ni pour le 1X2 ni pour l'Over/Under).
+``B365>2.5``/``B365<2.5`` sont deja completes a 100% sur les six fichiers
+reels (verifie avant l'extension, meme niveau de completude que B365H/D/A).
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from pathlib import Path
 SOURCE = "football_data"
 BOOKMAKER = "B365"
 MARKET = "1x2"
+OVER_UNDER_25_MARKET = "over_under_2.5"
 
 _ALLOWED_COLUMNS = (
     "Date",
@@ -32,6 +37,8 @@ _ALLOWED_COLUMNS = (
     "B365H",
     "B365D",
     "B365A",
+    "B365>2.5",
+    "B365<2.5",
 )
 
 
@@ -51,10 +58,16 @@ class FootballDataMatchRecord:
     b365_home: float | None
     b365_draw: float | None
     b365_away: float | None
+    b365_over_2_5: float | None = None
+    b365_under_2_5: float | None = None
 
     @property
     def has_complete_odds(self) -> bool:
         return self.b365_home is not None and self.b365_draw is not None and self.b365_away is not None
+
+    @property
+    def has_complete_over_under_2_5_odds(self) -> bool:
+        return self.b365_over_2_5 is not None and self.b365_under_2_5 is not None
 
 
 def _parse_optional_float(raw: str) -> float | None:
@@ -91,6 +104,8 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                     b365_home=_parse_optional_float(row["B365H"]),
                     b365_draw=_parse_optional_float(row["B365D"]),
                     b365_away=_parse_optional_float(row["B365A"]),
+                    b365_over_2_5=_parse_optional_float(row["B365>2.5"]),
+                    b365_under_2_5=_parse_optional_float(row["B365<2.5"]),
                 )
             )
     return records
