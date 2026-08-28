@@ -1566,3 +1566,231 @@ aucune modification.** Aucun autre seuil EV, aucun Kelly, aucun staking,
 aucun CLV, aucun autre bookmaker/marché, aucun nouveau modèle (dont B3.3)
 n'ont été testés après ce résultat, conformément au protocole (arrêt
 obligatoire).
+
+---
+
+## J. Diagnostic post-E1 — décomposition de l'écart poisson/marché et information incrémentale de xG
+
+Diagnostic **pur** (aucune nouvelle expérience économique, aucune
+stratégie, aucune optimisation, `poisson_simple` inchangé) motivé
+directement par le verdict SIGNAL NÉGATIF de l'expérience E1 (section I).
+Question : *pourquoi `poisson_simple` est-il inférieur au marché B365, et
+existe-t-il malgré tout une information indépendante exploitable
+(notamment via xG) ?* Exécuté sur exactement les 1762 matchs du dataset
+E1 (`scripts/run_stage7_diagnostic_e1_market_gap.py`, réutilisant
+`economic_dataset.py` sans modification), avec les prédictions `xg_model`
+(B3, inchangé) attachées via `real_data_walk_forward` — vérification
+explicite (assertion, pas hypothèse) que le `decision_time` recalculé est
+identique à celui d'E1 pour chaque match (partie 7). xG s'est avéré
+disponible pour la **totalité** des 1762 matchs (le seuil
+`MIN_TRAIN_MATCHES=10` ne s'est jamais révélé plus contraignant pour le
+xG que pour les buts sur ce corpus — un constat, pas une hypothèse
+supplémentaire).
+
+### Partie 1 — Décomposition de l'écart (global)
+
+| Issue | biais moyen | biais médian | dispersion (std) | calibration `poisson_simple` | calibration marché | % écart ≥ 0.05 | % écart ≥ 0.10 |
+|---|---|---|---|---|---|---|---|
+| Domicile | +0.0032 | -0.0009 | 0.1447 | 0.0794 | 0.0252 | 67.0 % | 38.8 % |
+| Nul | -0.0296 | -0.0370 | 0.0900 | 0.0525 | 0.0057 | 44.0 % | 12.2 % |
+| Extérieur | +0.0265 | +0.0138 | 0.1302 | 0.0696 | 0.0209 | 62.9 % | 34.2 % |
+
+Le biais **moyen** est faible sur domicile/extérieur (le désaccord n'est
+pas systématiquement dans un sens) mais `poisson_simple` **sous-estime
+systématiquement le nul** (biais négatif, cohérent sur toutes les
+sous-populations testées ci-dessous). Surtout : la **dispersion** de
+l'écart est large (std 0.09-0.14) et la **calibration** de
+`poisson_simple` est 3 à 9 fois pire que celle du marché selon l'issue —
+`poisson_simple` n'est pas juste « en moyenne pareil au marché avec du
+bruit symétrique », il est structurellement moins bien calibré. Près de
+39 % des matchs présentent un écart ≥ 10 points de probabilité sur
+l'issue domicile — un désaccord fréquent, pas un phénomène marginal.
+
+**Par championnat et par saison** (mêmes tableaux détaillés dans la
+sortie du script) : le marché domine `poisson_simple` en calibration sur
+**tous** les découpages sans exception (ex. Ligue 1 domicile :
+`poisson_simple` 0.1061 vs marché 0.0213 ; toutes saisons/championnats
+confondus, jamais d'inversion). La calibration de `poisson_simple` se
+dégrade même légèrement en 2025/26 par rapport à 2024/25 (domicile 0.0884
+vs 0.0789, nul 0.0627 vs 0.0425) — aucune amélioration temporelle
+spontanée.
+
+**Par décile de probabilité de marché** : le biais de `poisson_simple`
+n'est pas monotone — il alterne sur-confiance et sous-confiance selon la
+tranche (ex. domicile : décile 7 biais +0.058 — sur-confiance nette —
+puis décile 8 biais -0.021 ; extérieur : décile 7 biais +0.105, le plus
+grand écart local observé, contre seulement +0.043 pour le marché sur la
+même tranche). Le marché reste, lui, proche de la fréquence observée sur
+la quasi-totalité des déciles. `poisson_simple` n'est donc pas
+simplement « décalé » dans un sens fixe — il est **irrégulier**, ce qui
+est cohérent avec une calibration globalement moins bonne plutôt qu'un
+biais directionnel corrigible par un simple recalibrage additif.
+
+### Partie 2 — Où `poisson_simple` perd (quintiles de probabilité du favori marché)
+
+| Quintile | prob. favori (marché) | prob. favori (poisson) | fréquence observée | Brier `poisson_simple` | Brier marché | écart Brier |
+|---|---|---|---|---|---|---|
+| Q0 (plus équilibré) | 0.382 | 0.385 | 0.425 | 0.7145 | 0.6561 | 0.0584 |
+| Q1 | 0.437 | 0.462 | 0.397 | 0.7200 | 0.6593 | 0.0607 |
+| Q2 | 0.505 | 0.531 | 0.514 | 0.6514 | 0.6167 | 0.0347 |
+| Q3 | 0.580 | 0.618 | 0.583 | 0.6315 | 0.5695 | 0.0620 |
+| Q4 (plus gros favoris) | 0.717 | 0.743 | 0.770 | 0.4075 | 0.3737 | 0.0338 |
+
+**Aucune caractérisation simple ne ressort** : l'écart Brier
+`poisson_simple` − marché est présent dans **les cinq** quintiles
+(0.033 à 0.062), sans tendance monotone claire selon la force du favori —
+ce n'est pas spécifiquement sur les gros favoris, ni spécifiquement sur
+les matchs équilibrés, que `poisson_simple` décroche : le désavantage est
+**diffus sur tout le spectre**. Conformément au protocole, aucun
+sous-groupe n'a été retenu sur la base d'un critère de rentabilité — cette
+partie reste une caractérisation du biais/de la calibration, pas une
+recherche de niche exploitable.
+
+### Partie 3 — Comparaison des erreurs par match
+
+`delta_error = erreur_poisson − erreur_marché` (Brier ligne par ligne,
+n=1762) : moyenne +0.0499 (**identique**, comme attendu, à l'écart de
+Brier global d'E1 — vérification de cohérence croisée réussie), écart-type
+0.2750, médiane +0.0160. Distribution : `poisson_simple` fait
+**strictement mieux** que le marché sur 35.5 % des matchs pris
+individuellement (delta < -0.05), les deux sont proches sur 21.3 %
+(|delta| ≤ 0.05), et le marché domine nettement sur 43.2 % (delta > 0.05).
+**`poisson_simple` n'est donc pas uniformément pire** — il l'est **en
+moyenne et de façon majoritaire**, avec une hétérogénéité match par match
+substantielle.
+
+### Partie 4 — Le désaccord contient-il une information indépendante ?
+
+Question centrale : une fois la probabilité de marché prise en compte
+(comparaison **démeanée par décile** de probabilité de marché — variable
+disponible avant le match —, groupes non appariés comparés via
+`two_sample_bootstrap_test`, réutilisé sans modification), le **signe**
+du désaccord `poisson_simple` − marché prédit-il encore la fréquence
+observée du résultat ?
+
+| Issue | n (désaccord positif / négatif ou nul) | différence moyenne démeanée | IC95 % | p |
+|---|---|---|---|---|
+| Domicile | 875 / 887 | -0.0204 | [-0.0630, +0.0221] | 0.356 |
+| Nul | 373 / 1389 | -0.0135 | [-0.0600, +0.0330] | 0.578 |
+| Extérieur | 969 / 793 | +0.0097 | [-0.0306, +0.0492] | 0.613 |
+
+**Aucun signal détecté sur les trois issues** — les trois IC95 % couvrent
+largement 0. La méthode a été validée au préalable sur données
+synthétiques (tests unitaires) : elle détecte correctement un signal
+injecté délibérément informatif, et ne produit pas de faux positif quand
+le désaccord est du bruit pur — ce résultat « pas de signal » n'est donc
+pas un artefact de puissance insuffisante de la méthode elle-même, mais
+une observation sur ces données. **Le désaccord de `poisson_simple` avec
+le marché ne montre, sur ce corpus, aucune information indépendante
+détectable au-delà de ce que la probabilité de marché contient déjà** —
+cohérent avec le tableau de calibration de la partie 1 : `poisson_simple`
+semble surtout plus bruité que le marché, pas porteur d'un angle mort
+distinct que le marché ignorerait.
+
+### Parties 5-6 — xG face au marché
+
+Sur les 1762 matchs (xG disponible partout) :
+
+| | Brier |
+|---|---|
+| `poisson_simple` | 0.6251 |
+| `xg_model` (B3) | 0.6057 |
+| Marché normalisé | 0.5752 |
+
+**Corrélations des erreurs par match** (Brier ligne par ligne, Pearson) :
+(poisson, marché) = **+0.789**, (xG, marché) = **+0.845**, (poisson, xG) =
+**+0.838**.
+
+**Différences appariées de Brier** (`paired_bootstrap_test`, réutilisé
+sans modification, purement descriptif) :
+
+| Comparaison | diff. moyenne | IC95 % | p |
+|---|---|---|---|
+| xG − marché | +0.0305 | [+0.0205, +0.0406] | <0.0001 |
+| `poisson_simple` − marché | +0.0499 | [+0.0375, +0.0630] | <0.0001 (= E1, cohérent) |
+| xG − `poisson_simple` | -0.0194 | [-0.0309, -0.0080] | 0.0006 |
+
+**Réponse à la question centrale de la partie 5** (« le xG fait-il des
+erreurs différentes de celles du marché ? ») : **non, pas dans le sens
+recherché**. xG est significativement meilleur que `poisson_simple`
+(confirme la complémentarité partielle déjà connue depuis B3/B3.2/B3.3)
+**mais significativement moins bon que le marché**, et surtout ses
+erreurs sont **encore plus corrélées au marché** (+0.845) que ne le sont
+celles de `poisson_simple` (+0.789). Autrement dit, xG se trompe
+**davantage aux mêmes endroits que le marché**, pas à des endroits
+différents — l'amélioration de xG sur `poisson_simple` semble provenir
+d'un rapprochement partiel vers ce que le marché sait déjà, pas d'un
+angle mort distinct du marché.
+
+### Partie 7 — Vérification temporelle
+
+Contrainte respectée par construction et vérifiée par assertion (pas par
+hypothèse) : les prédictions xG ont été calculées avec exactement les
+mêmes constantes que E1 (`DECISION_OFFSET_HOURS=2.0`,
+`MIN_TRAIN_MATCHES=10`) et le même mécanisme `real_data_walk_forward`
+inchangé ; le `decision_time` recalculé ici a été comparé, match par
+match, à celui déjà stocké dans le dataset E1 — identité stricte vérifiée
+sans exception (le script se serait arrêté sinon). Aucune nouvelle
+hypothèse temporelle introduite.
+
+### Partie 8 — Data snooping
+
+Cette analyse est directement motivée par le résultat SIGNAL NÉGATIF
+d'E1 — elle est donc diagnostique et exploratoire par construction,
+documentée comme telle. Aucune conclusion de rentabilité n'est tirée d'un
+sous-groupe (quintile, décile, championnat, saison) découvert pendant
+cette analyse — en particulier, la partie 2 caractérise explicitement le
+biais sans jamais chercher ni retenir un sous-groupe rentable.
+
+### Limites méthodologiques
+
+- Le bootstrap utilisé (parties 4, 5-6) est un rééchantillonnage i.i.d.,
+  pas un bootstrap par blocs temporels — même réserve que E1.
+- La corrélation des erreurs (partie 5-6) est une mesure de
+  **chevauchement**, pas une preuve causale que xG et marché « voient la
+  même chose » pour la même raison — une corrélation élevée reste
+  compatible avec des mécanismes différents produisant des erreurs
+  corrélées. C'est un indice fort, pas une démonstration formelle.
+  L'absence de signal en partie 4 (test dédié, validé sur données
+  synthétiques) est un résultat sur `poisson_simple` spécifiquement, pas
+  directement sur xG (testé séparément en parties 5-6 via une approche
+  différente, la corrélation d'erreurs).
+- Les quintiles/déciles ne couvrent que la dimension « force du favori » /
+  « niveau de probabilité » — d'autres dimensions (calendrier, forme
+  récente, etc., section E) n'ont pas été explorées ici, hors périmètre
+  de ce diagnostic.
+
+### Réponses aux trois questions posées
+
+1. **Où et pourquoi `poisson_simple` est-il inférieur au marché ?**
+   Partout et de façon diffuse plutôt que localisée : sa calibration est
+   3 à 9 fois pire que celle du marché sur les trois issues, sur tous les
+   championnats et les deux saisons sans exception, avec un biais
+   irrégulier (tantôt sur-confiant, tantôt sous-confiant selon la
+   tranche de probabilité) plutôt qu'un décalage directionnel simple. Le
+   désavantage en Brier est présent dans les cinq quintiles de force du
+   favori (0.033 à 0.062), sans zone où `poisson_simple` égalerait le
+   marché — sauf au niveau du match individuel, où `poisson_simple` fait
+   en réalité mieux que le marché sur 35.5 % des cas (hétérogénéité
+   réelle, non exploitable ex ante faute de règle pour l'identifier à
+   l'avance).
+2. **Le désaccord `poisson_simple`/marché contient-il encore une
+   information indépendante apparente ?** Non, sur ce corpus, pour
+   aucune des trois issues (IC95 % couvrant largement 0 partout), avec
+   une méthode validée pour détecter un signal injecté quand il existe
+   réellement.
+3. **Le xG semble-t-il contenir une information qui n'est PAS déjà
+   capturée par B365 ?** **Non, pas dans cette analyse.** xG améliore
+   `poisson_simple` (confirmant B3/B3.2/B3.3) mais reste inférieur au
+   marché, et ses erreurs sont **plus** corrélées au marché que celles de
+   `poisson_simple` — le signe inverse de ce qu'il faudrait observer pour
+   soutenir l'hypothèse d'une information incrémentale exploitable.
+
+**Conclusion, conformément au protocole** : la réponse à la question 3
+étant négative, la pertinence de poursuivre les modèles xG **pour la
+prédiction 1X2 face au marché** doit être sérieusement reconsidérée.
+Aucune expérience économique dédiée au xG n'est engagée à ce stade.
+Conformément à l'arrêt obligatoire du protocole, ce diagnostic ne débouche
+sur aucune nouvelle stratégie, aucun nouveau modèle, aucune optimisation —
+il sert uniquement à informer le choix de la prochaine hypothèse
+scientifique.
