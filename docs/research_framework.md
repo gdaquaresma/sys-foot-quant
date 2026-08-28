@@ -1936,3 +1936,172 @@ une opportunité de marché (qui resterait à établir face à de vraies cotes
 Over/Under, non disponibles dans ce corpus). Conformément au protocole,
 aucun modèle n'est modifié et aucune nouvelle variante n'est testée à ce
 stade.
+
+---
+
+## L. Diagnostic — calibration par tranche des probabilités Over/Under (poisson_simple, xg_model)
+
+Diagnostic **pur**, prolongeant directement la section K : aucun nouveau
+modèle prédictif, aucune modification des modèles existants, aucune
+nouvelle donnée, aucune comparaison au marché, aucune optimisation de
+seuil. Réutilise **sans recalcul** les probabilités Over 1.5/2.5/3.5 déjà
+produites par `run_stage8_diagnostic_total_goals_over_under.build_total_goals_dataframe()`
+(mêmes 2132 matchs, mêmes contraintes point-in-time, `poisson_simple` et
+`xg_model` uniquement, comme demandé).
+
+### Inspection préalable des outils de calibration déjà présents
+
+Avant toute implémentation, inventaire du dépôt (`calibration_engine/`,
+`football_model/`) :
+
+- `calibration_engine.reliability.reliability_bins` — **réutilisée sans
+  modification** pour produire la table complète par tranche (10 tranches),
+  au lieu du seul résumé pondéré déjà calculé en section K.
+- `football_model.elo.EloModel` contient déjà une forme de « calibration
+  isotonique par tranches » (bins empiriques appliqués en lookup) —
+  **précédent étudié mais délibérément NON réutilisé** : l'appliquer aux
+  probabilités Over/Under reviendrait à construire un nouveau modèle
+  recalibré, explicitement exclu par la consigne. Ce diagnostic reste
+  purement analytique.
+- **Aucune décomposition de Brier** (fiabilité/résolution/incertitude, Murphy
+  1973) et **aucune métrique de discrimination** (monotonicité) n'existaient
+  dans le dépôt avant ce diagnostic — ajoutées comme outils de **mesure
+  purs** (`calibration_engine/decomposition.py`), même statut que
+  `goodness_of_fit.py`/`low_score_metrics.py` déjà présents : analysent un
+  ensemble (probabilité, résultat) déjà produit, ne génèrent et ne
+  modifient aucune prédiction. Décomposition : `Brier = Fiabilité −
+  Résolution + Incertitude` — la résolution (pouvoir de discrimination)
+  est, par construction mathématique, **indépendante de toute
+  recalibration monotone** (celle-ci ne peut modifier que la fiabilité) :
+  c'est l'outil exact requis pour répondre à « une calibration ex-ante
+  pourrait-elle corriger le biais sans détruire la discrimination ? ».
+
+### Résultat central : un skill négatif par rapport à la climatologie, sur les 6 combinaisons testées
+
+| Modèle | Seuil | Fiabilité | Résolution | Incertitude | Skill vs climatologie |
+|---|---|---|---|---|---|
+| `poisson_simple` | 1.5 | 0.0183 | 0.0017 | 0.1722 | **-0.0963** |
+| `poisson_simple` | 2.5 | 0.0216 | 0.0017 | 0.2489 | **-0.0798** |
+| `poisson_simple` | 3.5 | 0.0241 | 0.0017 | 0.2101 | **-0.1067** |
+| `xg_model` | 1.5 | 0.0067 | 0.0022 | 0.1726 | **-0.0262** |
+| `xg_model` | 2.5 | 0.0196 | 0.0043 | 0.2488 | **-0.0616** |
+| `xg_model` | 3.5 | 0.0267 | 0.0035 | 0.2100 | **-0.1106** |
+
+Sur les six combinaisons (2 modèles × 3 seuils), le **skill vs climatologie
+est négatif sans exception** : la fiabilité (biais) dépasse systématiquement
+la résolution (discrimination). Concrètement, en termes de score de Brier
+« groupé », prédire *toujours* le taux de base observé (climatologie
+constante) ferait **mieux** que les probabilités actuelles de
+`poisson_simple`/`xg_model` sur Over/Under — pas parce qu'elles ne
+discriminent rien (la résolution est positive partout, un vrai signal
+existe), mais parce que le biais de calibration l'emporte largement sur ce
+signal. `xg_model` a un skill un peu moins négatif que `poisson_simple`
+sur Over 1.5/2.5 (plus de résolution, ex. 0.0043 contre 0.0017 sur Over
+2.5) mais reste négatif partout, et son biais est généralement plus
+prononcé en valeur absolue sur les tranches hautes (voir tableau suivant).
+
+### Biais par tranche de probabilité prédite
+
+Le biais (`prédit − observé`) suit un **schéma quasi systématique en
+« S »** sur les six tables (10 tranches chacune, détail complet dans la
+sortie du script) : **négatif** dans les tranches basses (le modèle
+sous-estime la probabilité, la fréquence réelle est plus haute que prédit)
+et **positif, souvent nettement plus large en amplitude**, dans les
+tranches hautes (le modèle est trop confiant). Exemples représentatifs :
+
+- `poisson_simple`, Over 2.5 : tranche [0.0-0.1] biais -0.464 (n=42) →
+  tranche [0.9-1.0] biais +0.273 (n=51).
+- `poisson_simple`, Over 3.5 : tranche [0.0-0.1] biais -0.203 (n=110) →
+  tranche [0.9-1.0] biais +0.581 (n=11, effectif faible).
+- `xg_model`, Over 3.5 : tranche [0.1-0.2] biais -0.002 (n=72) → tranche
+  [0.7-0.8] biais +0.387 (n=66).
+
+C'est la signature classique d'une distribution de probabilités prédites
+**trop dispersée** par rapport à la vraie variabilité du phénomène
+(« overconfidence ») — exactement le type de biais qu'une recalibration
+monotone standard (Platt scaling, régression isotonique) est conçue pour
+corriger. Les tranches extrêmes (0.9-1.0 avec n=11 à n=51 selon le cas)
+restent peu peuplées — le biais y est directionnellement cohérent avec le
+reste de la table mais numériquement moins fiable.
+
+### Monotonicité (condition de plausibilité d'une recalibration monotone)
+
+| Modèle | Seuil | Violations / transitions | Taux |
+|---|---|---|---|
+| `poisson_simple` | 1.5 | 4/9 | 0.444 |
+| `poisson_simple` | 2.5 | 2/9 | 0.222 |
+| `poisson_simple` | 3.5 | 2/9 | 0.222 |
+| `xg_model` | 1.5 | 3/8 | 0.375 |
+| `xg_model` | 2.5 | 2/9 | 0.222 |
+| `xg_model` | 3.5 | 2/9 | 0.222 |
+
+Les violations de monotonicité (la fréquence observée qui redescend d'une
+tranche à la tranche suivante, plus haute) sont **concentrées dans les
+tranches basses et peu peuplées** (Over 1.5, où la plupart des matchs
+dépassent déjà 50 % de probabilité prédite, laissant les tranches basses
+avec n=13 à 38 seulement) — cohérent avec du bruit d'échantillonnage
+plutôt qu'une non-monotonicité structurelle. Sur Over 2.5/3.5, mieux
+peuplés sur toute la plage, le taux de violation descend à 22 %, et les
+tranches à fort effectif (n>100) suivent une progression globalement
+croissante. Cette lecture reste qualitative : les violations résiduelles
+dans les tranches peu peuplées ne permettent pas d'affirmer une
+monotonicité parfaite, seulement une monotonicité plausible sur la partie
+bien échantillonnée de la distribution.
+
+### Stabilité du biais par championnat et par saison
+
+Le biais change de comportement selon le seuil :
+- **Over 2.5 et 3.5** : biais **positif dans presque tous les
+  découpages**, pour les deux modèles (ex. `poisson_simple` Over 2.5 :
+  Liga +0.060, Ligue 1 +0.065, Premier League -0.002 — seule quasi-exception ;
+  `xg_model` Over 2.5 : +0.082 à +0.135 partout, sans aucune exception).
+  Un biais stable en direction est une condition favorable à la
+  généralisation d'une recalibration.
+- **Over 1.5** : le signe du biais de `poisson_simple` **s'inverse** selon
+  le championnat (Liga/Ligue 1 positifs, Premier League négatif à -0.034)
+  et selon la saison (2024/25 négatif, 2025/26 positif) — une
+  recalibration globale unique serait ici moins susceptible de bien
+  généraliser à tous les sous-groupes. `xg_model`, en revanche, reste
+  positif sur Over 1.5 dans tous les découpages (plus stable que
+  `poisson_simple` à ce seuil précis).
+
+### Limites méthodologiques
+
+- Analyse **purement diagnostique** : aucune recalibration n'a été
+  effectivement ajustée ni appliquée — cela constituerait un nouveau
+  modèle, explicitement exclu par la consigne. Les indicateurs de
+  résolution/monotonicité renseignent sur la **plausibilité** qu'une
+  recalibration future puisse réduire le biais sans dégrader la
+  discrimination, pas sur une démonstration qu'elle fonctionnerait
+  effectivement hors échantillon (une recalibration ajustée sur ce même
+  échantillon devrait, par construction, être elle-même validée sur un
+  échantillon disjoint pour éviter le surajustement — non fait ici,
+  hors périmètre).
+- La décomposition de Brier utilise le score « groupé » (probabilité
+  moyenne par tranche) — l'écart avec le Brier « brut » (probabilités
+  individuelles) est rapporté explicitement (`grouping_error`,
+  systématiquement < 0.002 en valeur absolue ici) plutôt que masqué.
+- Les tranches extrêmes de faible effectif (n<20, notamment sur Over 3.5)
+  restent des estimations bruitées du biais réel à ces niveaux de
+  probabilité.
+
+### Réponse à la question posée
+
+**Oui, un biais de calibration précis et récurrent est identifié** : un
+schéma en « S » (sous-confiance en zone basse, sur-confiance marquée en
+zone haute), présent sur les six combinaisons modèle × seuil testées,
+suffisamment large pour que le **skill par rapport à une simple
+climatologie constante soit négatif partout** — le biais de calibration
+domine actuellement le pouvoir de discrimination réel (résolution
+positive mais faible : 0.0017 à 0.0043 contre une fiabilité de 0.007 à
+0.027). Puisque la résolution est mathématiquement indépendante de toute
+recalibration monotone (celle-ci ne peut agir que sur la fiabilité), une
+recalibration ex-ante **pourrait en principe** réduire fortement le biais
+sans dégrader la discrimination déjà mesurée — cette conclusion est
+renforcée par la relative stabilité du biais sur Over 2.5/3.5 (positif
+presque partout) mais nuancée sur Over 1.5, où le signe du biais
+s'inverse selon le championnat et la saison pour `poisson_simple`
+spécifiquement. Ce diagnostic caractérise la plausibilité d'une telle
+correction ; il ne la met pas en œuvre ni ne démontre son efficacité hors
+échantillon — conformément au protocole, aucune recalibration n'est
+implémentée à ce stade.
