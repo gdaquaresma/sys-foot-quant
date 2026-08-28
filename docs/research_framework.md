@@ -2226,3 +2226,143 @@ restent inchangés ; cette expérience caractérise uniquement une couche de
 recalibration séparée, jamais intégrée au système de prédiction en
 production à ce stade. Conformément au protocole, aucune autre méthode,
 aucun hyperparamètre, aucune comparaison au marché n'ont été testés.
+
+---
+
+## N. Expérience E3 — validation de la fiabilité hors échantillon des probabilités calibrées
+
+Question précise : **quand le système annonce une probabilité calibrée
+d'Over, cette probabilité correspond-elle réellement à la fréquence
+observée sur des matchs futurs ?** Aucune comparaison au bookmaker, aucun
+ROI, aucune sélection de pari, aucun seuil de cote, aucune optimisation.
+`poisson_simple` et `xg_model` restent inchangés.
+
+**Aucun recalcul** : ce rapport réutilise **exactement** le pipeline déjà
+testé d'E2 (même découpage 40/30/30, même courbe isotonique ajustée
+uniquement sur la calibration n=640, même test n=640, même bootstrap
+apparié) — vérifié par les mêmes chiffres globaux que la section M
+(Brier/log loss/biais/résolution/IC95% identiques). Deux ajouts,
+strictement des mises en forme de données déjà calculées : la table de
+calibration **complète** (10 tranches fixes, y compris les tranches
+vides, jamais déplacées) et une lecture pratique agrégée des zones
+50-60 % / 60-70 % / 70-80 % / 80 %+ (fusion pondérée de [0.8-0.9] et
+[0.9-1.0] uniquement) sur les probabilités **calibrées**.
+`scripts/run_stage11_e3_reliability_validation.py`.
+
+### Lecture pratique — Over 2.5 (priorité)
+
+| Modèle | Zone | n | Annoncé | Observé | Écart |
+|---|---|---|---|---|---|
+| `poisson_simple` | 50-60 % | 630 | 53.6 % | 52.2 % | 1.4 pt |
+| `poisson_simple` | 60-70 % | 0 | — | — | — |
+| `poisson_simple` | 70-80 % | 2 | 75.0 % | 100 % | n trop faible |
+| `poisson_simple` | 80 %+ | 0 | — | — | — |
+| `xg_model` | 50-60 % | 387 | 57.0 % | 55.3 % | 1.7 pt |
+| `xg_model` | 60-70 % | 33 | 61.9 % | 66.7 % | 4.8 pt |
+| `xg_model` | 70-80 % | 2 | 72.8 % | 100 % | n trop faible |
+| `xg_model` | 80 %+ | 0 | — | — | — |
+
+*« Lorsque `xg_model` calibré annonçait environ 57 % d'Over 2.5 (n=387,
+zone la plus peuplée), l'Over 2.5 s'est produit 55.3 % du temps — un écart
+de 1.7 point. »* C'est le résultat le plus directement lisible du
+protocole demandé.
+
+**Nuance importante pour `poisson_simple`** : sa zone 50-60 % concentre
+**630 des 640 matchs de test** (98 %) — un seul palier isotonique domine
+presque tout le test (déjà signalé en section M : PAVA a fortement aplati
+la courbe pour cette combinaison). La fiabilité y est bonne (écart
+1.4 pt), mais elle porte sur une annonce **presque identique pour
+n'importe quel match** — la question posée (« correspond-elle à la
+fréquence observée ? ») reçoit une réponse positive, mais avec très peu
+de variété de probabilités annoncées pour la juger. `xg_model` conserve
+davantage de paliers distincts (387/33/2/0 répartis sur plusieurs zones)
+et reste bien calibré sur chacun.
+
+### Lecture pratique — Over 1.5 et Over 3.5
+
+| Modèle | Seuil | 50-60 % | 60-70 % | 70-80 % | 80 %+ |
+|---|---|---|---|---|---|
+| `poisson_simple` | 1.5 | n=0 | n=39, 69.5→64.1 % | n=200, 76.9→71.0 % | n=401, 81.6→78.6 % |
+| `xg_model` | 1.5 | n=10, 60.0→70.0 % | n=3, 63.4→100 % | n=305, 76.2→72.8 % | n=321, 83.7→77.6 % |
+| `poisson_simple` | 3.5 | n=0 | n=0 | n=0 | n=0 |
+| `xg_model` | 3.5 | n=0 | n=0 | n=0 | n=0 |
+
+**Over 3.5 : les quatre zones sont vides pour les deux modèles.** Après
+recalibration, aucune probabilité calibrée d'Over 3.5 n'atteint 50 % sur
+le corpus de test — Over 3.5 est un événement suffisamment rare (~30 %
+observé globalement, sections K/L) pour que le modèle calibré ne se
+déclare jamais franchement confiant dans ce sens. La question centrale
+d'E3 **ne peut donc pas être vérifiée dans ces zones pour Over 3.5** avec
+ce corpus — un résultat honnête à rapporter, pas une omission. Sur Over
+1.5, un résidu de biais subsiste même après calibration dans la zone
+80 %+ (`poisson_simple` : 81.6→78.6 %, écart 3.0 pt ; `xg_model` :
+83.7→77.6 %, écart 6.1 pt) — la calibration réduit le biais sans
+l'annuler complètement dans cette zone, cohérent avec les tables
+complètes ci-dessous.
+
+### Tables de calibration complètes (10 tranches fixes, y compris tranches vides)
+
+Le détail complet (avant ET après, les 10 tranches, tranches vides
+conservées avec leur taille plutôt que déplacées) est dans la sortie du
+script — extraits significatifs :
+
+- `poisson_simple` Over 3.5, après calibration : toute la masse tombe
+  dans 4 tranches basses (`[0.0-0.1]` n=7, `[0.1-0.2]` n=32, `[0.2-0.3]`
+  n=224, `[0.3-0.4]` n=377) — cohérent avec l'absence totale de matchs
+  dans les zones 50 %+ ci-dessus.
+- `xg_model` Over 2.5, après calibration : masse concentrée sur
+  `[0.4-0.5]` (n=215) et `[0.5-0.6]` (n=387), avec un résidu bien réparti
+  sur les tranches `[0.6-0.7]` (n=33) et `[0.7-0.8]` (n=2) — plus étalé
+  que `poisson_simple` sur la même paire (modèle, seuil).
+
+### Métriques globales (section 5 — déjà définies en E2, aucune nouvelle)
+
+| Modèle | Seuil | Brier avant→après | log loss avant→après | biais moyen absolu avant→après | résolution avant→après |
+|---|---|---|---|---|---|
+| `poisson_simple` | 1.5 | 0.1892→0.1866 | 0.574→0.561 | 0.0481→0.0409 | 0.0022→0.0021 |
+| `poisson_simple` | 2.5 | 0.2527→0.2467 | 0.700→0.686 | 0.0667→0.0151 | 0.0046→0.0017 |
+| `poisson_simple` | 3.5 | 0.2153→0.2053 | 0.622→0.639 | 0.0870→0.0169 | 0.0059→0.0019 |
+| `xg_model` | 1.5 | 0.1932→0.1881 | 0.591→0.643 | 0.0950→0.0425 | 0.0025→0.0010 |
+| `xg_model` | 2.5 | 0.2643→0.2456 | 0.727→0.684 | 0.1363→0.0203 | 0.0058→0.0056 |
+| `xg_model` | 3.5 | 0.2297→0.2052 | 0.651→0.607 | 0.1575→0.0107 | 0.0029→0.0031 |
+
+Chiffres strictement identiques à la section M (même pipeline, même
+segment de test, aucun recalcul) — vérifié comme non-régression.
+
+### Incertitude (section 6)
+
+IC95% bootstrap apparié (`paired_bootstrap_test`, réutilisé sans
+modification) sur `diff = Brier_après − Brier_avant`, exactement comme en
+section M : **AMÉLIORATION STATISTIQUEMENT DÉMONTRÉE** pour `xg_model`
+sur les 3 seuils et pour `poisson_simple` sur Over 3.5 ; **ABSENCE DE
+PREUVE D'AMÉLIORATION** (jamais dégradation) pour `poisson_simple` sur
+Over 1.5/2.5 — chiffres identiques à la section M.
+
+### Limites méthodologiques
+
+- Les zones 60-70 %/70-80 % sont parfois trop peu peuplées (n=2, n=3) pour
+  être lues de façon fiable — rapportées avec leur taille plutôt que
+  masquées ou fusionnées arbitrairement, conformément à la consigne.
+- La bonne fiabilité apparente de `poisson_simple` Over 2.5 (zone
+  50-60 %) reflète en grande partie une concentration extrême de la
+  courbe isotonique (98 % du test dans une seule tranche), pas une
+  calibration fine sur plusieurs niveaux de confiance — nuance déjà
+  documentée en section M (perte de résolution mesurée).
+- Over 3.5 ne peut pas être évalué dans les zones 50 %+ demandées, faute
+  de matchs de test où le modèle calibré atteint ce niveau de confiance.
+
+### Réponse à la question posée
+
+**Oui, avec des nuances par seuil et par modèle.** Quand `xg_model`
+calibré annonce une probabilité d'Over 2.5 (le marché prioritaire),
+celle-ci correspond bien à la fréquence observée dans sa zone la plus
+peuplée (57.0 % annoncé → 55.3 % observé, n=387) et reste raisonnablement
+fiable sur les autres zones peuplées. `poisson_simple` calibré est
+également bien calibré sur Over 2.5, mais avec une variété de
+probabilités annoncées beaucoup plus faible (un seul palier dominant).
+Sur Over 1.5, un résidu de biais subsiste dans la zone 80 %+ pour les
+deux modèles, même après calibration. Sur Over 3.5, la question ne peut
+pas être vérifiée dans les zones de confiance élevée (50 %+), le modèle
+calibré n'y atteignant jamais ce niveau sur ce corpus. Aucune règle de
+pari n'est créée à partir de ces résultats ; `poisson_simple` et
+`xg_model` restent inchangés.
