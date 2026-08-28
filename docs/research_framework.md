@@ -2366,3 +2366,164 @@ pas être vérifiée dans les zones de confiance élevée (50 %+), le modèle
 calibré n'y atteignant jamais ce niveau sur ce corpus. Aucune règle de
 pari n'est créée à partir de ces résultats ; `poisson_simple` et
 `xg_model` restent inchangés.
+
+---
+
+## O. Expérience E4 — discrimination de l'espérance totale de buts prédite
+
+Question exacte : **lorsque le modèle prédit un total attendu de buts
+plus élevé, les matchs produisent-ils effectivement davantage de buts ?**
+Objectif : démontrer une **discrimination réelle**, pas une calibration
+parfaite (une surestimation globale n'annule pas cette propriété).
+`poisson_simple` et `xg_model` restent inchangés ; **aucune calibration
+isotone n'est utilisée ici** — la variable étudiée est l'espérance
+**brute** `expected_total_goals = λ_home + λ_away`, déjà calculée et
+exposée par `run_stage8...build_total_goals_dataframe()` (colonnes
+`{model}_lambda_plus_mu`), réutilisée sans recalcul. Même découpage
+40/30/30 que B1/A2/B2/B3.3/E2/E3 (réutilisé via
+`run_stage10...build_calibration_and_test_sets`) ; la calibration (30 %)
+n'est ici utilisée pour rien (vérifié par test dédié — aucun ajustement
+n'est nécessaire pour cette analyse), seul le TEST (n=640, 3 championnats
+× 2 saisons) sert à l'évaluation. `scripts/run_stage12_e4_expected_goals_discrimination.py`.
+
+### Tranches fixes — GLOBAL (analyse principale, section 4 du protocole)
+
+| Tranche | `poisson_simple` n | prédit→observé | biais | `xg_model` n | prédit→observé | biais |
+|---|---|---|---|---|---|---|
+| <1.5 | 0 | — | — | 0 | — | — |
+| 1.5-2.0 | 12 | 1.844→2.167 | +0.323 | 0 | — | — |
+| 2.0-2.5 | 77 | 2.328→2.429 | +0.100 | 5 | 2.353→1.800 | -0.553 |
+| 2.5-3.0 | 203 | 2.761→2.621 | -0.140 | 119 | 2.816→2.361 | -0.455 |
+| 3.0-3.5 | 193 | 3.236→2.850 | -0.387 | 244 | 3.256→2.734 | -0.523 |
+| 3.5+ | 155 | 3.905→3.039 | -0.866 | 272 | 3.899→2.974 | -0.924 |
+
+**Sur les tranches suffisamment peuplées, le total réellement observé
+augmente de façon monotone avec la tranche prédite, pour les deux
+modèles** (`poisson_simple` : 2.167→2.429→2.621→2.850→3.039 ; `xg_model` :
+2.361→2.734→2.974, en ignorant la tranche 2.0-2.5 à n=5 trop faible pour
+être lue). Le biais suit un schéma différent selon le modèle :
+`poisson_simple` passe d'une sous-estimation dans les tranches basses à
+une surestimation croissante dans les tranches hautes (schéma
+« en éventail », signature d'une dispersion prédite trop large — cohérent
+avec la section L) ; `xg_model` surestime dans **toutes** les tranches,
+avec un biais qui croît en valeur absolue avec le niveau prédit (décalage
+plutôt qu'éventail).
+
+### Quintiles de l'espérance prédite (section 5, complément)
+
+| Quintile | `poisson_simple` prédit→observé | `xg_model` prédit→observé |
+|---|---|---|
+| Q1 | 2.354→2.523 | 2.804→2.344 |
+| Q2 | 2.769→2.469 | 3.148→2.758 |
+| Q3 | 3.062→2.789 | 3.405→2.719 |
+| Q4 | 3.397→2.914 | 3.663→2.891 |
+| Q5 | 3.980→3.102 | 4.183→3.086 |
+
+**Relation monotone stricte : NON, pour les deux modèles** (une seule
+inversion sur les quatre transitions dans chaque cas — `poisson_simple` :
+Q1→Q2 ; `xg_model` : Q2→Q3 — les trois autres transitions sont
+croissantes). Le résultat global reste net : Q5 est nettement au-dessus
+de Q1 pour les deux modèles (`poisson_simple` : +0.579 ; `xg_model` :
++0.742), et l'analyse des tranches fixes ci-dessus (plus large, donc plus
+stable) est monotone sans exception. La finesse des quintiles (128 matchs
+chacun) rend une inversion locale isolée statistiquement plausible sans
+remettre en cause la tendance d'ensemble.
+
+### Corrélation, MAE, biais moyen (section 6) — GLOBAL
+
+| Modèle | n | corrélation | MAE (IC95%) | biais moyen (IC95%) |
+|---|---|---|---|---|
+| `poisson_simple` | 640 | +0.164 | 1.381 [1.303, 1.460] | -0.353 [-0.482, -0.224] |
+| `xg_model` | 640 | +0.160 | 1.481 [1.402, 1.560] | -0.681 [-0.809, -0.553] |
+
+La décomposition de Brier (E2/E3) **ne s'applique pas ici** : elle
+suppose une probabilité dans [0,1] et un résultat binaire, alors que
+`expected_total_goals` est une estimation ponctuelle continue — la
+corrélation en tient lieu comme mesure de discrimination pour une
+variable continue (aucune métrique sophistiquée ajoutée). Les deux
+corrélations sont **positives mais modestes** (~0.16), et l'IC95% du
+biais moyen est entièrement négatif pour les deux modèles (surestimation
+systématique confirmée avec certitude statistique, cohérent avec K/L). La
+MAE (~1.4 but) reste large en valeur absolue — un rappel explicite que
+discrimination et précision ponctuelle sont deux propriétés différentes :
+le modèle sépare correctement les matchs à faible/fort total en moyenne,
+mais son estimation ponctuelle individuelle reste grossière.
+
+### Stabilité par championnat et par saison
+
+| Portée | `poisson_simple` corr. | `xg_model` corr. |
+|---|---|---|
+| Liga | +0.252 | +0.239 |
+| Ligue 1 | +0.186 | +0.175 |
+| **Premier League** | **-0.024** | **+0.012** |
+| 2024/25 | +0.241 | +0.194 |
+| 2025/26 | +0.081 | +0.123 |
+
+**Le signal n'est pas uniforme sur le corpus : la Premier League fait
+exception**, avec une corrélation quasi nulle pour les deux modèles
+(-0.024 et +0.012), alors que Liga, Ligue 1 et les deux saisons montrent
+toutes une corrélation positive du même ordre de grandeur (~0.08 à
+0.25). Le biais moyen (surestimation), lui, reste négatif et
+statistiquement non nul sur **tous** les découpages sans exception (voir
+sortie complète du script) — c'est la discrimination, pas le biais, qui
+varie selon le championnat.
+
+### P(Over 2.5 observé) par tranche fixe (section 9, descriptif, aucune calibration)
+
+| Tranche | `poisson_simple` (n) | `xg_model` (n) |
+|---|---|---|
+| 1.5-2.0 | 33.3 % (12) | — |
+| 2.0-2.5 | 44.2 % (77) | 20.0 % (5) |
+| 2.5-3.0 | 48.3 % (203) | 42.0 % (119) |
+| 3.0-3.5 | 57.0 % (193) | 53.3 % (244) |
+| 3.5+ | 56.8 % (155) | 56.2 % (272) |
+
+**La fréquence d'Over 2.5 augmente avec la tranche d'espérance prédite,
+pour les deux modèles**, quasiment sans exception (les deux dernières
+tranches de `poisson_simple` sont à égalité statistique, 57.0 % vs
+56.8 %, pas une inversion significative). C'est la lecture la plus
+directement utile pour l'objectif final du projet (marchés Over/Under) :
+l'espérance de buts, même non calibrée, ordonne correctement les matchs
+selon leur probabilité réelle d'Over 2.5.
+
+### Limites méthodologiques
+
+- Corrélations modestes (~0.16 au niveau global) : la discrimination est
+  réelle mais loin d'être forte — cohérent avec la résolution mesurée en
+  E2/E3 sur les probabilités Over/Under dérivées de cette même variable.
+- Premier League ne montre aucun signal de discrimination détectable
+  pour aucun des deux modèles — la structure du signal n'est donc pas
+  garantie sur tout sous-ensemble du corpus, un résultat à ne pas ignorer
+  pour toute exploitation future.
+- Aucun bootstrap n'a été construit pour la corrélation elle-même (aucun
+  outil générique de ce type déjà présent dans le dépôt, non ajouté
+  conformément à la consigne « ne pas ajouter de tests statistiques
+  multiples ») — seuls le biais moyen et la MAE portent un IC95%
+  bootstrap (réutilisation directe de `paired_bootstrap_test`).
+- MAE élevée (~1.4-1.5 but) : la discrimination établie ici ne dit rien
+  sur la précision individuelle des prédictions, qui reste grossière.
+
+### Réponse à la question posée
+
+**« Notre estimation du total attendu permet-elle réellement de
+distinguer les matchs à faible total de buts des matchs à fort total de
+buts, et cette discrimination est-elle suffisamment stable pour
+constituer la base d'une future estimation fiable des probabilités
+Over/Under ? »**
+
+**Oui pour la discrimination, avec une réserve claire sur la stabilité.**
+Sur les tranches fixes (l'analyse principale demandée), le total réel
+observé et la fréquence d'Over 2.5 augmentent tous deux de façon
+quasi-monotone avec l'espérance prédite, pour `poisson_simple` **et**
+`xg_model`, au niveau global. Les quintiles nuancent ce constat (une
+inversion locale sur quatre transitions) sans le contredire (Q5 nettement
+au-dessus de Q1 dans les deux cas). Cette discrimination reste toutefois
+**modeste en intensité** (corrélation ~0.16) et **non uniforme sur le
+corpus** : absente en Premier League pour les deux modèles, présente et
+comparable en Liga, Ligue 1 et sur les deux saisons. Une surestimation
+systématique de l'espérance (déjà établie en K/L) n'annule pas cette
+propriété de discrimination, conformément au critère de succès du
+protocole — mais toute exploitation future devra tenir compte du fait que
+le signal n'est pas structurellement garanti sur tout le corpus. Aucune
+conclusion de rentabilité n'est tirée ici ; `poisson_simple` et
+`xg_model` restent inchangés, aucune nouvelle calibration créée.
