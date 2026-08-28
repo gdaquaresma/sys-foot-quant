@@ -121,3 +121,25 @@ construit.
   provenant de la meme ligne/du meme moment de collecte. Voir
   `data_engine/market_odds/over_under_odds.py` et
   docs/research_framework.md section P (E5) pour l'utilisation complete.
+- **Extension realisee (E9, couche multi-bookmakers)** : `_ALLOWED_COLUMNS`
+  etendue a `BWH`/`BWD`/`BWA` (Bet&Win) et `PSH`/`PSD`/`PSA` (Pinnacle),
+  1X2 uniquement, colonnes source non-cloture - `BWCH/CD/CA` et
+  `PSCH/CD/CA` explicitement exclues, verifie par test dedie.
+  Contrairement a B365, BW et PS sont chacun PARTIELLEMENT complets
+  (couverture variable par saison - constate par inspection directe des
+  six fichiers, jamais suppose) : un bookmaker absent ou partiel sur un
+  match donne est simplement absent du snapshot multi-bookmaker, jamais
+  invente ni impute. Aucune colonne Over/Under BW/PS n'existe dans les
+  fichiers sources - perimetre Over/Under reste limite a B365 uniquement.
+  `BFE` (Betfair Exchange) explicitement EXCLU - nature d'exchange (prix
+  determines par un carnet d'ordres, pas un bookmaker a marge fixe) non
+  clarifiee, decision differee. Meme mecanisme point-in-time, aucune
+  nouvelle regle temporelle. Nouveau module
+  `data_engine/market_odds/multi_bookmaker_odds.py` (bookmaker -> marche
+  -> selection -> cote, reutilise le mecanisme d'appariement/PIT SANS
+  MODIFICATION) et nouveaux modules `market_engine/consensus.py`,
+  `.anomaly.py` (grille de classification d'ecart PRE-ENREGISTREE,
+  seuils 0.05/0.10 point de probabilite), `.arbitrage.py` (detection
+  MATHEMATIQUE uniquement, jamais presentee comme une opportunite reelle).
+  Voir docs/research_framework.md section T (E9) pour l'utilisation
+  complete et le detail des resultats.

@@ -3341,3 +3341,181 @@ recherche de value n'est validée par ce rapport.
 
 **Arrêt.** E8 est terminé conformément au protocole. Aucune expérience
 suivante n'est lancée automatiquement.
+
+## T. Expérience E9 — couche multi-bookmakers et détection d'anomalies/arbitrage
+
+**Contexte et cadrage.** E8 a validé, en walk-forward strict, que la
+distribution de buts corrigée par E7 tient hors échantillon (verdict A
+pour les trois modèles). E9 ne cherche PAS à battre le marché : il
+construit l'infrastructure permettant de comparer notre probabilité
+calibrée aux prix de plusieurs bookmakers, et de distinguer explicitement
+trois phénomènes différents : (A) écart modèle/marché (ne prouve rien
+seul), (B) anomalie bookmaker/marché (un bookmaker isolé du consensus),
+(C) arbitrage mathématique (phénomène différent, jamais confondu avec A/B).
+Aucune conclusion de rentabilité, aucun ROI, aucune règle de pari.
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés.
+
+### 1. Audit préalable et extension des données
+
+Inspection de `football_data_loader.py`, `market_engine/` (`overround.py`,
+`shin.py`, `model_vs_market.py`), `over_under_odds.py`, ADR 0006 et E5/E6/E8
+: l'infrastructure point-in-time (appariement, fuseau horaire, règle de
+connaissance conservatrice, `DECISION_OFFSET_HOURS`) était déjà complète et
+générique ; seule la **lecture** des données de marché était limitée à un
+seul bookmaker (B365). Inspection directe des six fichiers Football-Data
+réels : `BW` (Bet&Win) et `PS` (Pinnacle) publient des cotes 1X2 pré-match
+non-clôture, mais **aucune colonne Over/Under** pour ces deux bookmakers
+(seul B365 porte ce marché dans les fichiers sources) ; `BFE` (Betfair
+Exchange) est présent mais explicitement exclu — sa nature d'exchange
+(prix déterminés par un carnet d'ordres, pas une marge de bookmaker fixe)
+n'est pas clarifiée, décision différée. Complétude constatée (pas
+supposée) : `BW` et `PS` sont chacun **partiellement complets**, avec un
+profil qui **s'inverse entre les deux saisons** (BW ~0-40% manquant en
+2024/25 mais ~0-0.3% manquant en 2025/26 ; PS ~0% manquant en 2024/25 mais
+~45-50% manquant en 2025/26) — un artefact de couverture du fournisseur de
+données, pas un signal, documenté explicitement comme réserve (section 6).
+
+`_ALLOWED_COLUMNS` étendue à `BWH/D/A` et `PSH/D/A` (1X2 uniquement,
+jamais les colonnes de clôture `BWCH/CD/CA`/`PSCH/CD/CA`, vérifié par
+test dédié) — voir ADR 0006, section "Extension réalisée (E9)".
+
+### 2. Représentation générique multi-bookmakers
+
+Nouveau module `data_engine/market_odds/multi_bookmaker_odds.py` :
+réutilise **sans modification** le mécanisme point-in-time déjà validé
+(`matching.py`, `time_resolution.py`, `DECISION_OFFSET_HOURS`) pour
+produire, par match, une structure générique `bookmaker → marché →
+sélection → cote` (1X2 : H/D/A × B365/BW/PS ; Over/Under 2.5 : Over/Under
+× B365 uniquement). Un match reste exploitable dès lors que B365 1X2 est
+complet (même condition que E1/E5) ; un bookmaker secondaire absent ou
+partiel sur un match donné est simplement absent de son dictionnaire —
+**jamais inventé ni imputé**. Corpus exploitable réel : **1806/2123**
+matchs appariés (le résidu, ~15%, correspond aux exclusions déjà connues
+— jour ambigu lundi/mardi/vendredi — non une nouvelle perte).
+
+### 3. Conversion cote → probabilité et retrait d'overround
+
+`market_engine/overround.remove_overround_proportional`/`hold_percentage`
+réutilisés **sans modification**, appliqués **par bookmaker** (jamais sur
+un agrégat brut de plusieurs bookmakers — un bookmaker n'est normalisé que
+s'il cote **toutes** les sélections du marché, sinon son marché est
+partiel et n'est jamais normalisé). Nouveaux modules purs :
+`market_engine/consensus.py` (moyenne/médiane/min/max/écart-type des
+probabilités normalisées entre bookmakers, aucun poids optimisé, chaque
+bookmaker reste identifiable individuellement), `market_engine/anomaly.py`
+(grille de classification d'écart **pré-enregistrée**, seuils 0.05/0.10
+point de probabilité — réutilise la granularité déjà employée en E5,
+jamais qualifié de "value"), `market_engine/arbitrage.py` (détection
+**mathématique** pure : `1 - Σ(1/meilleure_cote_i) > 0`, présentée
+explicitement comme une détection historique, jamais une opportunité
+réelle).
+
+### 4. Résultats — structure du marché (corpus complet, n=1806)
+
+**Marché 1X2 :**
+
+| Bookmaker | Couverture | Overround moyen | Overround médian |
+|---|---|---|---|
+| B365 | 1806/1806 (100.0%) | 0.0556 | 0.0550 |
+| BW | 1453/1806 (80.5%) | 0.0567 | 0.0570 |
+| PS | 1383/1806 (76.6%) | 0.0363 | 0.0353 |
+
+Pinnacle (PS) affiche une marge nettement plus basse que B365/BW (~3.6%
+contre ~5.6%), cohérent avec sa réputation de bookmaker "sharp" à faible
+marge — observation descriptive, aucune conclusion de rentabilité.
+
+Sur les 5418 instances (sélection × match) disposant d'au moins 2
+bookmakers : **écart-type moyen entre bookmakers = 0.0053** (0.53 point de
+probabilité) — très faible. Conséquence directe : sur les **13926**
+instances bookmaker-vs-consensus évaluables, **100% sont classées "proche
+du consensus"** (seuil 0.05 jamais atteint) — **aucune anomalie de prix
+1X2 détectée sur ce corpus**, ni aucun arbitrage mathématique
+(0/1806 matchs).
+
+**Marché Over/Under 2.5 :**
+
+| Bookmaker | Couverture | Overround moyen | Overround médian |
+|---|---|---|---|
+| B365 | 1806/1806 (100.0%) | 0.0497 | 0.0533 |
+
+Un seul bookmaker disponible sur ce marché dans les fichiers sources :
+**0 instance avec ≥2 bookmakers**, consensus et dispersion **structurellement
+non calculables**. Les 3612 instances (Over + Under × 1806 matchs) sont
+marquées **"n=1, non interprétable"** — statut honnête plutôt qu'un faux
+"proche du consensus". Arbitrage : 0/1806 — attendu et documenté comme un
+**contrôle de cohérence interne d'un seul bookmaker** (le "meilleur prix
+Over" et "meilleur prix Under" proviennent nécessairement tous deux de
+B365), **pas une détection d'arbitrage inter-bookmakers réelle** — la
+détection d'arbitrage inter-bookmakers sur l'Over/Under 2.5 n'est
+**structurellement pas possible** avec les données Football-Data
+actuellement disponibles (aucun second bookmaker sur ce marché).
+
+### 5. Modèle vs marché (A), Over 2.5, split TEST walk-forward validé (E8)
+
+Restreint, par construction, à l'intersection du split TEST hors
+échantillon d'E8 (n=640, jamais in-sample) et du corpus multi-bookmaker
+exploitable (n=542 après intersection, cohérent avec le taux de couverture
+~85% déjà observé) :
+
+| Modèle | n | écart moyen (modèle−consensus) | écart médian | proche du consensus | écart notable | écart marqué |
+|---|---|---|---|---|---|---|
+| poisson_simple | 542 | −0.0114 | −0.0128 | 225 (41.5%) | 195 (36.0%) | 122 (22.5%) |
+| xg_model | 542 | −0.0078 | −0.0057 | 318 (58.7%) | 176 (32.5%) | 48 (8.9%) |
+
+Les deux modèles affichent un écart moyen **négatif** (le modèle, après
+correction E7/E8, tend légèrement à sous-estimer P(Over 2.5) par rapport
+au consensus de marché). `poisson_simple` s'écarte plus fréquemment et
+plus fortement du consensus (58.5% de son échantillon en écart
+notable/marqué) que `xg_model` (41.4%). **Rappel explicite (protocole
+point 12-A)** : cet écart ne prouve à lui seul ni une erreur du modèle, ni
+une opportunité de marché — il n'est jamais qualifié de "value" dans ce
+rapport ; sa signification économique éventuelle sortirait du périmètre
+d'E9.
+
+### 6. Limites
+
+- La couverture BW/PS varie fortement et **s'inverse entre les deux
+  saisons** (artefact du fournisseur de données, pas un signal) — toute
+  analyse future stratifiée par bookmaker doit tenir compte de cette
+  hétérogénéité temporelle avant d'interpréter une différence de
+  couverture comme informative.
+- L'absence totale d'anomalie 1X2 détectée (0/13926) et d'arbitrage
+  (0/1806 sur les deux marchés) peut refléter soit une réelle efficience
+  de ce sous-ensemble de bookmakers sur ce corpus, soit une couverture de
+  bookmakers encore trop restreinte (3 bookmakers 1X2 seulement, 1 seul
+  Over/Under) pour qu'un écart franc apparaisse — non tranché ici.
+- La comparaison modèle/marché est restreinte au sous-échantillon
+  intersection (n=542/640, ~85%) — les matchs perdus (jours ambigus)
+  ne sont pas un échantillon aléatoire du calendrier, réserve déjà
+  documentée pour toute analyse Football-Data (ADR 0006).
+- Aucune détection d'arbitrage inter-bookmakers n'est possible sur
+  l'Over/Under 2.5 avec les données actuellement disponibles (un seul
+  bookmaker) — extension future nécessaire pour évaluer ce marché sous
+  cet angle.
+- Aucune conclusion de rentabilité n'est tirée ; aucun ROI, yield, Kelly,
+  staking, profit, ou règle de pari n'est calculé à cette étape.
+
+### 7. Verdict final
+
+**Les données historiques disponibles permettent-elles désormais de
+construire une représentation multi-bookmakers suffisamment propre pour
+passer ensuite à l'étude des anomalies de prix et de l'arbitrage ?**
+
+**Oui, avec un périmètre clairement délimité.** La couche de données est
+construite, testée (anti-fuite compris) et exécutée sur le corpus réel
+sans aucune violation point-in-time détectée. Pour le **1X2**, la couche
+est riche (3 bookmakers, ~77-100% de couverture individuelle, 5418
+instances comparables) et suffisamment propre pour une étude future des
+anomalies/arbitrage — à ce stade, sur ce corpus, aucune anomalie ni
+arbitrage n'apparaît, ce qui est en soi un résultat descriptif valide (pas
+un échec de l'infrastructure). Pour l'**Over/Under 2.5** — notre marché
+prioritaire — la couche est propre mais **structurellement limitée à un
+seul bookmaker** avec les données Football-Data actuelles : la détection
+d'anomalies bookmaker-vs-consensus et d'arbitrage inter-bookmakers n'y est
+**pas évaluable**, et ne le deviendra que si une source de données future
+apporte un second bookmaker sur ce marché précis. `poisson_simple`,
+`dixon_coles` et `xg_model` restent inchangés ; aucune conclusion de
+rentabilité n'est tirée.
+
+**Arrêt.** E9 est terminé conformément au protocole. Aucune expérience E10
+n'est lancée automatiquement.
