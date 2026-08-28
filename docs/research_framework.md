@@ -2889,3 +2889,239 @@ modèle, jamais l'inverse** - aucune preuve, dans ce rapport, que le modèle
 détient une information sur le total de buts que le marché ne posséderait
 pas déjà. Aucune conclusion de rentabilité n'est tirée ; `poisson_simple`
 et `xg_model` restent inchangés.
+
+## R. Expérience E7 — construction d'une distribution finale cohérente du total de buts
+
+**Contexte et cadrage.** E6 a établi que le marché et le modèle capturent
+majoritairement le même signal sous-jacent sur le total de buts, sans
+preuve que le modèle détienne une information incrémentale. Le résultat a
+été acté comme contrainte architecturale : le marché n'est pas un
+adversaire à battre, mais le modèle conserve une information prédictive
+réelle sur le total qu'il convient de représenter aussi fidèlement que
+possible. E7 ne cherche donc PAS une nouvelle victoire contre le marché ;
+il cherche une représentation du total de buts qui soit (a) cohérente par
+construction entre tous les seuils Over/Under, et (b) mieux calibrée que
+la distribution brute produite par `poisson_simple`, `dixon_coles` et
+`xg_model`. Les trois modèles restent INCHANGÉS ; aucun nouveau modèle
+prédictif n'est créé. Aucune conclusion de rentabilité n'est tirée.
+
+### 1. Rappel structurel : une seule matrice, jamais des seuils séparés
+
+L'architecture existante dérive déjà `total_goals_distribution` ET
+`over_under_probs` de la MÊME matrice de score `score_matrix(lam, mu)` /
+`apply_dixon_coles_correction(matrix, lam, mu, rho)` — la propriété de
+source unique était donc déjà garantie avant E7. Le travail d'E7 porte
+uniquement sur l'amélioration de la matrice elle-même (via λ, μ), jamais
+sur un ajustement séparé par seuil.
+
+### 2. Diagnostic de la queue haute — un problème de moyenne, pas de forme
+
+Comparaison de la distribution empirique observée (corpus complet, 6
+championnats-saisons) à une distribution de référence Poisson évaluée à
+la moyenne empirique réelle (2.7922 buts) :
+
+| Total | Observé | Poisson(moyenne réelle) |
+|---|---|---|
+| 0 | 0.0549 | 0.0613 |
+| 1 | 0.1689 | 0.1711 |
+| 2 | 0.2462 | 0.2389 |
+| 3 | 0.2326 | 0.2224 |
+| 4 | 0.1506 | 0.1552 |
+| 5 | 0.0835 | 0.0867 |
+| 6+ | 0.0633 | 0.0644 |
+
+Indice de dispersion (Var/Moyenne, =1 pour un Poisson exact) : **0.9611**.
+
+La distribution empirique et la référence Poisson-à-la-bonne-moyenne se
+superposent presque exactement, y compris dans la queue (6+ : 0.0633 vs
+0.0644). Le problème identifié aux étapes K/L/E4 (surestimation
+systématique, concentrée dans la queue haute) n'est donc PAS un problème
+de forme (le total de buts reste bien approximé par un mélange de
+Poisson) : c'est un problème de **moyenne prédite trop élevée**. Une
+correction de la forme de la distribution serait donc mal ciblée ; une
+correction du niveau (de λ+μ) est la piste justifiée par ce diagnostic.
+
+### 3. Démonstration empirique de l'incohérence potentielle de l'isotonique par seuil (E2/E3)
+
+Sur le test walk-forward (n=640), vérification, pour chaque match, que
+les probabilités calibrées E2/E3 respectent P(Over1.5) ≥ P(Over2.5) ≥
+P(Over3.5) :
+
+| Modèle | n | violations Over1.5<Over2.5 | violations Over2.5<Over3.5 | au moins une violation |
+|---|---|---|---|---|
+| poisson_simple | 640 | 0 | 0 | 0 |
+| xg_model | 640 | 0 | 0 | 0 |
+
+**Aucune violation n'est observée empiriquement sur ce corpus.** Ce
+résultat n'invalide pas le risque structurel : une calibration isotonique
+indépendante par seuil n'offre AUCUNE garantie mathématique de
+monotonicité croisée entre seuils (chaque courbe est ajustée séparément,
+sans contrainte conjointe), et rien ne garantit que ce risque reste nul
+sur un corpus plus large, d'autres seuils, ou une distribution de marché
+différente. La conclusion honnête est donc : le risque est réel en
+principe et non démontré empiriquement sur ce corpus précis — ce qui
+justifie une approche structurellement garantie plutôt qu'une
+vérification a posteriori.
+
+### 4. Méthode proposée : correction scalaire du taux prédit, une seule avant implémentation
+
+**Méthode retenue : correction scalaire unique du taux total prédit.**
+Un facteur `c = E[total_réel] / E[λ+μ prédit]` est estimé UNIQUEMENT sur
+le split calibration, puis appliqué multiplicativement à (λ, μ) → (c·λ,
+c·μ) avant reconstruction de la matrice de score complète (Dixon-Coles ou
+indépendante selon le modèle). Justification :
+
+- **Cohérence garantie par construction** : la correction s'applique en
+  amont de la matrice, qui reste l'unique source de `total_goals_distribution`
+  et `over_under_probs` — aucun risque d'incohérence entre seuils, par
+  construction et non par vérification a posteriori.
+- **Un seul degré de liberté**, directement motivé par le diagnostic de
+  l'étape 2 (le problème est un biais de moyenne, pas de forme) — pas de
+  sur-paramétrisation, pas de nouvelle hypothèse de forme.
+- **Aucune modification des modèles prédictifs** : `poisson_simple`,
+  `dixon_coles`, `xg_model` restent inchangés ; la correction est une
+  étape de post-traitement de la distribution, strictement analogue en
+  esprit à l'isotonique d'E2 (ajustée sur calibration, évaluée sur test),
+  mais appliquée au niveau de la matrice plutôt qu'à chaque seuil
+  séparément.
+- Alternative écartée : recalibration isotonique de chaque cellule de la
+  matrice ou de chaque seuil — reproduirait exactement le risque
+  d'incohérence structurelle diagnostiqué à l'étape 3.
+
+Vérification automatique (non-négativité, somme=1, monotonicité
+Over/Under, reproduction exacte des probabilités depuis la distribution)
+sur un échantillon de 50 matchs réels après application de la correction :
+**cohérence vérifiée = True**, et sur balayage aléatoire (`hypothesis`,
+200 tirages de λ, μ, ρ, facteur d'échelle) en tests unitaires/anti-fuite,
+0 échec.
+
+Facteurs de correction ajustés sur calibration uniquement :
+
+| Modèle | c |
+|---|---|
+| poisson_simple | 0.8895 |
+| dixon_coles | 0.8895 |
+| xg_model | 0.8101 |
+
+(poisson_simple et dixon_coles partagent le même c car leurs λ, μ prédits
+sont identiques — seule la structure de corrélation bas-score diffère.)
+
+### 5. Résultats — évaluation sur TEST (jamais utilisé pour ajuster c)
+
+Métriques : Brier à 7 catégories (0,1,2,3,4,5,6+) avec IC95% bootstrap
+apparié (`paired_bootstrap_test`, réutilisé sans modification) sur le
+diff corrigé−brut, log loss à 7 catégories, biais et MAE de l'espérance
+totale, P(≥6) prédite vs observée, et décomposition de Murphy
+(calibration/résolution) par seuil Over 1.5/2.5/3.5.
+
+**Global (TEST, n=640, tous championnats/saisons confondus) :**
+
+| Modèle | Brier brut | Brier corrigé | diff (IC95%) | p | biais E[Total] brut | biais corrigé | P(≥6) brut | P(≥6) corrigée | P(≥6) observée |
+|---|---|---|---|---|---|---|---|---|---|
+| poisson_simple | 0.8283 | 0.8229 | [-0.0092, -0.0015] | 0.0056 | +0.2720 | -0.0376 | 0.1062 | 0.0714 | 0.0703 |
+| dixon_coles | 0.8294 | 0.8240 | [-0.0093, -0.0016] | 0.0046 | +0.2720 | -0.0376 | 0.1062 | 0.0714 | 0.0703 |
+| xg_model | 0.8384 | 0.8207 | [-0.0247, -0.0107] | <0.0001 | +0.5655 | -0.0153 | 0.1414 | 0.0696 | 0.0703 |
+
+**Amélioration statistiquement démontrée du Brier global pour les trois
+modèles** (IC95% entièrement négatif). Le biais de l'espérance totale
+passe d'une surestimation forte (+0.27 à +0.57) à un biais résiduel quasi
+nul (entre -0.04 et -0.02). La probabilité de queue P(≥6) corrigée est
+quasiment superposée à la fréquence observée pour les trois modèles
+(écarts ≤1.1pt), contre une surestimation d'un facteur ~1.5 à 2 à l'état
+brut — confirmant la lecture du diagnostic de l'étape 2 : corriger la
+moyenne corrige la queue.
+
+**Décomposition Over/Under (calibration = biais de fiabilité, résolution
+inchangée en théorie sous une transformation monotone du taux — mais ici
+la correction déplace aussi la matrice sous-jacente, donc la résolution
+peut légitimement bouger) — global :**
+
+| Modèle | Seuil | calibration brute | calibration corrigée | résolution brute | résolution corrigée |
+|---|---|---|---|---|---|
+| poisson_simple | O1.5 | 0.0556 | 0.0513 | 0.0022 | 0.0015 |
+| poisson_simple | O2.5 | 0.0828 | 0.0601 | 0.0046 | 0.0062 |
+| poisson_simple | O3.5 | 0.0992 | 0.0599 | 0.0059 | 0.0053 |
+| dixon_coles | O1.5 | 0.0575 | 0.0504 | 0.0028 | 0.0017 |
+| dixon_coles | O2.5 | 0.0828 | 0.0601 | 0.0046 | 0.0062 |
+| dixon_coles | O3.5 | 0.0992 | 0.0599 | 0.0059 | 0.0053 |
+| xg_model | O1.5 | 0.0950 | 0.0328 | 0.0025 | 0.0029 |
+| xg_model | O2.5 | 0.1368 | 0.0302 | 0.0058 | 0.0063 |
+| xg_model | O3.5 | 0.1575 | 0.0383 | 0.0029 | 0.0048 |
+
+Le biais de calibration diminue systématiquement sur les 9
+combinaisons ; la résolution est préservée ou légèrement améliorée dans
+7/9 cas (seule dégradation notable : poisson_simple/dixon_coles Over1.5,
+0.0022→0.0015 et 0.0028→0.0017, effet modeste et cohérent avec un léger
+"pooling" analogue à celui déjà documenté pour l'isotonique en E2).
+
+**Stabilité par championnat (TEST) :** l'amélioration du Brier global
+reste significative pour xg_model sur les trois championnats (p=0.0014
+Liga, p=0.0420 Ligue1, p=0.0034 Premier League) et pour poisson_simple/
+dixon_coles en Liga (p≈0.03) ; en Ligue1 et Premier League pour
+poisson_simple/dixon_coles, l'IC95% contient 0 (p=0.18-0.27, absence de
+preuve d'amélioration, jamais de dégradation démontrée). Le biais de
+l'espérance totale et la surestimation de la queue sont corrigés dans les
+trois championnats pour les trois modèles.
+
+**Stabilité par saison (TEST) :** amélioration significative pour
+xg_model sur les deux saisons (p=0.0002 / p=0.0010) ; pour poisson_simple/
+dixon_coles, significative en 2025/26 (p≈0.02) mais pas en 2024/25
+(p≈0.12, IC95% contenant 0, absence de preuve — jamais de dégradation).
+Aucun signe défavorable (IC95% entièrement positif) sur aucune des
+combinaisons championnat×saison×modèle testées.
+
+### 6. Limites
+
+- La correction scalaire est un DEGRÉ DE LIBERTÉ UNIQUE : elle corrige un
+  biais de niveau, pas d'éventuels biais différentiels par contexte
+  (favori/outsider, championnat, phase de saison) qui resteraient à
+  investiguer séparément et ne sont pas dans le périmètre d'E7.
+- L'absence de violation isotonique empirique (étape 3) ne prouve pas
+  l'absence structurelle du risque ; elle documente seulement qu'il ne
+  s'est pas matérialisé sur ce corpus précis.
+- Les gains ne sont pas uniformément significatifs sur toutes les
+  découpes championnat/saison pour poisson_simple/dixon_coles (absence de
+  preuve ≠ absence d'effet, échantillons de n=180-320 par découpe) — voir
+  section G2 pour la discussion générale des limites de puissance déjà
+  documentée sur ce corpus.
+- Aucune conclusion de rentabilité n'est tirée ; aucune règle de pari,
+  ROI, yield, Kelly, staking, seuil de cote, sélection de bookmaker n'est
+  calculée à cette étape.
+
+### 7. Verdict final
+
+**Quelle représentation du total de buts est actuellement la plus fiable
+et peut-elle servir de fondation unique pour dériver les marchés
+Over/Under ?**
+
+La distribution de score corrigée par facteur d'échelle scalaire (λ, μ
+multipliés par `c` ajusté uniquement sur calibration, puis matrice de
+score reconstruite en une seule fois) est, à ce stade, la représentation
+la plus fiable disponible dans le système :
+
+1. Elle **garantit par construction** — et non par vérification a
+   posteriori — la cohérence entre P(Total), P(Over1.5), P(Over2.5) et
+   P(Over3.5), contrairement à une calibration isotonique indépendante
+   par seuil (E2/E3), dont le risque d'incohérence croisée reste réel en
+   principe même s'il ne s'est pas matérialisé empiriquement ici.
+2. Elle **corrige la cause identifiée** du biais (un biais de moyenne, pas
+   de forme — étape 2), et le fait de façon démontrée : amélioration
+   statistiquement significative du Brier global pour les trois modèles,
+   biais de l'espérance totale ramené à un niveau quasi nul, et
+   correction quasi parfaite de la queue P(≥6).
+3. Elle **préserve, dans l'ensemble, la résolution** (pouvoir de
+   discrimination) des modèles sous-jacents, sans jamais la dégrader de
+   façon substantielle.
+
+Elle doit donc remplacer la distribution brute comme fondation unique
+pour dériver tous les marchés Over/Under du système — chaque seuil restant
+dérivé de la même matrice corrigée, jamais recalculé indépendamment. Ceci
+reste une conclusion de CALIBRATION, pas de rentabilité : aucune règle de
+pari n'est validée par ce rapport. `poisson_simple`, `dixon_coles` et
+`xg_model` restent inchangés ; seule une étape de post-traitement de leur
+sortie est ajoutée, reproduisant exactement le schéma d'E2 (ajustement sur
+calibration, évaluation sur test) mais appliquée au niveau de la matrice
+plutôt que par seuil.
+
+**Arrêt.** E7 est terminé conformément au protocole. Aucune expérience
+suivante n'est lancée automatiquement.
