@@ -1794,3 +1794,145 @@ Conformément à l'arrêt obligatoire du protocole, ce diagnostic ne débouche
 sur aucune nouvelle stratégie, aucun nouveau modèle, aucune optimisation —
 il sert uniquement à informer le choix de la prochaine hypothèse
 scientifique.
+
+---
+
+## K. Diagnostic — calibration du total de buts et des marchés Over/Under
+
+Diagnostic **pur** (aucune modification des modèles, aucune nouvelle
+variante, aucune stratégie, aucune optimisation) : le système contient-il
+déjà une information exploitable pour prédire le nombre total de buts et
+les marchés Over/Under ? Réutilise sans modification les trois modèles
+déjà figés produisant une matrice de score complète —
+`PoissonModel(use_team_hfa=False)` (poisson_simple), `DixonColesModel
+(use_team_hfa=False)` (B1) et `XGModel` (B3) — sur l'intégralité du
+corpus réel (3 championnats × 2 saisons), avec les **mêmes contraintes
+point-in-time** que partout ailleurs dans le projet
+(`DECISION_OFFSET_HOURS=2.0`, `MIN_TRAIN_MATCHES=10`, constantes
+réutilisées telles quelles depuis `economic_dataset.py`).
+`scripts/run_stage8_diagnostic_total_goals_over_under.py`.
+
+**Aucune comparaison au marché** : l'audit préalable des données de
+marché (section correspondante) a confirmé qu'**aucune cote Over/Under
+n'existe dans le corpus** (seul le 1X2 Bet365 est disponible) — ce
+diagnostic mesure donc la calibration des modèles **contre le résultat
+réel uniquement**, jamais contre un marché, conformément à la demande
+explicite de ne pas chercher à battre le marché.
+
+Couverture : 2072/2132 matchs pour `poisson_simple`/`dixon_coles`,
+2056/2132 pour `xg_model` (même mécanisme d'exclusion par historique
+insuffisant que partout ailleurs).
+
+### Buts totaux attendus vs observés (biais global)
+
+| Modèle | E[buts totaux] moyen prédit | Moyenne réelle observée | Biais |
+|---|---|---|---|
+| `poisson_simple` | 3.1033 | 2.7922 | **+0.3002** |
+| `dixon_coles` | 3.1033 | 2.7922 | **+0.3002** |
+| `xg_model` | 3.4143 | 2.7922 | **+0.6113** |
+
+**Les trois modèles surestiment systématiquement le nombre total de buts**,
+sans exception. `poisson_simple` et `dixon_coles` ont un biais identique
+(attendu : la correction Dixon-Coles ne modifie que les quatre cellules
+bas-score, dont la somme des probabilités — donc l'espérance globale — est
+préservée par construction, voir `apply_dixon_coles_correction`, qui
+renormalise sur l'ensemble de la matrice). `xg_model` surestime **deux
+fois plus** que les deux autres.
+
+### Calibration de la distribution complète (masse prédite moyenne vs fréquence observée)
+
+| Total de buts | `poisson_simple` (écart) | `dixon_coles` (écart) | `xg_model` (écart) |
+|---|---|---|---|
+| 0 | +0.0154 | +0.0207 | -0.0138 |
+| 1 | -0.0140 | -0.0246 | -0.0441 |
+| 2 | -0.0408 | -0.0355 | -0.0538 |
+| 3 | -0.0340 | -0.0340 | -0.0276 |
+| 4 | +0.0025 | +0.0025 | +0.0228 |
+| 5 | +0.0165 | +0.0165 | +0.0358 |
+| **6+** | **+0.0544** | **+0.0544** | **+0.0806** |
+
+Le biais global de la partie précédente s'explique très majoritairement
+par une **surestimation de la queue haute (6 buts ou plus)** : les trois
+modèles prédisent une masse de probabilité 2 à 3 fois supérieure à ce qui
+est réellement observé sur cette tranche (6.3 % observé, contre 11.8 % à
+14.4 % prédit selon le modèle), au prix d'une légère sous-estimation des
+totaux « normaux » (2-3 buts, la tranche la plus fréquente en réalité).
+`xg_model` est systématiquement le plus déséquilibré des trois sur cette
+dimension (écart le plus grand sur presque toutes les tranches).
+
+### Calibration Over/Under (global, seuils 1.5 / 2.5 / 3.5 — standards, non optimisés)
+
+| Modèle | Seuil | Brier | log loss | taux over observé | p(over) prédite moyenne | erreur de calibration pondérée |
+|---|---|---|---|---|---|---|
+| `poisson_simple` | 1.5 | 0.1892 | 0.7394 | 0.779 | 0.777 | 0.0712 |
+| `poisson_simple` | 2.5 | 0.2693 | 0.8397 | 0.533 | 0.573 | 0.1162 |
+| `poisson_simple` | 3.5 | 0.2342 | 0.7520 | 0.300 | 0.374 | 0.1233 |
+| `dixon_coles` | 1.5 | 0.1888 | 0.7382 | 0.779 | 0.783 | 0.0736 |
+| `dixon_coles` | 2.5 | 0.2693 | 0.8397 | 0.533 | 0.573 | 0.1162 |
+| `dixon_coles` | 3.5 | 0.2342 | 0.7520 | 0.300 | 0.374 | 0.1233 |
+| `xg_model` | 1.5 | 0.1770 | 0.5509 | 0.778 | 0.836 | 0.0683 |
+| `xg_model` | 2.5 | 0.2644 | 0.7312 | 0.534 | 0.646 | 0.1238 |
+| `xg_model` | 3.5 | 0.2335 | 0.6613 | 0.300 | 0.439 | 0.1440 |
+
+**Dixon-Coles est mathématiquement identique à `poisson_simple` sur les
+seuils 2.5 et 3.5** (chiffres strictement égaux) : sa correction ne
+touche que les cellules de score (0-0, 1-0, 0-1, 1-1), toutes de total
+≤ 2, donc entièrement dans la zone « under » de ces deux seuils — ce
+n'est pas un résultat numérique surprenant, c'est une conséquence directe
+et attendue de la construction du modèle (voir `dixon_coles.py`). Un
+écart minime apparaît sur le seuil 1.5 (la cellule 1-1, de total 2, est
+« over » à ce seuil et reçoit une correction tau).
+
+`xg_model` a un Brier et un log loss **légèrement meilleurs** que
+`poisson_simple`/`dixon_coles` sur les trois seuils, mais une **erreur de
+calibration pondérée systématiquement égale ou pire**, et une
+sur-prédiction de p(over) nettement plus marquée (ex. Over 1.5 : 0.836
+prédit contre 0.778 observé, un écart de +0.058, contre +0.004 seulement
+pour `poisson_simple`). Ce n'est pas une contradiction : `xg_model`
+produit des probabilités plus **extrêmes** (proches de 0 ou 1), ce qui
+peut réduire le log loss/Brier moyens sur les cas où cette confiance est
+correcte, tout en dégradant la calibration moyenne — deux mesures qui
+répondent à des questions différentes, cohérent avec le biais
+d'espérance de buts déjà 2× plus élevé observé ci-dessus pour ce modèle.
+
+**Par championnat et par saison** (mêmes tableaux détaillés dans la sortie
+du script) : le même schéma se répète sans exception - Dixon-Coles reste
+strictement identique à `poisson_simple` sur Over 2.5/3.5 sur les 3
+championnats et les 2 saisons ; `xg_model` a généralement une erreur de
+calibration égale ou pire que `poisson_simple` sur Over 2.5/3.5, sauf en
+Premier League où il fait légèrement mieux sur les deux seuils (seule
+exception notée, non retenue comme sous-groupe exploitable conformément à
+la consigne).
+
+### Limites méthodologiques
+
+- Diagnostic **modèle uniquement** : en l'absence de cotes Over/Under
+  dans le corpus, aucune conclusion de rentabilité ni de comparaison au
+  marché n'est possible ni recherchée ici.
+- Les seuils 1.5/2.5/3.5 sont des seuils standards documentés, choisis
+  avant tout calcul — aucune recherche de seuil optimal.
+- L'erreur de calibration pondérée utilise `reliability_bins` (10
+  tranches, réutilisé sans modification) — les tranches à faible effectif
+  par saison/championnat restent moins fiables individuellement (nombre
+  de tranches effectivement utilisées rapporté dans la sortie du script).
+
+### Réponse à la question posée
+
+**Les modèles existants ne sont pas dénués d'information sur le total de
+buts** (ils distinguent des matchs à faible/forte espérance de buts, et
+leurs probabilités Over/Under s'écartent sensiblement de valeurs
+non-informatives), **mais ils sont mesurablement mal calibrés dans un sens
+précis et systématique : une surestimation du nombre total de buts,
+concentrée dans la queue haute de la distribution (6 buts ou plus,
+surestimée d'un facteur 2 à 3), présente sur les trois modèles testés,
+tous les championnats et les deux saisons, sans exception.** La correction
+Dixon-Coles n'apporte, par construction mathématique, aucune amélioration
+sur les seuils Over/Under usuels (2.5/3.5) ; le modèle xG, bien que
+produisant un Brier/log loss légèrement meilleurs sur ces seuils, aggrave
+en réalité le biais d'espérance de buts (+0.61 contre +0.30) et n'améliore
+pas la calibration pondérée. Aucune conclusion de rentabilité n'est
+tirée : ce diagnostic caractérise un défaut de calibration mesurable, pas
+une opportunité de marché (qui resterait à établir face à de vraies cotes
+Over/Under, non disponibles dans ce corpus). Conformément au protocole,
+aucun modèle n'est modifié et aucune nouvelle variante n'est testée à ce
+stade.
