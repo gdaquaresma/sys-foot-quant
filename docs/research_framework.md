@@ -4276,3 +4276,247 @@ pari, aucun signal exploitable**. `poisson_simple`, `dixon_coles` et
 
 **Arrêt.** E13 est terminé conformément au protocole. Aucune expérience
 E14 n'est lancée automatiquement.
+
+## Y. Expérience E14 — recalibration ciblée de la zone [0.6,0.7) d'Over 2.5
+
+**Contexte et cadrage.** E11 a identifié et reproduit sur les trois
+modèles une sur-confiance statistiquement significative dans la tranche
+de probabilité [0.6,0.7) d'Over 2.5 (biais -0.11 à -0.12, IC95%
+entièrement <0, n=117-128). E14 teste si cette zone précise peut être
+corrigée par une seconde couche de calibration, walk-forward stricte,
+**sans dégrader** les propriétés déjà validées en E7/E8/E11 — en
+particulier la cohérence entre seuils Over/Under garantie par construction
+depuis E7. La question n'est pas « peut-on améliorer la calibration dans
+cette tranche ? » mais « peut-on l'améliorer démontrablement en
+walk-forward tout en conservant une distribution de buts cohérente ? ».
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés ; aucune
+modification d'E1-E13 ; aucune donnée historique modifiée ; aucun
+ROI/Kelly/staking ; aucune recherche de value.
+
+### 1. Point méthodologique critique : couche spécifique au marché O2.5, jamais une modification de la distribution de buts
+
+E7/E8 ont validé qu'une seule distribution de buts cohérente doit
+permettre de dériver tous les seuils O/U. Recalibrer P(Over 2.5) seule,
+en laissant P(Over 1.5)/P(Over 3.5) inchangés, romprait ce principe si
+cela n'est jamais vérifié : la probabilité recalibrée pourrait dépasser
+P(Over 1.5) ou tomber sous P(Over 3.5) pour un match donné — une
+violation qui n'existerait pas dans une distribution de score unique. Une
+recalibration **jointe** des 5 seuils (préservant leur monotonicité
+empilée par construction) exigerait de corriger la matrice de score
+elle-même de façon conditionnelle à la tranche de probabilité prédite —
+un mécanisme aussi complexe qu'une nouvelle couche de modèle, hors du
+périmètre « simple, parcimonieuse, pré-spécifiée » imposé par ce
+protocole et du principe « ne pas modifier E1-E13 ». E14 teste donc
+exclusivement l'option « couche spécifique au marché Over 2.5 »,
+soumise à un **gate obligatoire** de cohérence inter-seuils (section 5)
+contre les seuils 1.5/3.5 **inchangés** de la même distribution E7/E8.
+
+### 2. Données, échantillon et protocole walk-forward
+
+Périmètre **identique** à E7/E8/E11 (mêmes 3 championnats × 2 saisons,
+même découpage 40/30/30 rodage/calibration/test, `n_calibration=640`,
+`n_test=640`). `dixon_coles` non testé séparément (reproduit exactement
+`poisson_simple` sur Over 2.5/3.5/4.5, déjà établi K/E7/E8/E11).
+
+Pour chaque match de test `m` (trié par `decision_time`), la méthode de
+recalibration (A ou B) est ajustée **exclusivement** sur les matchs de
+calibration dont `decision_time` est strictement antérieur — jamais le
+test, jamais un match postérieur — exactement le même principe que
+`attach_walk_forward_scale` (E8), appliqué ici à une seconde couche
+plutôt qu'à l'échelle (λ,μ). Les probabilités baseline utilisées comme
+données d'entraînement pour les matchs de calibration eux-mêmes sont
+elles-mêmes des probabilités walk-forward (calculées en n'utilisant que
+les matchs de calibration antérieurs — jamais un match de calibration
+utilisé contre lui-même) : zéro fuite à aucun niveau de la chaîne, vérifié
+par tests anti-fuite dédiés (balayage aléatoire confirmant qu'un
+déplacement d'une ligne de calibration vers le futur ne peut jamais
+augmenter le nombre de matchs utilisés). Règle d'exclusion pré-enregistrée
+(identique en esprit à E8) : `_MIN_N_RECAL=30` matchs de calibration
+antérieurs requis — **0 match exclu** sur les deux modèles.
+
+**Non-régression vérifiée** : les probabilités baseline recalculées ici
+reproduisent exactement les chiffres publiés en E11 pour la zone
+[0.6,0.7) (poisson_simple : n=128, biais -0.1225, IC95%=[-0.2101,-0.0366] ;
+xg_model : n=117, biais -0.1129, IC95%=[-0.2009,-0.0206]).
+
+### 3. Deux méthodes pré-spécifiées, évaluées comme expériences distinctes
+
+**Méthode A — Isotonic locale** : régression isotonique (PAVA,
+`fit_isotonic_calibration`, E2, réutilisée sans modification, zéro
+paramètre libre), ajustée sur **tout le domaine** de probabilité [0,1]
+— jamais restreinte à [0.6,0.7) seul, précisément pour éviter toute
+rupture artificielle aux frontières de la zone — puis évaluée
+spécifiquement dans [0.6,0.7).
+
+**Méthode B — Correction paramétrique locale** : recalibration
+logistique à deux paramètres, `p_recalibrée = sigmoid(a + b·logit(p))` —
+exactement la forme fonctionnelle déjà utilisée comme **mesure** en E11
+(`calibration_slope_intercept`, réutilisée sans modification, mais
+utilisée ici comme **mécanisme d'ajustement**). Deux paramètres
+seulement, ajustée sur tout le domaine, aucune flexibilité locale
+supplémentaire.
+
+Les deux méthodes sont traitées comme deux expériences **distinctes** :
+chacune est évaluée selon exactement la même grille de verdict,
+indépendamment de la performance de l'autre — aucune sélection « la
+meilleure des deux » n'est faite après observation des résultats OOS.
+
+### 4. Résultats — comparaison Baseline / Méthode A / Méthode B (mêmes matchs OOS)
+
+**`poisson_simple`** (n=640 test, zone cible n=128, zone adjacente n=379) :
+
+| | GLOBAL Brier | [0.6,0.7) Brier | [0.6,0.7) biais (IC95%) | [0.4,0.6) Brier |
+|---|---|---|---|---|
+| Baseline (E7/E8) | 0.2487 | 0.2663 | -0.1225 [-0.2101,-0.0366] | 0.2481 |
+| Méthode A (isotonic) | 0.2458 | 0.2534 | -0.0686 [-0.1559,+0.0168] | 0.2478 |
+| Méthode B (logistique) | 0.2492 | 0.2505 | -0.0350 [-0.1219,+0.0507] | 0.2518 |
+
+Diff Brier (candidat − baseline), mêmes matchs, IC95% bootstrap :
+
+| Méthode | GLOBAL (n=640) | [0.6,0.7) (n=128) | [0.4,0.6) (n=379) |
+|---|---|---|---|
+| A | [-0.0092,+0.0034] p=0.369 | **[-0.0242,-0.0021] p=0.017** | [-0.0056,+0.0047] p=0.876 |
+| B | [-0.0077,+0.0087] p=0.917 | **[-0.0320,-0.0002] p=0.047** | [-0.0030,+0.0105] p=0.291 |
+
+**Amélioration OOS statistiquement démontrée dans [0.6,0.7) pour les deux
+méthodes** (IC95% entièrement négatif), sans dégradation démontrée ni du
+Brier global ni de la zone adjacente [0.4,0.6).
+
+**`xg_model`** (n=640 test, zone cible n=117, zone adjacente n=445) :
+
+| | GLOBAL Brier | [0.6,0.7) Brier | [0.6,0.7) biais (IC95%) | [0.4,0.6) Brier |
+|---|---|---|---|---|
+| Baseline (E7/E8) | 0.2466 | 0.2618 | -0.1129 [-0.2009,-0.0206] | 0.2481 |
+| Méthode A (isotonic) | 0.2488 | 0.2638 | -0.1019 [-0.1899,-0.0092] | 0.2497 |
+| Méthode B (logistique) | 0.2473 | 0.2560 | -0.0755 [-0.1629,+0.0172] | 0.2485 |
+
+Diff Brier (candidat − baseline), mêmes matchs :
+
+| Méthode | GLOBAL (n=640) | [0.6,0.7) (n=117) | [0.4,0.6) (n=445) |
+|---|---|---|---|
+| A | [-0.0018,+0.0063] p=0.273 | [-0.0061,+0.0099] p=0.617 | [-0.0025,+0.0057] p=0.431 |
+| B | [-0.0035,+0.0049] p=0.752 | [-0.0137,+0.0020] p=0.149 | [-0.0038,+0.0044] p=0.850 |
+
+**Aucune amélioration OOS démontrée dans [0.6,0.7) pour `xg_model`**,
+pour aucune des deux méthodes (IC95% contenant 0) — la correction locale
+ne fonctionne pas de façon généralisable sur ce modèle avec ce corpus.
+
+### 5. GATE OBLIGATOIRE — cohérence inter-seuils (P(O1.5) ≥ P(O2.5)_recalibrée ≥ P(O3.5))
+
+| Modèle | Méthode | n évalué | violations | taux | amplitude max |
+|---|---|---|---|---|---|
+| poisson_simple | A | 640 | **14** | 2.19% | **0.1692** |
+| poisson_simple | B | 640 | **24** | 3.75% | **0.1617** |
+| xg_model | A | 640 | 2 | 0.31% | 0.1120 |
+| xg_model | B | 640 | 1 | 0.16% | 0.0030 |
+
+**Pour `poisson_simple` — le seul cas où une amélioration OOS est par
+ailleurs démontrée — les deux méthodes violent le gate de cohérence de
+façon substantielle** : 14 à 24 matchs sur 640 (2.2% à 3.75%) voient leur
+P(Over 2.5) recalibrée dépasser P(Over 1.5) ou tomber sous P(Over 3.5) de
+la même distribution E7/E8, avec une amplitude maximale de 16 à 17 points
+de probabilité — une violation large, pas un artefact numérique
+négligeable. Cette recalibration, appliquée seule sur Over 2.5, romprait
+la propriété de cohérence structurelle validée en E7/E8 pour une partie
+non négligeable des matchs.
+
+### 6. Robustesse temporelle et par championnat (zone [0.6,0.7) uniquement)
+
+**`poisson_simple`, Méthode A** — instabilité claire par sous-période et
+par championnat :
+
+| Découpe | n | diff Brier IC95% |
+|---|---|---|
+| Première moitié (chronologique) | 60 | [-0.0237,-0.0012] significatif |
+| Seconde moitié | 68 | [-0.0312,+0.0045] absence de preuve |
+| Liga | 34 | [-0.0403,+0.0060] absence de preuve |
+| Ligue 1 | 47 | [-0.0127,+0.0211] absence de preuve |
+| Premier League | 47 | [-0.0443,-0.0108] significatif |
+
+L'amélioration globale démontrée en section 4 n'est donc **pas uniforme** :
+elle est portée principalement par la Premier League et par la première
+moitié chronologique du test, pas par un effet stable sur tout le corpus
+— exactement le type de résultat que le protocole demande de ne **pas**
+présenter comme une preuve de généralisation. Le même schéma
+(significatif en Premier League, absence de preuve ailleurs) se
+retrouve pour la Méthode B.
+
+**Sensibilité à l'observation extrême** (zone cible, `poisson_simple`) :
+retirer le résidu le plus extrême déplace le biais baseline de -0.1225 à
+-0.1180 (n=128→127) — variation modeste, la zone n'est pas dominée par un
+unique point aberrant, mais reste construite sur un effectif de 117-128
+observations, cohérent avec les limites de puissance déjà documentées en
+section G2 du corpus.
+
+**Densité de calibration locale** : la méthode isotonique et la méthode
+logistique sont toutes deux ajustées sur l'ensemble du domaine [0,1] (pas
+seulement sur [0.6,0.7)), ce qui leur permet de bénéficier de l'ensemble
+du jeu de calibration walk-forward (jusqu'à 610 matchs disponibles en fin
+de fenêtre) plutôt que des seules ~120 observations locales — mais cela
+ne suffit pas à stabiliser le résultat par championnat/sous-période
+observé ci-dessus, ce qui suggère que l'instabilité vient du signal réel
+dans la zone cible, pas d'un manque de données d'entraînement pour la
+méthode elle-même.
+
+### 7. Limites
+
+- Échantillon de la zone cible modeste (n=117-128), cohérent avec les
+  limites de puissance déjà documentées section G2 : une amélioration
+  démontrée au niveau global peut ne pas se répliquer par sous-groupe
+  (observé ici pour poisson_simple).
+- Le gate de cohérence est appliqué uniquement à Over 2.5 vs Over 1.5/3.5
+  (seuils immédiatement adjacents) — non testé formellement contre Over
+  0.5/4.5, structurellement moins susceptibles d'être franchis par une
+  probabilité proche de 0.6-0.7.
+- Aucune troisième méthode (recalibration jointe de la distribution
+  complète) n'a été tentée — écartée explicitement en section 1 comme
+  hors du périmètre « simple, parcimonieuse, pré-spécifiée » de ce
+  protocole, pas testée et rejetée empiriquement.
+- Conformément au protocole, aucune variante des méthodes A/B (autre
+  fenêtre, autre forme fonctionnelle) n'a été testée après observation
+  des résultats OOS — un résultat négatif ou mitigé n'est jamais réajusté
+  a posteriori.
+- Aucune conclusion de rentabilité n'est tirée ; aucune donnée de marché
+  n'a été utilisée pour calibrer cette zone.
+
+### 8. Verdict final
+
+**`E14 — RECALIBRATION NON VALIDÉE`**
+
+Pour les quatre combinaisons testées (2 modèles × 2 méthodes), aucune ne
+satisfait l'intégralité des critères pré-enregistrés :
+
+- **`xg_model`** (méthodes A et B) : l'amélioration OOS dans [0.6,0.7)
+  n'est **pas démontrée** (IC95% contenant 0) — critère le plus en amont
+  de la grille de décision, jamais atteint.
+- **`poisson_simple`** (méthodes A et B) : l'amélioration OOS dans
+  [0.6,0.7) **est démontrée** (IC95% entièrement négatif, sans
+  dégradation du Brier global ni de la zone adjacente), **mais le gate
+  obligatoire de cohérence inter-seuils est violé de façon substantielle**
+  (14 à 24 matchs sur 640, amplitude jusqu'à 17 points de probabilité) —
+  motif de rejet explicitement prévu par le protocole, quelle que soit la
+  performance sur Over 2.5 seul. L'amélioration démontrée n'est de plus
+  pas stable par championnat ni par sous-période (portée principalement
+  par la Premier League), ce qui aurait de toute façon appelé à la
+  prudence indépendamment du gate de cohérence.
+
+Conformément au protocole : la zone [0.6,0.7) d'Over 2.5 est documentée
+comme une **limite structurelle du moteur actuel**, pas corrigée. Aucune
+nouvelle tentative de recalibration locale n'est engagée sans nouvelles
+données. `poisson_simple`, `dixon_coles` et `xg_model` restent inchangés ;
+aucune modification d'E1-E13 ; aucune stratégie de pari, aucun ROI, Kelly,
+staking, ou recherche de value.
+
+**Ce qu'il faut faire ensuite (conformément au verdict B du protocole)** :
+ne pas forcer cette correction dans le moteur. Une future tentative sur
+cette zone précise ne serait justifiée qu'avec un effectif substantiellement
+plus grand (plusieurs saisons supplémentaires) permettant (a) de trancher
+si l'instabilité par championnat observée pour `poisson_simple` reflète un
+signal réel localisé ou du bruit d'échantillonnage, et (b) d'envisager une
+recalibration conjointe de la distribution complète (seule option qui
+garantirait la cohérence par construction plutôt que par un gate a
+posteriori) — non tentée ici car hors du périmètre pré-spécifié de ce
+protocole.
+
+**Arrêt.** E14 est terminé conformément au protocole. Aucune expérience
+E15 n'est lancée automatiquement.
