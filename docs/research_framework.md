@@ -4520,3 +4520,261 @@ protocole.
 
 **Arrêt.** E14 est terminé conformément au protocole. Aucune expérience
 E15 n'est lancée automatiquement.
+
+## Z. Expérience E15 — diagnostic structurel de l'absence de discrimination en Premier League
+
+**Contexte et cadrage.** E4 et E11 ont montré, sur deux mesures
+indépendantes (espérance brute puis distribution corrigée E7/E8), une
+discrimination quasi nulle ou négative en Premier League, alors que Liga
+et Ligue 1 discriminent normalement. E15 est un **diagnostic pur** :
+aucun modèle modifié, aucun hyperparamètre touché, aucune correction
+E7/E8 modifiée, aucune règle de production créée. Cinq explications
+possibles sont testées sans présupposer laquelle est vraie : anomalie de
+données/mapping, sous-puissance statistique, caractéristique
+distributionnelle réelle du championnat, différence de calibration, ou
+absence réelle de signal. Aucune conclusion causale n'est tirée d'une
+simple corrélation.
+
+### 1. Audit des données (étape 1) — comparaison Liga / Ligue 1 / Premier League
+
+Inspection directe des fichiers bruts (jamais les objets déjà transformés),
+en complément de `_verify_integrity` (déjà exécuté par le chargement
+existant) :
+
+| | Liga 24/25 | Liga 25/26 | Ligue1 24/25 | Ligue1 25/26 | PL 24/25 | PL 25/26 |
+|---|---|---|---|---|---|---|
+| Matchs | 380 | 380 | 306 | 306 | 380 | 380 |
+| Équipes | 20 | 20 | 18 | 18 | 20 | 20 |
+| Round-robin exact | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Doublons match_id | 0 | 0 | 0 | 0 | 0 | 0 |
+| Conflits nom↔id | 0 | 0 | 0 | 0 | 0 | 0 |
+| Déséquilibre dom/ext | 0 | 0 | 0 | 0 | 0 | 0 |
+| Scores/xG invalides | 0/0 | 0/0 | 0/0 | 0/0 | 0/0 | 0/0 |
+
+Continuité inter-saisons (turnover promotion/relégation attendu, jamais
+signalé comme anomalie ; seul un ID réattribué à un nom différent le
+serait) : Liga 17/20 équipes communes, Ligue 1 15/18, Premier League
+17/20 — **0 conflit id↔nom sur les trois championnats**. Les « coups
+d'envoi dupliqués » observés (36 à 164 selon le championnat/saison) sont
+des **matchs simultanés à l'horaire standard** (ex. samedi 15h), pas des
+doublons d'enregistrement — déjà distingué explicitement des doublons de
+`match_id` (0 partout).
+
+**Conclusion étape 1 : aucune anomalie de données ou de mapping
+détectée sur aucun des trois championnats.** L'hypothèse « anomalie de
+données » est écartée avant toute analyse statistique.
+
+### 2. Réplication d'E4/E11 (étape 2) — confirmation avant toute nouvelle analyse
+
+Espérance **brute** (E4, `{model}_lambda_plus_mu` vs total réel, TEST
+n=228/184/228) :
+
+| Championnat | poisson_simple corr | xg_model corr |
+|---|---|---|
+| Liga | +0.2518 | +0.2390 |
+| Ligue 1 | +0.1855 | +0.1749 |
+| **Premier League** | **-0.0241** | **+0.0119** |
+
+Distribution **corrigée** E7/E8, Over 2.5 (reproduction E11) :
+
+| Championnat | poisson_simple corr / biais | xg_model corr / biais |
+|---|---|---|
+| Liga | +0.1460 / -0.0320 | +0.1517 / -0.0362 |
+| Ligue 1 | +0.2142 / -0.0018 | +0.1750 / +0.0036 |
+| **Premier League** | **-0.0056** / +0.0100 | **+0.0367** / +0.0038 |
+
+**Réplication exacte confirmée** sur les deux mesures (brute et
+corrigée) : le résultat historique tient, sur ce même corpus, avant toute
+nouvelle analyse.
+
+### 3. Distribution réelle des buts (étape 3)
+
+| Championnat | n | moyenne | variance | dispersion | skewness | kurtosis (excès) |
+|---|---|---|---|---|---|---|
+| Liga | 760 | 2.6566 | 2.4603 | 0.9261 | +0.675 | +0.262 |
+| Ligue 1 | 612 | 2.8987 | 3.1026 | 1.0704 | +0.584 | +0.142 |
+| Premier League | 760 | 2.8421 | 2.5468 | 0.8961 | +0.512 | +0.401 |
+
+Test bootstrap de différence d'indice de dispersion : PL vs Liga
+IC95%=[-0.159,+0.101] p=0.647 (**aucune différence démontrée**) ; PL vs
+Ligue 1 IC95%=[-0.322,-0.026] p=0.022 (PL significativement **moins**
+dispersée que Ligue 1 spécifiquement). **Lecture critique** : ce résultat
+n'explique PAS l'anomalie — la Liga a une dispersion réelle quasi
+identique à la Premier League (0.926 vs 0.896) tout en discriminant
+normalement (+0.25) là où la Premier League ne discrimine pas (-0.02).
+Une dispersion réelle différente n'est donc pas une explication crédible,
+conformément à la mise en garde du protocole (« ne pas confondre variance
+brute et absence de discrimination »).
+
+### 4. Distribution des prédictions (étape 4)
+
+| Championnat | Modèle | moyenne | écart-type | CV | IQR |
+|---|---|---|---|---|---|
+| Liga | poisson_simple | 3.073 | 0.677 | 0.220 | 0.860 |
+| Ligue 1 | poisson_simple | 3.244 | 0.640 | 0.197 | 0.848 |
+| **Premier League** | poisson_simple | 3.045 | **0.432** | **0.142** | **0.636** |
+| Liga | xg_model | 3.404 | 0.592 | 0.174 | 0.746 |
+| Ligue 1 | xg_model | 3.535 | 0.493 | 0.140 | 0.595 |
+| **Premier League** | xg_model | 3.401 | **0.416** | **0.122** | **0.539** |
+
+**Constat net et cohérent sur les deux modèles** : les prédictions
+d'espérance de buts sont mesurablement plus **compressées** en Premier
+League (écart-type et IQR les plus bas des trois championnats, pour
+`poisson_simple` ET `xg_model` indépendamment) — pas seulement une
+corrélation plus faible, mais moins de variance à discriminer en premier
+lieu. **Réserve méthodologique importante** : cette compression est
+mesurée sur une variable **dérivée du modèle lui-même** (λ+μ prédit) —
+elle documente un mécanisme proximal plausible (moins de dispersion
+prédite → mécaniquement moins de corrélation mesurable, à qualité de
+signal égale), mais ne constitue **pas** une caractéristique indépendante
+de la performance du modèle au sens strict requis par la grille de
+verdict — voir section 9.
+
+### 5. Calibration vs discrimination (étape 5) — classification pré-enregistrée
+
+| Championnat | Modèle | Calibration (biais IC95%) | Corrélation (IC95%) | Classification |
+|---|---|---|---|---|
+| Liga | poisson_simple | [-0.096,+0.034] calibrée | +0.146 [+0.018,+0.267] démontrée | D (discrimination démontrée) |
+| Ligue 1 | poisson_simple | [-0.072,+0.068] calibrée | +0.214 [+0.072,+0.349] démontrée | D (discrimination démontrée) |
+| **Premier League** | poisson_simple | [-0.055,+0.076] **calibrée** | -0.006 [-0.136,+0.126] **non démontrée** | **B — bien calibrée mais peu discriminante** |
+| Liga | xg_model | [-0.099,+0.029] calibrée | +0.152 [+0.024,+0.274] démontrée | D |
+| Ligue 1 | xg_model | [-0.067,+0.073] calibrée | +0.175 [+0.032,+0.308] démontrée | D |
+| **Premier League** | xg_model | [-0.060,+0.069] **calibrée** | +0.037 [-0.097,+0.167] **non démontrée** | **B — bien calibrée mais peu discriminante** |
+
+Pour les deux modèles, la Premier League est **B** — jamais **C** : son
+point estimé de corrélation (-0.006 / +0.037) reste **en dessous** du
+minimum observé sur Liga/Ligue 1 (+0.146 / +0.152), donc pas seulement
+« la même magnitude mais non démontrée » — un vrai déficit ponctuel, pas
+un simple manque de puissance sur un signal de magnitude comparable.
+
+### 6. Test de puissance/incertitude (étape 6)
+
+| Comparaison | Modèle | Diff corrélation (IC95%) | p |
+|---|---|---|---|
+| PL vs Liga | poisson_simple | [-0.464,-0.085] | **0.0052** |
+| PL vs Ligue 1 | poisson_simple | [-0.404,-0.009] | **0.0412** |
+| PL vs Liga | xg_model | [-0.406,-0.044] | **0.0166** |
+| PL vs Ligue 1 | xg_model | [-0.358,+0.037] | 0.1122 (absence de preuve) |
+
+Permutation (PL vs les deux autres championnats poolés, 2000
+permutations) : `poisson_simple` p=0.0015, `xg_model` p=0.0160 — **les
+deux significatifs**.
+
+**La différence PL vs Liga/Ligue1 est statistiquement démontrée dans 3
+comparaisons directes sur 4, et dans les deux tests de permutation** —
+ce n'est donc **pas** simplement un cas d'intervalles trop larges pour
+conclure. La seule exception (xg_model, PL vs Ligue 1 isolément, n=184)
+reste cohérente en direction, non significative à ce seul effectif.
+« Sous-puissance/incertitude générale » n'est donc pas le verdict le
+plus soutenu par l'ensemble de la preuve, même si cette unique
+comparaison invite à la prudence.
+
+### 7. Analyse temporelle (étape 7)
+
+| Championnat | Modèle | Saison 2024/25 | Saison 2025/26 |
+|---|---|---|---|
+| Liga | poisson_simple | +0.271 | +0.224 |
+| Ligue 1 | poisson_simple | +0.331 | +0.060 |
+| **Premier League** | poisson_simple | **+0.069** | **-0.125** |
+| Liga | xg_model | +0.298 | +0.182 |
+| Ligue 1 | xg_model | +0.206 | +0.145 |
+| **Premier League** | xg_model | **+0.024** | **-0.001** |
+
+**L'absence de discrimination en Premier League n'est concentrée sur
+aucune des deux saisons** : elle est faible/nulle en 2024/25 et
+nulle/négative en 2025/26, pour les deux modèles — jamais franchement
+positive sur aucune sous-période. Ce n'est pas un effet ponctuel d'une
+saison extrême ; Liga et Ligue 1, à titre de comparaison, restent
+positifs sur les deux saisons (avec une seule exception modérée : Ligue 1
+poisson_simple en 2025/26, +0.060, plus proche de zéro que d'habitude,
+mais toujours positif).
+
+### 8. Analyse par modèle (étape 8)
+
+| Championnat | poisson_simple | xg_model |
+|---|---|---|
+| Liga | +0.2518 | +0.2390 |
+| Ligue 1 | +0.1855 | +0.1749 |
+| **Premier League** | **-0.0241** | **+0.0119** |
+
+**Le phénomène est commun aux deux modèles**, estimés indépendamment à
+partir de deux signaux différents (buts réels pour `poisson_simple`, xG
+pour `xg_model`) — jamais spécifique à un seul mécanisme d'estimation.
+`dixon_coles` reproduit exactement `poisson_simple` sur Over 2.5 (déjà
+établi K/E7/E8/E11), non testé séparément. Cette convergence renforce
+l'hypothèse d'un effet lié au championnat ou aux données plutôt qu'à un
+modèle particulier.
+
+### 9. Limites
+
+- La compression des prédictions (étape 4) est un mécanisme **proximal**
+  plausible, pas une explication structurelle **indépendante** validée :
+  elle est dérivée du modèle lui-même, pas d'une mesure externe. Une
+  mesure véritablement indépendante (ex. dispersion réelle du niveau des
+  équipes via le classement final ou le différentiel de buts par équipe)
+  n'a **pas** été testée ici — elle aurait dû être pré-enregistrée avant
+  l'exécution réelle pour être admissible sans risque de sélection a
+  posteriori (protocole, étape 9) ; elle est proposée en piste future
+  section 13, pas ajoutée après coup dans ce rapport.
+- La dispersion réelle des buts (étape 3, la seule mesure véritablement
+  indépendante testée) ne différencie PAS la Premier League de la Liga,
+  qui pourtant discrimine normalement — cette mesure candidate est donc
+  explicitement écartée comme explication, pas simplement non concluante.
+- Une seule comparaison de puissance sur quatre (xg_model, PL vs Ligue 1)
+  n'atteint pas la significativité — la preuve d'une différence
+  structurelle réelle vs Liga/Ligue 1 est majoritaire mais pas unanime.
+- `dixon_coles` non testé séparément (redondant avec `poisson_simple` sur
+  Over 2.5, déjà établi).
+- Diagnostic purement descriptif et comparatif : aucune conclusion
+  causale n'est tirée d'une corrélation, conformément à la règle
+  fondamentale du protocole.
+
+### 10. Verdict officiel
+
+**`E15 — ABSENCE DE SIGNAL CONFIRMÉE MAIS INEXPLIQUÉE`**
+
+Appliqué mécaniquement à partir des résultats ci-dessus, sans sélection a
+posteriori d'une explication préférée :
+
+- **Anomalie de données** : écartée (étape 1, audit intégralement
+  propre sur les trois championnats).
+- **Sous-puissance générale** : écartée comme explication principale
+  (étape 6, différence démontrée dans 3 comparaisons sur 4 et les deux
+  tests de permutation) — nuance sur 1 comparaison sur 4.
+- **Différence structurelle étayée** : NON retenue — la seule mesure
+  véritablement indépendante du modèle (dispersion réelle des buts,
+  étape 3) ne différencie pas la Premier League de la Liga, qui pourtant
+  discrimine normalement ; la compression des prédictions (étape 4),
+  bien que réelle et reproduite sur les deux modèles, est dérivée du
+  modèle lui-même et ne satisfait donc pas le critère d'indépendance
+  requis par la grille de verdict.
+- **Différence de calibration** : écartée — la Premier League est **bien
+  calibrée** pour les deux modèles (classification B, jamais A), le
+  problème est spécifiquement et uniquement un déficit de discrimination.
+- La réplication (étape 2) est solide, le phénomène est commun aux deux
+  modèles (étape 8) et stable sur les deux saisons (étape 7) — ce n'est
+  ni un artefact ponctuel ni un problème propre à un seul modèle.
+
+**Aucune cause identifiable au-delà d'un mécanisme proximal non
+indépendant (compression des prédictions) n'a été établie** — ce
+résultat est accepté explicitement comme valide, conformément au
+protocole, plutôt que forcé vers une explication qui ne satisferait pas
+son propre critère de preuve.
+
+### 11. Point de décision pour le moteur
+
+Conformément au protocole : `poisson_simple`, `dixon_coles` et `xg_model`
+restent inchangés ; E7/E8 ne sont pas modifiés ; aucune recalibration de
+la Premier League n'est effectuée ; aucun coefficient championnat n'est
+créé automatiquement ; les données Premier League ne sont pas retirées du
+corpus d'entraînement.
+
+**Règle de gating analytique proposée (jamais une règle de pari)** :
+« ne pas interpréter l'espérance de buts prédite comme un signal
+discriminant en Premier League » — à documenter comme réserve
+d'interprétation pour toute lecture future des sorties du moteur sur ce
+championnat spécifiquement, sans aucune transformation en stratégie
+d'exploitation ni en modification du pipeline de production.
+
+**Arrêt.** E15 est terminé conformément au protocole. Aucune expérience
+E16 n'est lancée automatiquement.
