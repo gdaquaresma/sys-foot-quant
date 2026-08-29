@@ -3707,3 +3707,187 @@ soutenue par les données actuelles.
 
 **Arrêt.** E10 est terminé conformément au protocole. Aucune expérience
 E11 n'est lancée automatiquement.
+
+## V. Expérience E11 — cartographie de la fiabilité absolue des probabilités de buts vs B365
+
+**Contexte et cadrage.** E10 a montré qu'aucune zone de désaccord
+modèle/marché n'est fiable en soi — le désaccord ne doit donc pas être
+utilisé comme signal. E11 change de perspective : au lieu de partir du
+gap, il mesure d'abord la **fiabilité absolue** des probabilités du
+moteur officiel E8 (H1), puis, seulement dans un second temps et de façon
+**exploratoire** (H2), regarde comment les prix B365 se répartissent
+parmi les probabilités jugées fiables. `poisson_simple`, `dixon_coles` et
+`xg_model` restent inchangés ; aucune nouvelle calibration, aucun tuning,
+aucun arbitrage (hors périmètre — un seul bookmaker Over/Under 2.5 dans
+Football-Data).
+
+### 1. Protocole
+
+Pour chaque match du split TEST walk-forward d'E8, la matrice de score
+**corrigée** (facteur `c(m)` walk-forward) produit, en un seul appel,
+les probabilités Over/Under pour 5 seuils dérivés de **la même
+distribution** : 0.5 / 1.5 / 2.5 / 3.5 / 4.5 — jamais une calibration
+indépendante par seuil (propriété structurelle déjà garantie depuis
+l'architecture initiale, confirmée à nouveau ici). Calibration absolue
+(H1) mesurée par 10 tranches de probabilité annoncée fixées ex ante
+(`reliability_bins`, réutilisé sans modification, [0-10%) … [90-100%]),
+augmentées de biais + IC95% bootstrap, Brier, log loss. Complété par la
+pente et l'ordonnée à l'origine de la régression de calibration de Cox
+(1958) — mesure pure, jamais utilisée pour corriger une prédiction —,
+la corrélation point-bisériale, et la décomposition de Brier (E2/E4,
+réutilisée sans modification). Comparaison inter-modèles par
+`paired_bootstrap_test` sur l'intersection exacte des matchs. H2
+(exploratoire) restreinte aux tranches de probabilité jugées fiables au
+sens H1 (n≥30, IC95% du biais contenant 0) — décidées **mécaniquement**
+à partir de la table de calibration, avant tout examen des prix — puis
+catégorisées par écart relatif entre la cote B365 et la cote juste du
+modèle, grille fixée ex ante (<2% / 2-5% / 5-10% / ≥10%).
+
+### 2. Résultats H1 — calibration absolue par seuil (GLOBAL, n=640)
+
+| Seuil | Pente | Intercept | Corrélation | Résolution | Tranches significatives (biais IC95% hors 0) |
+|---|---|---|---|---|---|
+| Over 0.5 | 0.39–0.46 | +1.56 à +1.75 | 0.04–0.07 | 0.0002–0.0015 | aucune (données concentrées en [0.8,1.0), n négligeable ailleurs) |
+| Over 1.5 | 0.35–0.53 | +0.48 à +0.70 | 0.08–0.09 | 0.0012–0.0020 | aucune tranche à n≥30 significative (poisson/DC [0.4-0.5) l'est mais n=6) |
+| **Over 2.5** | 0.52–0.66 | −0.001 à +0.02 | 0.13 | 0.0035–0.0077 | **[0.6-0.7) sur-confiance, tous modèles** ; [0.3-0.4) sous-confiance (poisson/DC uniquement) |
+| Over 3.5 | 0.46–0.64 | −0.40 à −0.54 | 0.12–0.13 | 0.0037–0.0093 | [0.1-0.2) sous-confiance (poisson/DC) ; [0.4-0.5) sur-confiance (xg_model) |
+| Over 4.5 | 0.65–0.73 | −0.50 à −0.64 | 0.13–0.16 | 0.0020–0.0052 | [0.3-0.4) sur-confiance (poisson/DC) |
+
+Détail Over 2.5 (priorité, GLOBAL, n=640) :
+
+| Tranche | n | p moyen | Fréq. réelle | Biais (IC95%) |
+|---|---|---|---|---|
+| [0.3-0.4) | 69 | 0.360 | 0.493 | **+0.133 [+0.016, +0.250]** (poisson/DC) |
+| [0.4-0.5) | 178–192 | 0.45–0.46 | 0.45–0.49 | ≈0, IC95% contenant 0 |
+| [0.5-0.6) | 201–253 | 0.54–0.55 | 0.55–0.56 | ≈0, IC95% contenant 0 |
+| [0.6-0.7) | 117–128 | 0.63–0.65 | 0.52–0.52 | **−0.11 à −0.12, IC95% entièrement <0 (tous modèles)** |
+
+**Résultat central et robuste** : dans la tranche [0.6-0.7), les trois
+modèles (poisson_simple/dixon_coles identiques par construction, xg_model
+indépendamment) montrent une **sur-confiance statistiquement
+significative** — quand le modèle annonce ~64-65%, la fréquence réelle
+n'est que ~52%. À l'inverse, la tranche [0.4-0.5) et [0.5-0.6) — la zone
+où se concentre la majorité des matchs (n=379 à 445 selon le modèle) —
+est **bien calibrée** pour les trois modèles (IC95% du biais contenant
+largement 0). Les pentes de Cox restent uniformément **inférieures à 1**
+(0.35 à 0.73 selon le seuil) : signe d'une sur-confiance systémique
+modérée (les variations de probabilité annoncées sont plus marquées que
+les variations réelles de fréquence), cohérent avec le pattern observé
+par tranche.
+
+### 3. Comparaison inter-modèles (Brier, paires appariées, mêmes matchs)
+
+| Seuil | poisson_simple vs xg_model : diff Brier (IC95%) | p |
+|---|---|---|
+| Over 0.5 | [-0.0010, +0.0009] | 0.983 |
+| Over 1.5 | [-0.0011, +0.0067] | 0.153 |
+| Over 2.5 | [-0.0037, +0.0080] | 0.460 |
+| Over 3.5 | [-0.0024, +0.0076] | 0.324 |
+| Over 4.5 | [-0.0033, +0.0030] | 0.921 |
+
+**Aucune différence significative entre `poisson_simple` et `xg_model`
+sur aucun des 5 seuils** — après correction walk-forward E7/E8, les deux
+modèles produisent des distributions Over/Under statistiquement
+indiscernables en Brier, malgré un biais brut pré-correction très
+différent (xg_model 2× plus fort, établi en K/E7). `dixon_coles`
+reproduit exactement `poisson_simple` (déjà établi). **Aucun "gagnant"
+n'est désigné**, conformément au protocole.
+
+### 4. Stabilité par championnat et saison
+
+Constat le plus net et **reproduit à travers les 5 seuils et les 3
+modèles** : la **Premier League** affiche une corrélation
+probabilité-issue proche de zéro ou négative sur presque toutes les
+combinaisons (ex. Over 2.5 : corr=−0.006 à +0.037 selon le modèle ; Over
+0.5 : jusqu'à −0.09), et une pente de Cox parfois négative (ex.
+poisson_simple Over 0.5 : slope=−0.37). `liga` et `ligue1` montrent au
+contraire une discrimination positive et modérée (corr 0.10 à 0.26)
+partout. **Ce résultat n'est pas nouveau** : il reproduit exactement le
+constat déjà établi en E4 ("discrimination réelle mais absente en
+Premier League") — désormais confirmé une troisième fois, sur un
+mécanisme de mesure différent (calibration walk-forward E8 plutôt que
+discrimination brute). Aucune conclusion n'est tirée pour autant sur une
+sélection de championnat — signalé comme observation descriptive stable,
+pas comme règle.
+
+### 5. H2 (exploratoire) — écarts de prix B365 parmi les probabilités fiables (Over 2.5)
+
+Tranches jugées fiables au sens H1 (décidées avant tout examen des prix) :
+`poisson_simple` → [0.4-0.5), [0.5-0.6), [0.7-0.8) (n=350/542) ;
+`xg_model` → [0.3-0.4), [0.4-0.5), [0.5-0.6) (n=416/542).
+
+| Modèle | Catégorie d'écart | n | p modèle moyen | Fréq. réelle | Biais (IC95%) |
+|---|---|---|---|---|---|
+| poisson_simple | <2% | 32 | 0.578 | 0.469 | −0.109 [−0.282, +0.067] |
+| poisson_simple | 2-5% | 46 | 0.549 | 0.522 | −0.027 [−0.162, +0.113] |
+| poisson_simple | 5-10% | 82 | 0.542 | 0.622 | +0.080 [−0.027, +0.186] |
+| poisson_simple | ≥10% | 190 | 0.503 | 0.505 | +0.002 [−0.070, +0.073] |
+| xg_model | <2% | 41 | 0.504 | 0.463 | −0.040 [−0.191, +0.113] |
+| xg_model | 2-5% | 64 | 0.506 | 0.484 | −0.022 [−0.140, +0.099] |
+| xg_model | 5-10% | 106 | 0.508 | 0.509 | +0.002 [−0.095, +0.099] |
+| xg_model | **≥10%** | 205 | 0.482 | 0.556 | **+0.074 [+0.006, +0.141]** |
+
+Pour `xg_model`, la catégorie `≥10%` (n=205, l'écart de prix le plus
+large avec B365) montre un biais **positif et statistiquement
+significatif** : parmi les matchs où `xg_model` est déjà bien calibré ET
+où sa cote juste diffère de B365 d'au moins 10%, la fréquence réelle
+d'Over 2.5 dépasse légèrement ce que `xg_model` annonçait lui-même. Pour
+`poisson_simple`, aucune catégorie n'atteint la significativité. **Ce
+résultat est exploratoire (H2)** : il ne constitue ni une "value"
+démontrée, ni une stratégie — il documente un écart statistique
+descriptif dans une seule sous-catégorie d'un seul modèle, sans
+réplication indépendante ni contrôle multi-test.
+
+### 6. Limites
+
+- Les seuils Over 0.5/1.5/4.5 concentrent la quasi-totalité des matchs
+  dans 2-3 tranches extrêmes — les pentes de Cox y sont peu fiables
+  (variance de p trop faible pour bien identifier la pente) et doivent
+  être lues avec prudence.
+- Les tranches à n<30 (marquées explicitement) restent nombreuses,
+  notamment aux extrêmes de chaque seuil — aucune conclusion n'en est
+  tirée.
+- Le résultat H2 significatif (xg_model, ≥10%) porte sur une seule
+  catégorie d'un seul modèle, non répliqué sur `poisson_simple` ni sur un
+  second échantillon — descriptif uniquement, pas un fondement de
+  stratégie.
+- La discrimination quasi nulle en Premier League reste non expliquée
+  (facteurs structurels du championnat non testés ici).
+- Aucune conclusion de rentabilité n'est tirée ; aucun ROI, yield, Kelly,
+  staking, sélection de championnat/saison/modèle après observation, ni
+  arbitrage (hors périmètre).
+
+### 7. Réponses aux questions du protocole
+
+**Q1 — Les probabilités de total de buts sont-elles réellement
+fiables ?** Globalement oui, avec une réserve précise : la zone centrale
+(40-60% de probabilité annoncée, la plus peuplée) est bien calibrée pour
+Over 2.5 sur les trois modèles ; mais une **sur-confiance statistiquement
+démontrée et reproduite sur les trois modèles** apparaît dans la tranche
+60-70% (biais −0.11 à −0.12). La fiabilité n'est donc pas uniforme sur
+toute la plage de probabilité.
+
+**Q2 — À quels niveaux la fiabilité est-elle la meilleure ou la plus
+faible ?** Meilleure : 40-60% pour Over 2.5 (zone la plus peuplée et la
+mieux calibrée, tous modèles). Plus faible : 60-70% pour Over 2.5 (sur-confiance
+significative, tous modèles) et, plus généralement, les tranches
+extrêmes de chaque seuil (n souvent <30, non concluant plutôt que
+"mauvais").
+
+**Q3 — La distribution E8 permet-elle de dériver de façon cohérente
+plusieurs marchés Over/Under ?** Oui — démontré à nouveau ici : les 5
+seuils (0.5 à 4.5) sont dérivés en un seul appel de la même matrice
+corrigée par match, sans aucune calibration indépendante par seuil,
+propriété structurelle déjà garantie depuis E7/E8 et reconfirmée par
+l'exécution réelle.
+
+**Q4 — Lorsque la probabilité est fiable, observe-t-on des écarts de
+prix intéressants avec B365 ?** Un seul écart statistique atteint la
+significativité (xg_model, catégorie ≥10%, biais +0.074, IC95%
+[+0.006,+0.141], n=205) — descriptif uniquement, non répliqué, **jamais
+interprété comme une rentabilité démontrée**.
+
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés.
+
+**Arrêt.** E11 est terminé conformément au protocole. Aucune expérience
+E12 n'est lancée automatiquement.
