@@ -275,6 +275,36 @@ operationnelle) : hors perimetre, non executee. Piste gelee. **Le moteur
 final reste GELE** (`min_edge_threshold=None`, `BET` non active) ; aucun
 code de `final_engine` modifie.
 
+### Phase I - decision strategique finale sur le corpus Football-Data (documentaire, moteur GELE)
+
+`docs/final_data_strategy.md` audite, sans executer aucune experience,
+si une piste serieuse et falsifiable reste testable avec le corpus
+Football-Data actuel apres E1->E16 + Phases D/F/G/H (20 tests
+independants au total, aucun resultat positif). Verification directe
+des six fichiers CSV (pas une relecture de documentation) revele trois
+bookmakers jamais documentes auparavant (`BMGM`, `BV`, `CL`, 1X2 seul,
+2025/26 uniquement) - classes, comme `BF`/`BFD`/`1XB`/consensus
+`Max`/`Avg`, comme redondants par construction avec les bookmakers a
+marge fixe deja demontres non informatifs (E9/E13). Toutes les pistes
+restantes sont classees A/B/C/D (testable+interessante / testable mais
+redondante / impossible avec les donnees actuelles / deja epuisee) -
+aucune ne satisfait le critere d'une experience prioritaire justifiee
+pour la question de l'edge de pari, a l'exception d'un fil diagnostique
+deja identifie par le projet lui-meme (classement/forme independants
+pour le puzzle Premier League, E15) explicitement optionnel et sans
+consequence sur `BET`/`min_edge_threshold`. **Verdict : `CORPUS
+FOOTBALL-DATA - PISTES SCIENTIFIQUEMENT EPUISEES`** pour la question de
+l'edge. Recommandation unique : acquisition ciblee d'une nouvelle source
+de donnees pre-match (composition, calendrier de congestion, classement
+independant), seule categorie jamais testee et structurellement
+orthogonale aux quatre familles deja epuisees (modele, prix de marche,
+mouvement de marche, statistiques post-match), sous reserve de criteres
+explicites (horodatage verifiable, couverture mesuree, une seule
+variable nouvelle par experience, controle de recalibration obligatoire
+des la conception). **Le moteur final reste GELE**
+(`min_edge_threshold=None`, `BET` non active) ; aucun code modifie a
+l'occasion de cet audit.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
