@@ -5009,3 +5009,14 @@ conclusion des sections I à AA ci-dessus ; il les consolide et en tire les
 conséquences architecturales, sans introduire de nouveau résultat
 empirique. Aucune expérience E17 n'a été lancée à l'occasion de cette
 synthèse.
+
+## AC. Spécification technique du moteur final (Phase A)
+
+Suite directe de la synthèse (section AB) : `docs/final_engine_specification.md`
+traduit les conclusions d'E1→E16 en un contrat d'implémentation technique
+précis (pipeline à 6 niveaux A-F, inventaire des primitives déjà testées à
+réutiliser, inputs exacts, gates scientifiques exhaustifs séparés des
+seuils opérationnels non validés, objet de sortie structuré, moteur
+minimal viable). Aucun résultat d'E1→E16 n'y est modifié ; aucun code de
+moteur de production n'a été écrit à cette étape (Phase A = spécification
+pure). L'implémentation (Phase B) reste soumise à une instruction séparée.

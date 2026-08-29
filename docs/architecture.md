@@ -39,6 +39,31 @@ du projet, implementee dans un unique composant : le Repository
 | `risk_engine` (bankroll, Flat Betting, Kelly informatif + quality gates, limites, metriques de risque, Monte Carlo) | Implemente (Flat Betting seul active en production - Kelly verrouille, voir `risk_engine/kelly.py`) | 4 |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
 
+## 2.0 Specification technique du moteur final (Phase A, en cours)
+
+La campagne E1->E16 etant close (section 2.1 ci-dessous), la phase de
+construction a demarre par une **specification technique pure** (Phase A -
+aucun code de moteur ecrit) : `docs/final_engine_specification.md`. Ce
+document traduit les conclusions d'E1->E16 en un contrat d'implementation
+precis - pipeline en 6 niveaux (A Prediction / B Calibration / C Pricing /
+D Market comparison / E Qualification / F Decision), inventaire des
+primitives deja testees a reutiliser sans reimplementation (`score_matrix`,
+`fit_scale_correction_as_of`/`attach_walk_forward_scale` d'E8,
+`compare_model_to_market`, `edge`/`expected_value`, `matching.py`/
+`time_resolution.py`), inputs exacts par categorie (obligatoire/optionnel/
+recherche uniquement - la cloture restant exclue du chemin de decision),
+liste exhaustive des scientific gates justifies par E1->E16 (zone
+[0.6,0.7) d'Over 2.5 issue d'E11/E14, gate de discrimination Premier
+League issu d'E15, gate anti-mouvement issu d'E16, gate anti-dispersion
+multi-bookmaker issu d'E9/E13) explicitement separes des operational
+thresholds (marques `PARAMETRE OPERATIONNEL A VALIDER`, jamais presentes
+comme scientifiquement optimaux), objet de sortie structure complet, et
+definition du moteur minimal viable (Niveaux A-E pleinement implementables
+aujourd'hui, Niveau F limite a l'abstention faute de regle de conversion
+edge->pari validee). Aucun code de production n'a ete ecrit ou modifie a
+l'occasion de cette specification - implementation reportee a la Phase B,
+sur instruction separee.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
