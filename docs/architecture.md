@@ -155,6 +155,33 @@ bug de cle de championnat dans `reference_tables.py`, "ligue1" vs
 "ligue_1", a ete corrige avant execution - voir l'annexe du rapport).
 `BET` n'est pas active.
 
+### Phase E - audit strategique des voies d'amelioration (documentaire, moteur GELE)
+
+`docs/next_signal_strategy.md` audite, sans executer aucun code ni
+modifier le moteur, les voies restant scientifiquement justifiables pour
+obtenir un signal de pari exploitable. Six pistes sont actees comme
+definitivement epuisees avec le corpus actuel (recalibration locale O2.5,
+recherche d'un nouveau seuil d'edge, desaccord modele/marche, dispersion
+B365/Pinnacle, mouvement ouverture/cloture, ensemble arbitraire de
+modeles). **Clarification architecturale** issue de l'inspection directe
+des fichiers Football-Data deja presents dans le depot (jamais lue
+auparavant) : `_ALLOWED_COLUMNS`/`_OPTIONAL_COLUMNS` de
+`football_data_loader.py` n'incluent PAS les colonnes de consensus
+multi-bookmaker elargi (`Max`/`Avg`), les cotes d'echange Betfair
+(`BFE`/`BFD`), le handicap asiatique (`AH*`), ni les statistiques de
+match (`HS`/`AS`/`HST`/`AST`/`HC`/`AC`/`HY`/`AY`/`HR`/`AR`) - toutes deja
+presentes dans les six fichiers CSV utilises depuis E1, jamais exploitees
+par aucune experience E1-E16 ni par le moteur final. Recommandation
+unique de la Phase E : etendre le loader a ces colonnes (aucune nouvelle
+acquisition de donnees) puis mener une seule experience diagnostique
+(tirs cadres comme signal d'attaque/defense alternatif, protocole
+identique a B3/xg_model) avant d'envisager tout nouveau fournisseur de
+donnees (compositions, lignes O/U supplementaires). **Decision : le
+moteur final reste GELE** (`min_edge_threshold=None`, `BET` non active,
+aucune modification) tant qu'aucune source de signal nouvelle n'est
+validee par un protocole dedie. Aucun code de production modifie a
+l'occasion de cet audit.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
