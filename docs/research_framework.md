@@ -3519,3 +3519,191 @@ rentabilité n'est tirée.
 
 **Arrêt.** E9 est terminé conformément au protocole. Aucune expérience E10
 n'est lancée automatiquement.
+
+## U. Expérience E10 — fiabilité des zones de désaccord modèle/marché (Over/Under 2.5)
+
+**Contexte et cadrage.** E9 a construit la couche multi-bookmakers ; pour
+l'Over/Under 2.5, seul B365 est disponible dans Football-Data (limitation
+documentée, jamais contournée : aucune analyse inter-bookmakers ni
+arbitrage O/U n'est produite ici). E10 teste l'idée centrale du projet :
+lorsque `P_model` diverge de `P_market`, certaines zones de désaccord
+sont-elles historiquement plus fiables que d'autres ? **Il ne s'agit
+toujours pas d'une recherche de stratégie de pari** — la question posée
+est uniquement celle de la calibration conditionnelle au désaccord.
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés ; aucune
+nouvelle calibration, aucune sélection de modèle/championnat/saison après
+observation.
+
+### 1. Protocole (figé avant exécution réelle)
+
+`P_model` = probabilité Over 2.5 issue **exactement** du pipeline walk-forward
+validé en E8 (verdict A) — jamais recalculée. `P_market` = cote B365
+Over/Under 2.5, décomposée en probabilité brute (1/cote), overround
+(`hold_percentage`) et probabilité normalisée (`remove_overround_proportional`),
+toutes deux conservées séparément, jamais confondues. `gap = P_model −
+P_market_normalisé`. Tranches de désaccord **identiques à celles déjà
+pré-enregistrées en E5** (continuité méthodologique explicite, mêmes
+bornes de 5 points, jamais choisies après observation) :
+
+    <=-15pts / -15/-10 / -10/-5 / -5/+5 / +5/+10 / +10/+15 / >=+15pts
+
+Zones d'accord/désaccord (mêmes seuils 5/10/15, point 8) : accord
+(|gap|<5), désaccord modéré (5-10), désaccord important (10-15), désaccord
+extrême (≥15). Seuil d'incertitude élevée : n<30 (identique à E5). Corpus :
+intersection du split TEST walk-forward d'E8 (n=640) et du corpus
+multi-bookmaker exploitable d'E9 avec cote B365 O/U complète — **n=542**
+pour les trois modèles (même intersection, donc même n, pour
+`poisson_simple`, `dixon_coles` et `xg_model`).
+
+### 2. Résultats globaux par tranche de gap
+
+`poisson_simple` et `dixon_coles` produisent des résultats **strictement
+identiques** sur ce marché (déjà établi en K : Dixon-Coles ne diffère de
+Poisson simple que sur les cellules de score ≤2, sans effet sur Over 2.5) :
+
+| Tranche | n | P_model moy. | Fréq. observée | Biais (IC95%) | Brier | Résolution |
+|---|---|---|---|---|---|---|
+| ≤−15pts | 22 | 0.380 | 0.636 | **+0.256 [+0.066, +0.435]** | 0.264 | 0.044 |
+| −15/−10 | 57 | 0.416 | 0.526 | +0.111 [−0.021, +0.238] | 0.262 | 0.013 |
+| −10/−5 | 102 | 0.454 | 0.451 | −0.003 [−0.098, +0.094] | 0.246 | 0.007 |
+| −5/+5 (accord) | 225 | 0.542 | 0.564 | +0.022 [−0.045, +0.087] | 0.252 | 0.003 |
+| +5/+10 | 93 | 0.604 | 0.505 | −0.099 [−0.200, +0.003] | 0.252 | 0.050 |
+| +10/+15 | 34 | 0.695 | 0.618 | −0.077 [−0.226, +0.066] | 0.200 | 0.070 |
+| ≥+15pts | 9 | 0.660 | 0.444 | −0.216 [−0.558, +0.131] | 0.315 | 0.006 |
+
+Pour `xg_model` (n=542, même intersection) :
+
+| Tranche | n | P_model moy. | Fréq. observée | Biais (IC95%) | Brier |
+|---|---|---|---|---|---|
+| ≤−15pts | 8 | 0.414 | 0.375 | −0.039 [−0.312, +0.329] | 0.234 |
+| −15/−10 | 30 | 0.481 | 0.633 | +0.152 [−0.019, +0.313] | 0.241 |
+| −10/−5 | 92 | 0.493 | 0.544 | +0.051 [−0.049, +0.151] | 0.245 |
+| −5/+5 (accord) | 318 | 0.531 | 0.513 | −0.019 [−0.074, +0.036] | 0.250 |
+| +5/+10 | 84 | 0.593 | 0.607 | +0.014 [−0.088, +0.113] | 0.231 |
+| +10/+15 | 9 | 0.611 | 0.333 | −0.278 [−0.517, +0.012] | 0.251 |
+| ≥+15pts | 1 | 0.691 | 0.000 | — | 0.477 |
+
+**Seul un résultat atteint la significativité statistique au niveau
+global** : pour `poisson_simple`/`dixon_coles`, la tranche `≤−15pts`
+(n=22, modèle nettement plus pessimiste sur Over que le marché) affiche un
+biais **positif et significatif** (IC95% entièrement > 0) — le modèle
+**sous-estime** systématiquement P(Over 2.5) précisément dans cette zone,
+la fréquence réelle d'Over étant plus proche de ce que disait le marché
+que de ce que disait le modèle. Aucune autre tranche, pour aucun modèle,
+n'atteint la significativité au niveau global. La zone d'accord (−5/+5)
+est bien calibrée pour les trois modèles (IC95% du biais contenant
+largement 0) — résultat attendu, pas une découverte.
+
+### 3. Zones accord/désaccord (point 8) et comparaison de Brier
+
+| Zone | n (poisson/DC) | Brier (poisson/DC) | n (xg) | Brier (xg) |
+|---|---|---|---|---|
+| Accord (\|gap\|<5) | 225 | 0.2516 | 318 | 0.2504 |
+| Désaccord modéré (5-10) | 195 | 0.2489 | 176 | 0.2380 |
+| Désaccord important (10-15) | 91 | 0.2388 | 39 | 0.2434 |
+| Désaccord extrême (≥15) | 31 | 0.2788 | 9 | 0.2606 |
+
+**Aucune des comparaisons de Brier (désaccord vs accord) n'atteint la
+significativité statistique**, pour aucun modèle (tous les IC95% bootstrap
+contiennent 0, p entre 0.17 et 0.81) — voir tableau détaillé dans le
+script. Autrement dit : **aucune zone de désaccord ne démontre une
+fiabilité (ou une dégradation) statistiquement distincte de la zone
+d'accord** sur cet échantillon. Les zones `désaccord extrême` restent à
+faible effectif (n=9 à 31 selon le modèle) — comparaisons non concluantes,
+pas des absences de preuve de fiabilité.
+
+### 4. Test d'asymétrie (point 10) — résultat le plus net d'E10
+
+| Modèle | n (modèle>marché) | Biais | n (modèle<marché) | Biais | Diff (IC95%) | p |
+|---|---|---|---|---|---|---|
+| poisson_simple / dixon_coles | 242 | −0.0642 | 300 | +0.0615 | **[−0.2097, −0.0430]** | **0.0040** |
+| xg_model | 245 | −0.0334 | 297 | +0.0307 | [−0.1498, +0.0197] | 0.1324 |
+
+Pour `poisson_simple`/`dixon_coles`, l'asymétrie est **statistiquement
+significative** : quand le modèle est plus optimiste que le marché sur
+Over 2.5 (gap>0), il tend à **sur-estimer** (biais négatif, la fréquence
+réelle est inférieure à ce qu'il annonçait) ; quand il est plus
+pessimiste (gap<0), il tend à **sous-estimer** (biais positif). Dans les
+deux cas, **le désaccord du modèle avec le marché va, en moyenne, dans le
+mauvais sens** — la fréquence réelle est systématiquement plus proche de
+ce qu'impliquait le marché que de ce que le modèle ajoutait en s'en
+écartant. Ce résultat est cohérent avec le diagnostic post-E1, E5 et E6 :
+**aucune preuve, ici non plus, que le désaccord du modèle avec le marché
+contienne une information fiable** — le marché reste, sur cet échantillon,
+la référence la plus proche de la réalité dans les deux directions de
+désaccord. Pour `xg_model`, la même tendance directionnelle existe mais
+n'atteint pas la significativité (IC95% contenant 0).
+
+### 5. Stabilité par championnat et saison
+
+Les biais significatifs identifiés au niveau global (tranche `≤−15pts`)
+ne se répliquent **pas de façon cohérente** au niveau des sous-groupes :
+`premier_league` (n=11, biais +0.296, IC95% [+0.026,+0.529]) et `ligue1`
+(n=9, biais +0.331, IC95% [+0.038,+0.586]) montrent un biais positif
+significatif dans cette même tranche, mais `liga` (n=2) est trop réduit
+pour conclure. Par saison, `2025_26` seule atteint la significativité
+(n=14, biais +0.273, IC95% [+0.043,+0.482]) ; `2024_25` (n=8) ne l'atteint
+pas. La majorité des découpes fines (championnat × tranche, saison ×
+tranche) tombent sous le seuil n<30 et sont marquées **incertitude
+élevée** — conformément au protocole, aucune conclusion n'en est tirée.
+
+### 6. Diagnostic secondaire 1X2 (victoire à domicile, `poisson_simple` brut)
+
+Fourni à titre secondaire uniquement (priorité restée sur l'Over/Under
+2.5, conformément au protocole) : la tranche extrême `≥+15pts` (n=35,
+modèle nettement plus optimiste que le marché sur la victoire à domicile)
+affiche un biais négatif significatif (−0.242, IC95% [−0.387,−0.094]) —
+même lecture qualitative que pour l'Over/Under : quand le modèle
+`poisson_simple` s'écarte fortement et à la hausse du marché sur le 1X2,
+il tend à sur-estimer. La tranche `≤−15pts` (n=18) montre un biais positif
+significatif symétrique (+0.249, IC95% [+0.015,+0.479]). Ce diagnostic
+n'a pas vocation à être approfondi dans ce rapport.
+
+### 7. Limites
+
+- **Limitation Over/Under structurelle (documentée, non contournée)** :
+  B365 est le seul bookmaker Over/Under 2.5 disponible dans Football-Data
+  — aucune analyse inter-bookmakers, aucun arbitrage, aucune dispersion
+  multi-bookmakers O/U ne peut être produite à ce stade.
+- Les zones de désaccord extrême (≥15 points) restent à très faible
+  effectif (n=1 à 31 selon le modèle/découpe) — non concluant, pas une
+  absence de signal démontrée.
+- Le résultat le plus robuste (asymétrie significative pour
+  poisson_simple/dixon_coles) ne se réplique pas avec la même
+  significativité pour xg_model — différence de comportement entre
+  modèles, non résolue ici, cohérente avec les limites de puissance déjà
+  documentées en section G2.
+- Aucune conclusion de rentabilité n'est tirée ; aucun ROI, yield, Kelly,
+  staking, règle de pari, recherche de meilleur bookmaker n'est calculé.
+
+### 8. Verdict final
+
+**Existe-t-il des zones de désaccord modèle/marché dans lesquelles notre
+estimation du total de buts reste historiquement fiable, et ces zones
+sont-elles suffisamment stables pour justifier leur conservation dans le
+futur moteur d'analyse ?**
+
+**Non, pas sur ce corpus.** Aucune zone de désaccord ne démontre une
+fiabilité statistiquement distincte de la zone d'accord (aucune
+comparaison de Brier significative, section 3). Le résultat le plus net
+va dans le sens **opposé** à l'hypothèse recherchée : pour
+`poisson_simple`/`dixon_coles`, une **asymétrie significative** montre que
+le désaccord du modèle avec le marché tend, dans les deux directions, à
+s'éloigner de la réalité plutôt qu'à s'en rapprocher (section 4) — cohérent
+avec l'ensemble des résultats précédents du projet (diagnostic post-E1,
+E5, E6). Une seule tranche isolée (`≤−15pts`, désaccord extrême où le
+modèle est nettement plus pessimiste que le marché) montre un biais
+significatif, mais dans le sens d'une **sous-estimation** du modèle, pas
+d'une fiabilité supérieure, et ce signal ne se réplique pas de façon
+cohérente entre championnats/saisons à si faible effectif (n=22 au
+niveau global). **Aucune zone de désaccord n'est donc suffisamment stable
+ni suffisamment démontrée pour être conservée comme composante fiable du
+futur moteur d'analyse** — cette conclusion reste strictement de
+calibration, jamais de rentabilité ; l'hypothèse d'une éventuelle "value"
+future n'est ni validée ni infirmée par ce rapport, simplement non
+soutenue par les données actuelles.
+
+`poisson_simple`, `dixon_coles` et `xg_model` restent inchangés.
+
+**Arrêt.** E10 est terminé conformément au protocole. Aucune expérience
+E11 n'est lancée automatiquement.
