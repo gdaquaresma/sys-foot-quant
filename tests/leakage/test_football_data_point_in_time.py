@@ -54,13 +54,13 @@ def test_football_data_record_odds_are_independent_of_match_result(tmp_path: Pat
     header = (
         "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
         "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
-        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
     )
     rows = (
         "E0,16/08/2024,20:00,A,B,5,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
-        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,7,2,1.90,3.80,4.20,1.85,1.95\n"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,7,2,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92\n"
         "E0,17/08/2024,15:00,C,D,0,0,D,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
-        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,7,2,1.90,3.80,4.20,1.85,1.95\n"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,7,2,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92\n"
     )
     path = tmp_path / "E0.csv"
     path.write_text(header + rows)
@@ -95,13 +95,13 @@ def test_provenance_fields_are_always_set_correctly(tmp_path: Path) -> None:
     header = (
         "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
         "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
-        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
     )
     path = tmp_path / "E0.csv"
     path.write_text(
         header
         + "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
-        + "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,5,3,1.90,3.80,4.20,1.85,1.95\n"
+        + "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,5,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92\n"
     )
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     r = records[0]

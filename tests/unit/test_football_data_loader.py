@@ -17,15 +17,16 @@ _HEADER = (
     "BWH,BWD,BWA,PSH,PSD,PSA,"
     "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,"
     "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,"
-    "BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
+    "BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
 )
 
 
 def _write_csv(path: Path, rows: list[str]) -> Path:
-    # HST,AST (Phase F) puis BFEH,BFED,BFEA,BFE>2.5,BFE<2.5 (Phase G)
-    # ajoutees en fin de _HEADER - valeurs arbitraires non pertinentes
-    # pour ces tests, ajoutees en fin de chaque ligne.
-    rows = [f"{r},4,3,1.90,3.80,4.20,1.85,1.95" for r in rows]
+    # HST,AST (Phase F), BFEH,BFED,BFEA,BFE>2.5,BFE<2.5 (Phase G), puis
+    # AHh,B365AHH,B365AHA,PAHH,PAHA (Phase H) ajoutees en fin de _HEADER -
+    # valeurs arbitraires non pertinentes pour ces tests, ajoutees en fin
+    # de chaque ligne.
+    rows = [f"{r},4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92" for r in rows]
     path.write_text(_HEADER + "\n".join(rows) + "\n")
     return path
 
@@ -123,6 +124,69 @@ def test_load_basic_rows(tmp_path: Path) -> None:
     assert "BFE" not in r0.odds_1x2_by_bookmaker()
     assert "BFE" not in r0.over_under_2_5_by_bookmaker()
     assert "BFE" not in BOOKMAKERS_1X2
+    # --- Handicap asiatique (Phase H) - OUVERTURE uniquement ---------------
+    assert r0.ah_line == pytest.approx(-0.75)
+    assert r0.b365_ah_home == pytest.approx(1.95)
+    assert r0.b365_ah_away == pytest.approx(1.95)
+    assert r0.p_ah_home == pytest.approx(1.98)
+    assert r0.p_ah_away == pytest.approx(1.92)
+    assert r0.has_complete_b365_ah_odds is True
+    assert r0.has_complete_p_ah_odds is True
+    assert r0.b365_asian_handicap() == {"line": pytest.approx(-0.75), "home": pytest.approx(1.95), "away": pytest.approx(1.95)}
+    assert r0.p_asian_handicap() == {"line": pytest.approx(-0.75), "home": pytest.approx(1.98), "away": pytest.approx(1.92)}
+
+
+def test_ah_line_can_be_negative_zero_or_positive(tmp_path: Path) -> None:
+    """``AHh`` n'est PAS une cote (jamais bornee a ``> 1.0``, contrairement
+    a ``_parse_optional_float``) - verifie explicitement pour une ligne
+    negative, nulle, et positive."""
+    for line in (-1.5, 0.0, 1.5):
+        rows = [
+            "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
+            "1.65,4.1,5.3,1.63,4.15,5.2,"
+            f"1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,1.90,3.80,4.20,1.85,1.95,{line},1.95,1.95,1.98,1.92",
+        ]
+        path = tmp_path / f"E0_{line}.csv"
+        path.write_text(_HEADER + "\n".join(rows) + "\n")
+        records = load_football_data_csv(path, league="premier_league", season="2024_25")
+        assert records[0].ah_line == pytest.approx(line)
+
+
+def test_ah_column_missing_raises(tmp_path: Path) -> None:
+    """``AHh``/``B365AHH``/``B365AHA``/``PAHH``/``PAHA`` font partie de
+    ``_ALLOWED_COLUMNS`` (Phase H) - un fichier sans ces colonnes doit
+    echouer explicitement."""
+    path = tmp_path / "bad.csv"
+    path.write_text(
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
+        "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,1.90,3.80,4.20,1.85,1.95\n"
+    )
+    with pytest.raises(ValueError, match="colonnes attendues absentes"):
+        load_football_data_csv(path, league="premier_league", season="2024_25")
+
+
+def test_ah_missing_on_a_single_row_is_absent_not_invented(tmp_path: Path) -> None:
+    """Pinnacle AH est absent sur ~23% des matchs (couverture constatee,
+    voir docstring de module) - un match sans Pinnacle AH reste
+    exploitable pour B365 AH, simplement absent de ``p_asian_handicap()``."""
+    rows = [
+        "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
+        "1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,,",
+    ]
+    path = tmp_path / "E0.csv"
+    path.write_text(_HEADER + "\n".join(rows) + "\n")
+    records = load_football_data_csv(path, league="premier_league", season="2024_25")
+    r = records[0]
+    assert r.ah_line == pytest.approx(-0.75)
+    assert r.has_complete_b365_ah_odds is True
+    assert r.p_ah_home is None
+    assert r.has_complete_p_ah_odds is False
+    assert r.p_asian_handicap() is None
+    assert r.b365_asian_handicap() is not None
 
 
 def test_bfe_column_missing_raises(tmp_path: Path) -> None:
@@ -148,7 +212,7 @@ def test_bfe_missing_on_a_single_row_is_absent_not_invented(tmp_path: Path) -> N
     rows = [
         "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
         "1.65,4.1,5.3,1.63,4.15,5.2,"
-        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,,,,,",
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,,,,,,-0.75,1.95,1.95,1.98,1.92",
     ]
     path = tmp_path / "E0.csv"
     path.write_text(_HEADER + "\n".join(rows) + "\n")
@@ -183,10 +247,10 @@ def test_shots_on_target_values_are_read_as_integers(tmp_path: Path) -> None:
         "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
         "1.65,4.1,5.3,1.63,4.15,5.2,"
         "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,9,0,"
-        "1.90,3.80,4.20,1.85,1.95",
+        "1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92",
     ]
     path = tmp_path / "E0.csv"
-    path.write_text(_HEADER + "\n".join(rows) + "\n")  # ecrit directement (pas _write_csv, HST/AST/BFE deja fournis)
+    path.write_text(_HEADER + "\n".join(rows) + "\n")  # ecrit directement (pas _write_csv, HST/AST/BFE/AH deja fournis)
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     assert records[0].home_shots_on_target == 9
     assert records[0].away_shots_on_target == 0
@@ -341,8 +405,8 @@ _REQUIRED_ROW_PREFIX = (
     "1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
     "1.58,4.30,5.40,1.60,4.20,5.35,1.61,4.25,5.15"
 )
-_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5"
-_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3,1.90,3.80,4.20,1.85,1.95"
+_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA"
+_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92"
 
 
 def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
@@ -407,10 +471,10 @@ def test_literal_zero_odds_value_is_treated_as_missing_not_as_a_real_price(tmp_p
     toujours > 1.0). Doit etre traite comme absent (None), jamais comme
     0.0 (ce qui casserait toute normalisation d'overround en aval) - la
     meme regle s'applique identiquement aux cotes de CLOTURE (E16)."""
-    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
+    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
     row = _REQUIRED_ROW_PREFIX.format(date="19/04/2025", time="16:00", home="A", away="B", hg=2, ag=1, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3,1.90,3.80,4.20,1.85,1.95\n")
+    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92\n")
     records = load_football_data_csv(path, league="ligue1", season="2024_25")
     r = records[0]
     assert r.p_over_2_5 is None

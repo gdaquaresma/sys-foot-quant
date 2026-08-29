@@ -238,6 +238,43 @@ l'homogeneite deja demontree entre B365/Pinnacle (E9/E13). Piste gelee.
 **Le moteur final reste GELE** (`min_edge_threshold=None`, `BET` non
 active) ; aucun code de `final_engine` modifie.
 
+### Phase H - information incrementale du handicap asiatique, AH (executee, verdict negatif, moteur GELE)
+
+`docs/ah_incremental_information_experiment.md` teste le marche Asian
+Handicap (AH), non explore par la campagne E1->E16. Definition
+mathematique complete derivee et pre-enregistree
+(`docs/ah_experiment_specification.md`) : nouvelle primitive pure
+`football_model.goal_distribution.asian_handicap_probabilities` (lignes
+entieres/demi-entieres traitees directement par partition de la matrice
+de score selon le signe de `diff+handicap` ; lignes de quart decomposees
+en moyenne de deux lignes propres adjacentes, prouve - et non approxime -
+egal au reglement reel via 195 cas parametres contre un oracle
+independant) et fonction de reglement `settle(d,h)` (push/demi-gain/
+demi-perte correctement geres). Nouveau module isole,
+`data_engine/market_odds/asian_handicap_odds.py` (reutilise
+`matching.py`/`time_resolution.py` INCHANGES) - AH (ouverture B365/
+Pinnacle uniquement, `AHh`/`B365AHH/AHA`/`PAHH/PAHA`) ajoute a
+`football_data_loader.py`, **jamais importe par `final_engine`**.
+Modele_AH (transformation deterministe de la matrice `poisson_simple`
+deja corrigee walk-forward par E7/E8, INCHANGEE) compare a Marche_AH
+(B365, `remove_overround_proportional` INCHANGEE), avec le CONTROLE
+obligatoire "Modele_AH-recalibre" (regression logistique walk-forward a
+2 covariables, meme mecanique qu'E16/Phases F/G - `fit_logistic`/
+`walk_forward_logistic`, INCHANGEES) **integre des la conception du
+protocole**, contrairement a la Phase F ou il avait ete ajoute apres un
+premier resultat trompeur. Question A (calibration) : le modele
+surestime substantiellement la probabilite de push sur l'AH brut (11.7%
+predit vs 6.3% observe). Question B (information incrementale, matchs a
+reglement propre uniquement, n=1354) : **Verdict `NON VALIDE`** - IC95%
+de la difference de Brier (Modele+Marche vs Modele-recalibre) chevauchant
+zero au niveau global (p=0.340) et dans les huit sous-groupes de
+robustesse (championnat/saison/type de ligne) ; l'essentiel du gain
+apparent (Brier 0.2882->0.2514) provient a 97% de la seule recalibration
+(0.2882->0.2507), pas du marche AH. Question C (rentabilite
+operationnelle) : hors perimetre, non executee. Piste gelee. **Le moteur
+final reste GELE** (`min_edge_threshold=None`, `BET` non active) ; aucun
+code de `final_engine` modifie.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par

@@ -129,6 +129,21 @@ Reste une HYPOTHESE DOCUMENTEE (meme discipline que la regle de
 connaissance conservatrice, ADR 0006 section 4), pas un fait verifie
 aupres de la source externe (aucune requete a football-data.co.uk
 effectuee, aucune donnee supplementaire telechargee).
+
+EXTENSION PHASE H (docs/ah_experiment_specification.md) : ajout du
+handicap asiatique, OUVERTURE uniquement - ``AHh`` (ligne, domicile),
+``B365AHH``/``B365AHA`` (prix B365), ``PAHH``/``PAHA`` (prix Pinnacle).
+Couverture verifiee (jamais supposee) sur le corpus exploitable
+(n=1806, meme population que E9/E13/Phase G) : B365 100%, Pinnacle
+76.6% (meme profil de degradation par saison que les autres marches
+Pinnacle deja documentes). Format constant sur les six fichiers (AUCUN
+renommage inter-saison, contrairement a BF/BFD, Phase G). **NON LUS** :
+``BFEAHH``/``BFEAHA`` (Betfair Exchange AH - une seule variable nouvelle
+par experience, deja utilise pour BFE 1X2/O-U en Phase G, hors
+perimetre ici), ``MaxAHH``/``AHA``/``AvgAHH``/``AHA`` (agregats, ADR
+0006), et toute colonne de cloture (``AHCh``, ``B365CAHH``/``AHA``,
+``PCAHH``/``AHA`` - reserve critique identique a E16, jamais un feature
+de decision a l'ouverture).
 """
 
 from __future__ import annotations
@@ -191,6 +206,13 @@ _ALLOWED_COLUMNS = (
     "BFEA",
     "BFE>2.5",
     "BFE<2.5",
+    # Handicap asiatique (Phase H) - ouverture uniquement, PAS BFE-AH ni
+    # cloture, voir docstring de module.
+    "AHh",
+    "B365AHH",
+    "B365AHA",
+    "PAHH",
+    "PAHA",
 )
 
 OVER_UNDER_25_BOOKMAKERS = ("B365", "P")  # P = Pinnacle (colonne distincte de PS, meme bookmaker - voir docstring)
@@ -251,6 +273,14 @@ class FootballDataMatchRecord:
     bfe_away: float | None = None
     bfe_over_2_5: float | None = None
     bfe_under_2_5: float | None = None
+    # Handicap asiatique (Phase H) - OUVERTURE uniquement. `ah_line` peut
+    # etre negative/nulle/positive (convention domicile, jamais une cote -
+    # PAS parsee par `_parse_optional_float`, voir `_parse_optional_handicap_line`).
+    ah_line: float | None = None
+    b365_ah_home: float | None = None
+    b365_ah_away: float | None = None
+    p_ah_home: float | None = None
+    p_ah_away: float | None = None
     bw_home: float | None = None
     bw_draw: float | None = None
     bw_away: float | None = None
@@ -380,6 +410,39 @@ class FootballDataMatchRecord:
         )
 
     # ----------------------------------------------------------------
+    # Handicap asiatique (Phase H) - OUVERTURE uniquement. `ah_line` est
+    # une valeur reelle (pas une cote) - completude verifiee separement
+    # de sa validite en tant que cote.
+    # ----------------------------------------------------------------
+
+    @property
+    def has_complete_b365_ah_odds(self) -> bool:
+        return self.ah_line is not None and self.b365_ah_home is not None and self.b365_ah_away is not None
+
+    @property
+    def has_complete_p_ah_odds(self) -> bool:
+        return self.ah_line is not None and self.p_ah_home is not None and self.p_ah_away is not None
+
+    def b365_asian_handicap(self) -> dict[str, float] | None:
+        """{"line":.., "home":.., "away":..} si le handicap asiatique B365
+        est COMPLET sur ce match (ligne + les deux prix), sinon ``None``."""
+        return (
+            {"line": self.ah_line, "home": self.b365_ah_home, "away": self.b365_ah_away}
+            if self.has_complete_b365_ah_odds
+            else None
+        )
+
+    def p_asian_handicap(self) -> dict[str, float] | None:
+        """{"line":.., "home":.., "away":..} si le handicap asiatique
+        Pinnacle est COMPLET sur ce match, sinon ``None`` (absent sur
+        ~23% des matchs, voir docstring de module)."""
+        return (
+            {"line": self.ah_line, "home": self.p_ah_home, "away": self.p_ah_away}
+            if self.has_complete_p_ah_odds
+            else None
+        )
+
+    # ----------------------------------------------------------------
     # Cotes de CLOTURE (E16) - RETROSPECTIF UNIQUEMENT. Jamais utilisees
     # comme feature d'une decision a l'ouverture (voir reserve critique
     # du docstring de module) - servent uniquement a etudier le
@@ -461,6 +524,18 @@ def _parse_optional_float(raw: str) -> float | None:
     return value if value > 1.0 else None
 
 
+def _parse_optional_handicap_line(raw: str) -> float | None:
+    """Parse une ligne de handicap asiatique (``AHh``) - PAS une cote :
+    une valeur negative, nulle ou positive est toutes valides (convention
+    domicile, docs/ah_experiment_specification.md section 2.1). Seule une
+    cellule vide est traitee comme absente - jamais de borne ``> 1.0``
+    (contrairement a ``_parse_optional_float``, qui ne s'applique qu'aux
+    cotes)."""
+    if raw is None or raw.strip() == "":
+        return None
+    return float(raw)
+
+
 def load_football_data_csv(path: Path, league: str, season: str) -> list[FootballDataMatchRecord]:
     """Lit un fichier Football-Data brut et ne retient QUE les colonnes de
     ``_ALLOWED_COLUMNS`` (toujours requises - echec explicite si absentes)
@@ -507,6 +582,11 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                     bfe_away=_parse_optional_float(row["BFEA"]),
                     bfe_over_2_5=_parse_optional_float(row["BFE>2.5"]),
                     bfe_under_2_5=_parse_optional_float(row["BFE<2.5"]),
+                    ah_line=_parse_optional_handicap_line(row["AHh"]),
+                    b365_ah_home=_parse_optional_float(row["B365AHH"]),
+                    b365_ah_away=_parse_optional_float(row["B365AHA"]),
+                    p_ah_home=_parse_optional_float(row["PAHH"]),
+                    p_ah_away=_parse_optional_float(row["PAHA"]),
                     bw_home=_parse_optional_float(row["BWH"]),
                     bw_draw=_parse_optional_float(row["BWD"]),
                     bw_away=_parse_optional_float(row["BWA"]),

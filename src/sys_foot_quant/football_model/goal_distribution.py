@@ -57,6 +57,44 @@ def total_goals_distribution(matrix: np.ndarray, max_bucket: int = DEFAULT_MAX_B
     return out
 
 
+def asian_handicap_probabilities(matrix: np.ndarray, handicap: float) -> dict[str, float]:
+    """P(Home)/P(Push)/P(Away) pour une ligne de handicap asiatique
+    ``handicap`` (convention domicile : negatif favorise le domicile),
+    a partir d'UNE SEULE matrice de score deja corrigee - meme principe
+    que ``over_under_probs``, mais sur la difference de buts plutot que
+    le total (Phase H, docs/ah_experiment_specification.md section 2.3).
+
+    Ligne PROPRE (entiere ou demi-entiere, ``handicap % 0.5 == 0``) :
+    partition exacte de la matrice sur ``i - j + handicap`` positif/nul/
+    negatif - les trois valeurs somment exactement a 1.
+
+    Ligne QUART (``handicap % 0.5 in {0.25, 0.75}``) : PAS une ligne
+    unique - par definition du handicap asiatique (jamais une
+    approximation), une mise a quart de ligne est divisee en deux
+    demi-mises egales sur les deux lignes propres adjacentes
+    ``handicap - 0.25``/``handicap + 0.25``. La probabilite retournee est
+    la moyenne simple (poids 0.5/0.5) des deux distributions propres -
+    demontre, terme a terme sur chaque resultat reel possible, identique
+    a la fraction de mise reellement remboursee/perdue/gagnee (voir
+    section 2.3 du protocole et les tests dedies)."""
+    frac = abs(handicap) % 1.0
+    is_quarter = min(abs(frac - 0.25), abs(frac - 0.75)) < 1e-9
+
+    if is_quarter:
+        lo = asian_handicap_probabilities(matrix, handicap - 0.25)
+        hi = asian_handicap_probabilities(matrix, handicap + 0.25)
+        return {k: 0.5 * lo[k] + 0.5 * hi[k] for k in ("home", "push", "away")}
+
+    n = matrix.shape[0]
+    diffs = np.subtract.outer(np.arange(n), np.arange(n))
+    margin = diffs + handicap
+    return {
+        "home": float(matrix[margin > 1e-9].sum()),
+        "push": float(matrix[np.abs(margin) <= 1e-9].sum()),
+        "away": float(matrix[margin < -1e-9].sum()),
+    }
+
+
 def check_distribution_validity(dist: np.ndarray, atol: float = 1e-9) -> dict:
     """Identique a ``run_stage15_e7_total_goals_distribution.check_distribution_validity``."""
     return {
