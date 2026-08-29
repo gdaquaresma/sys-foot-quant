@@ -39,6 +39,57 @@ du projet, implementee dans un unique composant : le Repository
 | `risk_engine` (bankroll, Flat Betting, Kelly informatif + quality gates, limites, metriques de risque, Monte Carlo) | Implemente (Flat Betting seul active en production - Kelly verrouille, voir `risk_engine/kelly.py`) | 4 |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
 
+## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
+
+La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
+ligne dans les lignes `data_engine`/`calibration_engine`/`market_engine`
+ci-dessus) est desormais close - voir `docs/research_synthesis_e1_e16.md`
+pour la synthese consolidee complete (matrice E1->E16 classee
+🟢 VALIDE / 🟡 PROMETTEUR-A CONFIRMER / 🔴 REJETE-NON DEMONTRE /
+⚪ LIMITE-ABSENCE DE PREUVE, et `docs/research_framework.md` section AB
+pour le pointeur). Conclusions architecturales principales de cette
+synthese, retenues ici pour reference rapide :
+
+- **Modele de buts** : `poisson_simple`, `dixon_coles` et `xg_model`
+  restent tous les trois inchanges - aucune hierarchie n'est demontree
+  entre eux (E11 : statistiquement indiscernables en Brier sur l'O/U apres
+  correction E7/E8 ; `dixon_coles` est mathematiquement redondant avec
+  `poisson_simple` sur Over 2.5/3.5 specifiquement, fait deja etabli en K).
+  Aucun ensemble des trois modeles n'a ete teste - **hypothese future non
+  validee**.
+- **Distribution officielle** : la matrice de score unique corrigee par le
+  facteur scalaire walk-forward d'E7/E8 (Verdict A) reste la seule couche
+  de calibration validee pour la production ; **E14 (recalibration locale
+  de la zone [0.6,0.7) d'Over 2.5) est explicitement exclue de la
+  production** (gate de coherence inter-seuils viole, instabilite par
+  championnat).
+- **Marche** : le moteur ne doit **jamais** etre concu selon l'hypothese
+  "modele > marche" - aucune des 16 experiences ne le demontre. Le marche
+  (B365 ouverture) doit etre traite comme un **benchmark de prix**, jamais
+  une cible a battre ; le desaccord modele/marche, le mouvement
+  ouverture->cloture (E16) et la dispersion multi-bookmaker (E9/E13) sont
+  tous rejetes comme sources d'edge.
+- **Limites connues explicitement documentees** : zone [0.6,0.7) d'Over
+  2.5 (sur-confiance demontree, non corrigee), Premier League (absence de
+  discrimination confirmee 3x, calibration correcte, cause non identifiee
+  - interdiction de creer un coefficient PL sans nouvelle experience).
+- **Moteur minimal viable** (section 13 de la synthese) : projection,
+  pricing, comparaison marche et gates de qualification sont livrables
+  aujourd'hui sans hypothese nouvelle ; **aucune regle de conversion
+  probabilite/edge -> decision de pari positive n'est validee** - la seule
+  decision scientifiquement defendable a ce stade est une abstention
+  conditionnelle aux gates (championnat, zone de calibration, disponibilite
+  des donnees).
+- **Verdict** : `RESEARCH PHASE CLOSED` pour la question centrale
+  "existe-t-il un edge demontrable sur le marche d'ouverture" (posee sous
+  6 angles independants, toujours negative ou contradictoire) ; un seul
+  fil optionnel et non bloquant reste ouvert (mesure independante de la
+  dispersion du niveau des equipes en Premier League).
+
+**Aucun code de moteur de production n'a ete modifie ou ecrit a l'occasion
+de cette synthese** - elle est strictement documentaire, en attente d'une
+instruction separee avant implementation.
+
 Detail des etapes : voir `docs/research_framework.md` (section H) pour le
 protocole ayant guide l'etape 2, et les scripts `scripts/run_stage2_walk_forward.py`
 / `scripts/run_stage3_value_engine.py` pour les resultats empiriques (tous

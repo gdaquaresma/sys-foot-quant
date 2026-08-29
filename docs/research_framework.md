@@ -4989,3 +4989,23 @@ aucun ROI/Kelly/staking.
 
 **Arrêt.** E16 est terminé conformément au protocole. Aucune expérience
 E17 n'est lancée automatiquement.
+
+## AB. Synthèse consolidée E1 → E16
+
+La campagne expérimentale E1 → E16 est close (voir section 15 de la
+synthèse). Une synthèse consolidée complète — matrice E1→E16 avec
+classification 🟢/🟡/🔴/⚪, analyse des briques validées (les trois modèles,
+la correction E7/E8, le rejet d'E14 en production), une section « limites
+connues » (zone [0.6,0.7) d'Over 2.5, Premier League, marché), le rôle
+exact du marché (jamais « modèle > marché »), le principe d'abstention, les
+niveaux de sortie, la logique Over/Under, le rôle des trois modèles,
+les données nécessaires au moteur, les règles de production point-in-time,
+l'architecture finale proposée avec statut VALIDÉ SCIENTIFIQUEMENT /
+CHOIX ARCHITECTURAL / HYPOTHÈSE FUTURE par composant, le moteur minimal
+viable, la liste des composants rejetés, et le verdict final
+(`RESEARCH PHASE CLOSED`) — est disponible dans
+`docs/research_synthesis_e1_e16.md`. Ce document ne modifie aucune
+conclusion des sections I à AA ci-dessus ; il les consolide et en tire les
+conséquences architecturales, sans introduire de nouveau résultat
+empirique. Aucune expérience E17 n'a été lancée à l'occasion de cette
+synthèse.
