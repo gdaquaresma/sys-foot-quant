@@ -208,6 +208,36 @@ six pistes deja closes en Phase E. **Le moteur final reste GELE**
 (`min_edge_threshold=None`, `BET` non active) ; aucun code de
 `final_engine` modifie a l'occasion de cette experience.
 
+### Phase G - information incrementale de Betfair Exchange, BFE (executee, verdict negatif, moteur GELE)
+
+`docs/bfe_incremental_information_experiment.md` teste la piste
+recommandee par la Phase E (BFE, "nature d'exchange non clarifiee",
+decision E9/E13 differee). Audit direct (overround empirique + motif de
+renommage inter-saison) revele DEUX instruments Betfair distincts,
+jamais un seul : ``BF``/``BFD`` (renomme entre saisons comme WH->LB,
+overround ~5% - profil bookmaker classique, "Betfair Sportsbook", NON
+LU - redondant par construction) et ``BFE`` (constant, overround
+~1-1.3% - profil d'echange, SEUL LU). Nouveau module isole,
+`data_engine/market_odds/betfair_exchange_odds.py` (reutilise
+`matching.py`/`time_resolution.py` INCHANGES) - BFE ajoute a
+`football_data_loader.py` via des methodes DEDIEES
+(`bfe_odds_1x2()`/`bfe_over_under_2_5()`), **deliberement isole** de
+`BOOKMAKERS_1X2`/`odds_1x2_by_bookmaker`/`over_under_2_5_by_bookmaker`
+(deja utilises par les scripts GELES E9/E13 - jamais alteres). Modele
+B365 (baseline, zero parametre) compare a B365+BFE (regression
+logistique walk-forward a 2 covariables, meme mecanique qu'E16/Phase F -
+`fit_logistic`/`walk_forward_logistic`, INCHANGES), avec le CONTROLE
+obligatoire "B365-recalibre" (meme mecanique SANS BFE - lecon
+directement tiree de Phase F) sur quatre selections (1X2 : H/D/A ;
+Over/Under 2.5 : Over). **Verdict : `NON VALIDE`** sur les QUATRE
+selections - aucun IC95% de la difference de Brier (vs le controle)
+entierement negatif, un seul cas marginalement significatif dans la
+direction OPPOSEE (degradation). BFE se comporte comme un bookmaker
+fortement correle a B365, sans information distincte - confirme
+l'homogeneite deja demontree entre B365/Pinnacle (E9/E13). Piste gelee.
+**Le moteur final reste GELE** (`min_edge_threshold=None`, `BET` non
+active) ; aucun code de `final_engine` modifie.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par

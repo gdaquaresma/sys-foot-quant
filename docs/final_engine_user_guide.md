@@ -114,6 +114,12 @@ opportunites. `min_edge_threshold` reste `None`.
   l'essentiel du gain apparent provenait d'une simple recalibration,
   jamais des tirs cadres eux-memes une fois ce facteur isole. Jamais
   utilise par ce moteur.
+- **Betfair Exchange (BFE) n'apporte pas d'information incrementale
+  demontree** par rapport a B365 : teste et infirme sur les quatre
+  selections (1X2 H/D/A, Over 2.5) (Phase G,
+  `docs/bfe_incremental_information_experiment.md`) - BFE se comporte
+  comme un bookmaker fortement correle a B365, sans apport distinct.
+  Jamais utilise par ce moteur.
 
 Pour le detail scientifique complet de chacune de ces limites, voir
 `docs/research_synthesis_e1_e16.md` (sections 3, 7, 8) et les sections

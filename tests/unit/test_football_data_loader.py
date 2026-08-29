@@ -16,14 +16,16 @@ _HEADER = (
     "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,"
     "BWH,BWD,BWA,PSH,PSD,PSA,"
     "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,"
-    "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
+    "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,"
+    "BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
 )
 
 
 def _write_csv(path: Path, rows: list[str]) -> Path:
-    # HST,AST ajoutees en fin de _HEADER (Phase F) - valeurs arbitraires
-    # (4,3) non pertinentes pour ces tests, ajoutees en fin de chaque ligne.
-    rows = [f"{r},4,3" for r in rows]
+    # HST,AST (Phase F) puis BFEH,BFED,BFEA,BFE>2.5,BFE<2.5 (Phase G)
+    # ajoutees en fin de _HEADER - valeurs arbitraires non pertinentes
+    # pour ces tests, ajoutees en fin de chaque ligne.
+    rows = [f"{r},4,3,1.90,3.80,4.20,1.85,1.95" for r in rows]
     path.write_text(_HEADER + "\n".join(rows) + "\n")
     return path
 
@@ -106,6 +108,57 @@ def test_load_basic_rows(tmp_path: Path) -> None:
     # --- tirs cadres (Phase F) - POST-kickoff, jamais une cote -------------
     assert r0.home_shots_on_target == 4
     assert r0.away_shots_on_target == 3
+    # --- Betfair Exchange (Phase G) - PAS Betfair Sportsbook ---------------
+    assert r0.bfe_home == pytest.approx(1.90)
+    assert r0.bfe_draw == pytest.approx(3.80)
+    assert r0.bfe_away == pytest.approx(4.20)
+    assert r0.bfe_over_2_5 == pytest.approx(1.85)
+    assert r0.bfe_under_2_5 == pytest.approx(1.95)
+    assert r0.has_complete_bfe_odds is True
+    assert r0.has_complete_bfe_over_under_2_5_odds is True
+    assert r0.bfe_odds_1x2() == {"H": pytest.approx(1.90), "D": pytest.approx(3.80), "A": pytest.approx(4.20)}
+    assert r0.bfe_over_under_2_5() == {"Over": pytest.approx(1.85), "Under": pytest.approx(1.95)}
+    # BFE reste ISOLE des methodes/tuple deja utilises par E9/E13 (geles) -
+    # jamais un "BFE" qui apparait dans leur sortie ou leur perimetre.
+    assert "BFE" not in r0.odds_1x2_by_bookmaker()
+    assert "BFE" not in r0.over_under_2_5_by_bookmaker()
+    assert "BFE" not in BOOKMAKERS_1X2
+
+
+def test_bfe_column_missing_raises(tmp_path: Path) -> None:
+    """``BFEH``/``BFED``/``BFEA``/``BFE>2.5``/``BFE<2.5`` font partie de
+    ``_ALLOWED_COLUMNS`` (Phase G) - un fichier sans ces colonnes doit
+    echouer explicitement, jamais silencieusement produire ``None``."""
+    path = tmp_path / "bad.csv"
+    path.write_text(
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
+        "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3\n"
+    )
+    with pytest.raises(ValueError, match="colonnes attendues absentes"):
+        load_football_data_csv(path, league="premier_league", season="2024_25")
+
+
+def test_bfe_missing_on_a_single_row_is_absent_not_invented(tmp_path: Path) -> None:
+    """BFE est absent sur ~5-8% des matchs 2025/26 (couverture constatee,
+    voir docstring de module) - un match sans BFE reste exploitable,
+    simplement absent de ``bfe_odds_1x2()``/``bfe_over_under_2_5()``."""
+    rows = [
+        "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
+        "1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3,,,,,",
+    ]
+    path = tmp_path / "E0.csv"
+    path.write_text(_HEADER + "\n".join(rows) + "\n")
+    records = load_football_data_csv(path, league="premier_league", season="2024_25")
+    r = records[0]
+    assert r.bfe_home is None
+    assert r.has_complete_bfe_odds is False
+    assert r.bfe_odds_1x2() is None
+    # les cotes 1X2 B365 restent lisibles independamment de l'absence de BFE
+    assert r.b365_home == pytest.approx(1.6)
 
 
 def test_shots_on_target_column_missing_raises(tmp_path: Path) -> None:
@@ -129,10 +182,11 @@ def test_shots_on_target_values_are_read_as_integers(tmp_path: Path) -> None:
     rows = [
         "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
         "1.65,4.1,5.3,1.63,4.15,5.2,"
-        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,9,0",
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,9,0,"
+        "1.90,3.80,4.20,1.85,1.95",
     ]
     path = tmp_path / "E0.csv"
-    path.write_text(_HEADER + "\n".join(rows) + "\n")  # ecrit directement (pas _write_csv, HST/AST deja fournis)
+    path.write_text(_HEADER + "\n".join(rows) + "\n")  # ecrit directement (pas _write_csv, HST/AST/BFE deja fournis)
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     assert records[0].home_shots_on_target == 9
     assert records[0].away_shots_on_target == 0
@@ -218,12 +272,28 @@ def test_allowed_columns_contain_exactly_the_documented_closing_columns() -> Non
     }
 
 
-def test_allowed_columns_never_contain_bfe() -> None:
-    """BFE (Betfair Exchange) n'est jamais lu - nature d'exchange non
-    clarifiee (protocole E9), volontairement exclu du perimetre."""
+def test_allowed_columns_contain_exactly_the_documented_bfe_columns() -> None:
+    """Decision E9/E13 ("BFE jamais lu, nature d'exchange non clarifiee")
+    REVISITEE en Phase G apres audit empirique dedie (voir docstring de
+    module) : exactement les 5 colonnes BFE d'OUVERTURE (1X2 + Over/Under
+    2.5), JAMAIS le handicap asiatique (`BFEAHH`/`BFEAHA`) ni la cloture
+    (`BFECH`/`BFEC>2.5`/...) ni Betfair Sportsbook (`BFH`/`BFD`/`BFDH`,
+    instrument DIFFERENT, non lu - voir docstring de module)."""
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _ALLOWED_COLUMNS
 
-    assert not any("BFE" in col for col in _ALLOWED_COLUMNS)
+    bfe_columns = {c for c in _ALLOWED_COLUMNS if "BFE" in c}
+    assert bfe_columns == {"BFEH", "BFED", "BFEA", "BFE>2.5", "BFE<2.5"}
+    assert not any(c.startswith("BF") and "BFE" not in c for c in _ALLOWED_COLUMNS)  # BF/BFD (Sportsbook) jamais lu
+
+
+def test_bfe_is_never_merged_into_the_frozen_e9_e13_bookmaker_layer() -> None:
+    """Garde-fou de non-regression E9/E13 (Phase G) : BFE ne doit JAMAIS
+    apparaitre dans ``BOOKMAKERS_1X2`` ni dans les sorties de
+    ``odds_1x2_by_bookmaker``/``over_under_2_5_by_bookmaker`` - ces
+    methodes sont deja utilisees par des scripts GELES (E9, E13) dont la
+    reproductibilite ne doit jamais etre alteree par une extension
+    ulterieure."""
+    assert "BFE" not in BOOKMAKERS_1X2
 
 
 def test_allowed_columns_never_contain_max_or_avg_aggregates() -> None:
@@ -271,8 +341,8 @@ _REQUIRED_ROW_PREFIX = (
     "1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
     "1.58,4.30,5.40,1.60,4.20,5.35,1.61,4.25,5.15"
 )
-_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST"
-_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3"
+_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5"
+_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3,1.90,3.80,4.20,1.85,1.95"
 
 
 def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
@@ -337,10 +407,10 @@ def test_literal_zero_odds_value_is_treated_as_missing_not_as_a_real_price(tmp_p
     toujours > 1.0). Doit etre traite comme absent (None), jamais comme
     0.0 (ce qui casserait toute normalisation d'overround en aval) - la
     meme regle s'applique identiquement aux cotes de CLOTURE (E16)."""
-    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
+    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5\n"
     row = _REQUIRED_ROW_PREFIX.format(date="19/04/2025", time="16:00", home="A", away="B", hg=2, ag=1, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3\n")
+    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3,1.90,3.80,4.20,1.85,1.95\n")
     records = load_football_data_csv(path, league="ligue1", season="2024_25")
     r = records[0]
     assert r.p_over_2_5 is None

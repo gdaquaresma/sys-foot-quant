@@ -85,6 +85,50 @@ match (``HS``/``AS``/``HC``/``AC``/``HF``/``AF``/``HY``/``AY``/``HR``/
 ``AR``) n'est lue - perimetre volontairement limite a l'hypothese
 prioritaire (tirs cadres), une seule source d'information nouvelle a la
 fois (voir protocole Phase F).
+
+EXTENSION PHASE G (docs/bfe_incremental_information_experiment.md) : audit
+DIRECT des colonnes Betfair (jamais lues avant Phase G, `BFE` etait
+explicitement exclu depuis E9/E13 - "nature d'exchange non clarifiee").
+Inspection de l'en-tete brut des six fichiers reels a revele DEUX
+instruments Betfair DISTINCTS, jamais un seul :
+- ``BFH``/``BFD``/``BFA`` (fichiers 2024/25) renomme ``BFDH``/``BFDD``/
+  ``BFDA`` (fichiers 2025/26) - EXACTEMENT le meme phenomene de
+  renommage inter-saison deja documente pour WH/LB (E13) : UN SEUL
+  bookmaker, deux noms de colonne selon la saison. Overround moyen
+  empirique 1.045-1.060 sur les six fichiers - PROFIL IDENTIQUE a B365
+  (1.055-1.056) - signature d'un bookmaker a marge fixe classique
+  ("Betfair Sportsbook"). 1X2 UNIQUEMENT (aucune colonne Over/Under ni
+  handicap asiatique pour cet instrument, dans aucun des six fichiers).
+  **NON LU** - redondant par construction avec les bookmakers a marge
+  deja exclus comme non-informatifs (BW/PS/WH/LB, E9/E13), et hors
+  perimetre de l'hypothese Phase G (une seule variable nouvelle : BFE).
+- ``BFEH``/``BFED``/``BFEA`` (1X2), ``BFE>2.5``/``BFE<2.5`` (Over/Under
+  2.5) - CONSTANT sur les six fichiers (jamais renomme). Overround moyen
+  empirique 1.006-1.013 - PRES DE 1.0, tres inferieur au profil de tout
+  bookmaker du corpus - signature attendue d'un prix d'echange ("best
+  back price", sans marge de bookmaker centralisee). Couverture par
+  ligne : 92-100% (100% sur les six fichiers 2024/25, 92-95% sur les
+  fichiers 2025/26 - degradation asymetrique deja observee pour d'autres
+  bookmakers secondaires, ex. Pinnacle O/U). **SEUL INSTRUMENT LU ICI**
+  (Phase G, hypothese exchange vs bookmaker).
+- ``BFEAHH``/``BFEAHA`` (handicap asiatique, colonnes existantes,
+  couverture identique a BFE 1X2/O-U) : **NON LU** - hors perimetre
+  explicite de la Phase G (une seule variable nouvelle, jamais AH
+  simultanement).
+- ``BFCH/CD/CA``/``BFDCH/CD/CA`` (cloture Sportsbook) et
+  ``BFECH/CD/CA``/``BFEC>2.5/C<2.5``/``BFECAHH/AHA`` (cloture Exchange) :
+  **NON LUS** - aucune analyse retrospective (mouvement ouverture/
+  cloture) n'est menee en Phase G, contrairement a E16.
+
+Interpretation ("Betfair Sportsbook" vs "Betfair Exchange") deduite de
+DEUX preuves structurelles independantes trouvees DANS les donnees
+elles-memes (renommage inter-saison identique au precedent WH/LB deja
+accepte ; signature d'overround radicalement differente entre les deux
+instruments) - jamais une simple supposition sur le nom des colonnes.
+Reste une HYPOTHESE DOCUMENTEE (meme discipline que la regle de
+connaissance conservatrice, ADR 0006 section 4), pas un fait verifie
+aupres de la source externe (aucune requete a football-data.co.uk
+effectuee, aucune donnee supplementaire telechargee).
 """
 
 from __future__ import annotations
@@ -139,6 +183,14 @@ _ALLOWED_COLUMNS = (
     # match qu'elles decrivent, voir la reserve de la docstring de module.
     "HST",
     "AST",
+    # Betfair Exchange (Phase G) - PAS Betfair Sportsbook (BF/BFD, non lu,
+    # voir docstring de module) ; ouverture uniquement, jamais AH ni
+    # cloture.
+    "BFEH",
+    "BFED",
+    "BFEA",
+    "BFE>2.5",
+    "BFE<2.5",
 )
 
 OVER_UNDER_25_BOOKMAKERS = ("B365", "P")  # P = Pinnacle (colonne distincte de PS, meme bookmaker - voir docstring)
@@ -188,6 +240,17 @@ class FootballDataMatchRecord:
     # _ALLOWED_COLUMNS, couverture 100% verifiee sur les six fichiers reels).
     home_shots_on_target: int | None = None
     away_shots_on_target: int | None = None
+    # Betfair EXCHANGE (Phase G) - PAS Betfair Sportsbook (BF/BFD, jamais
+    # lu, voir docstring de module). Isole DELIBEREMENT de
+    # `odds_1x2_by_bookmaker`/`over_under_2_5_by_bookmaker`/
+    # `BOOKMAKERS_1X2` (methodes/tuple deja utilisees par E9/E13, gelees -
+    # ne jamais alterer leur comportement en y ajoutant BFE) - accessible
+    # uniquement via `bfe_odds_1x2()`/`bfe_over_under_2_5()`.
+    bfe_home: float | None = None
+    bfe_draw: float | None = None
+    bfe_away: float | None = None
+    bfe_over_2_5: float | None = None
+    bfe_under_2_5: float | None = None
     bw_home: float | None = None
     bw_draw: float | None = None
     bw_away: float | None = None
@@ -279,6 +342,42 @@ class FootballDataMatchRecord:
         if self.has_complete_lb_odds:
             out["LB"] = {"H": self.lb_home, "D": self.lb_draw, "A": self.lb_away}
         return out
+
+    # ----------------------------------------------------------------
+    # Betfair EXCHANGE (Phase G) - DELIBEREMENT ISOLE de
+    # `odds_1x2_by_bookmaker`/`over_under_2_5_by_bookmaker`/
+    # `BOOKMAKERS_1X2` (deja utilises par E9/E13, geles - toute
+    # modification de leur comportement romprait leur reproductibilite
+    # si ces scripts etaient re-executes). Accessible uniquement via ces
+    # deux methodes dediees.
+    # ----------------------------------------------------------------
+
+    @property
+    def has_complete_bfe_odds(self) -> bool:
+        return self.bfe_home is not None and self.bfe_draw is not None and self.bfe_away is not None
+
+    @property
+    def has_complete_bfe_over_under_2_5_odds(self) -> bool:
+        return self.bfe_over_2_5 is not None and self.bfe_under_2_5 is not None
+
+    def bfe_odds_1x2(self) -> dict[str, float] | None:
+        """{"H":.., "D":.., "A":..} si Betfair Exchange 1X2 est COMPLET
+        sur ce match, sinon ``None`` (jamais invente ni impute - BFE est
+        absent sur ~5-8% des matchs 2025/26, voir docstring de module)."""
+        return (
+            {"H": self.bfe_home, "D": self.bfe_draw, "A": self.bfe_away}
+            if self.has_complete_bfe_odds
+            else None
+        )
+
+    def bfe_over_under_2_5(self) -> dict[str, float] | None:
+        """{"Over":.., "Under":..} si Betfair Exchange Over/Under 2.5 est
+        COMPLET sur ce match, sinon ``None``."""
+        return (
+            {"Over": self.bfe_over_2_5, "Under": self.bfe_under_2_5}
+            if self.has_complete_bfe_over_under_2_5_odds
+            else None
+        )
 
     # ----------------------------------------------------------------
     # Cotes de CLOTURE (E16) - RETROSPECTIF UNIQUEMENT. Jamais utilisees
@@ -403,6 +502,11 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                     p_under_2_5=_parse_optional_float(row["P<2.5"]),
                     home_shots_on_target=int(row["HST"]),
                     away_shots_on_target=int(row["AST"]),
+                    bfe_home=_parse_optional_float(row["BFEH"]),
+                    bfe_draw=_parse_optional_float(row["BFED"]),
+                    bfe_away=_parse_optional_float(row["BFEA"]),
+                    bfe_over_2_5=_parse_optional_float(row["BFE>2.5"]),
+                    bfe_under_2_5=_parse_optional_float(row["BFE<2.5"]),
                     bw_home=_parse_optional_float(row["BWH"]),
                     bw_draw=_parse_optional_float(row["BWD"]),
                     bw_away=_parse_optional_float(row["BWA"]),
