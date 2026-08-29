@@ -68,6 +68,23 @@ kickoff - `DECISION_OFFSET_HOURS`, meme regle que partout ailleurs) et NE
 DOIVENT JAMAIS etre utilisees comme feature d'une prediction censee etre
 disponible a l'ouverture. Aucun script anterieur (E1-E15) ne lit ces
 champs ; leur ajout ici n'affecte donc AUCUN resultat deja publie.
+
+EXTENSION PHASE F (docs/next_signal_strategy.md, docs/sot_incremental_information_experiment.md) :
+ajout de ``HST``/``AST`` (tirs cadres domicile/exterieur) a
+``_ALLOWED_COLUMNS`` - COUVERTURE VERIFIEE (jamais supposee) : 0 valeur
+manquante sur les six fichiers reels (2132 lignes), ``HST<=HS`` et
+``AST<=AS`` toujours vrai. Ce sont des STATISTIQUES DE MATCH, connues
+seulement APRES le coup d'envoi (meme moment de publication que
+``FTHG``/``FTAG`` dans la meme ligne source) - JAMAIS un feature du match
+qu'elles decrivent lui-meme, uniquement exploitables comme entree
+HISTORIQUE (moyenne glissante d'un match anterieur) d'un futur match,
+exactement comme ``goals_knowledge_time`` (``real_data_walk_forward.py``,
+kickoff+2h) le fait deja pour les buts reels - aucun nouveau delai de
+connaissance n'est invente ici. Aucune autre colonne de statistique de
+match (``HS``/``AS``/``HC``/``AC``/``HF``/``AF``/``HY``/``AY``/``HR``/
+``AR``) n'est lue - perimetre volontairement limite a l'hypothese
+prioritaire (tirs cadres), une seule source d'information nouvelle a la
+fois (voir protocole Phase F).
 """
 
 from __future__ import annotations
@@ -118,6 +135,10 @@ _ALLOWED_COLUMNS = (
     "B365C<2.5",
     "PC>2.5",
     "PC<2.5",
+    # Statistiques de match (Phase F) - POST-kickoff, jamais un feature du
+    # match qu'elles decrivent, voir la reserve de la docstring de module.
+    "HST",
+    "AST",
 )
 
 OVER_UNDER_25_BOOKMAKERS = ("B365", "P")  # P = Pinnacle (colonne distincte de PS, meme bookmaker - voir docstring)
@@ -160,6 +181,13 @@ class FootballDataMatchRecord:
     b365_under_2_5: float | None = None
     p_over_2_5: float | None = None
     p_under_2_5: float | None = None
+    # Tirs cadres (Phase F) - POST-kickoff, statistique de match, jamais une
+    # cote. ``None`` uniquement pour compatibilite avec les constructions
+    # directes anterieures a Phase F (ex : tests) qui ne les renseignent
+    # pas - ``load_football_data_csv`` les remplit TOUJOURS (int, colonnes
+    # _ALLOWED_COLUMNS, couverture 100% verifiee sur les six fichiers reels).
+    home_shots_on_target: int | None = None
+    away_shots_on_target: int | None = None
     bw_home: float | None = None
     bw_draw: float | None = None
     bw_away: float | None = None
@@ -373,6 +401,8 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                     b365_under_2_5=_parse_optional_float(row["B365<2.5"]),
                     p_over_2_5=_parse_optional_float(row["P>2.5"]),
                     p_under_2_5=_parse_optional_float(row["P<2.5"]),
+                    home_shots_on_target=int(row["HST"]),
+                    away_shots_on_target=int(row["AST"]),
                     bw_home=_parse_optional_float(row["BWH"]),
                     bw_draw=_parse_optional_float(row["BWD"]),
                     bw_away=_parse_optional_float(row["BWA"]),

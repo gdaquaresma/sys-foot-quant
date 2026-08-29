@@ -16,11 +16,14 @@ _HEADER = (
     "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,"
     "BWH,BWD,BWA,PSH,PSD,PSA,"
     "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,"
-    "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
+    "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
 )
 
 
 def _write_csv(path: Path, rows: list[str]) -> Path:
+    # HST,AST ajoutees en fin de _HEADER (Phase F) - valeurs arbitraires
+    # (4,3) non pertinentes pour ces tests, ajoutees en fin de chaque ligne.
+    rows = [f"{r},4,3" for r in rows]
     path.write_text(_HEADER + "\n".join(rows) + "\n")
     return path
 
@@ -100,6 +103,39 @@ def test_load_basic_rows(tmp_path: Path) -> None:
         "B365": {"Over": pytest.approx(1.88), "Under": pytest.approx(1.92)},
         "P": {"Over": pytest.approx(1.82), "Under": pytest.approx(1.87)},
     }
+    # --- tirs cadres (Phase F) - POST-kickoff, jamais une cote -------------
+    assert r0.home_shots_on_target == 4
+    assert r0.away_shots_on_target == 3
+
+
+def test_shots_on_target_column_missing_raises(tmp_path: Path) -> None:
+    """HST/AST font partie de ``_ALLOWED_COLUMNS`` (Phase F, couverture
+    100% verifiee sur les six fichiers reels) - un fichier sans ces
+    colonnes doit echouer explicitement, jamais silencieusement produire
+    ``None``."""
+    path = tmp_path / "bad.csv"
+    path.write_text(
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
+        "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87\n"
+    )
+    with pytest.raises(ValueError, match="colonnes attendues absentes"):
+        load_football_data_csv(path, league="premier_league", season="2024_25")
+
+
+def test_shots_on_target_values_are_read_as_integers(tmp_path: Path) -> None:
+    rows = [
+        "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
+        "1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,9,0",
+    ]
+    path = tmp_path / "E0.csv"
+    path.write_text(_HEADER + "\n".join(rows) + "\n")  # ecrit directement (pas _write_csv, HST/AST deja fournis)
+    records = load_football_data_csv(path, league="premier_league", season="2024_25")
+    assert records[0].home_shots_on_target == 9
+    assert records[0].away_shots_on_target == 0
 
 
 def test_missing_b365_values_are_flagged_not_dropped(tmp_path: Path) -> None:
@@ -235,8 +271,8 @@ _REQUIRED_ROW_PREFIX = (
     "1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
     "1.58,4.30,5.40,1.60,4.20,5.35,1.61,4.25,5.15"
 )
-_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5"
-_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89"
+_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST"
+_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3"
 
 
 def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
@@ -301,10 +337,10 @@ def test_literal_zero_odds_value_is_treated_as_missing_not_as_a_real_price(tmp_p
     toujours > 1.0). Doit etre traite comme absent (None), jamais comme
     0.0 (ce qui casserait toute normalisation d'overround en aval) - la
     meme regle s'applique identiquement aux cotes de CLOTURE (E16)."""
-    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
+    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
     row = _REQUIRED_ROW_PREFIX.format(date="19/04/2025", time="16:00", home="A", away="B", hg=2, ag=1, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0\n")
+    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3\n")
     records = load_football_data_csv(path, league="ligue1", season="2024_25")
     r = records[0]
     assert r.p_over_2_5 is None

@@ -182,6 +182,32 @@ aucune modification) tant qu'aucune source de signal nouvelle n'est
 validee par un protocole dedie. Aucun code de production modifie a
 l'occasion de cet audit.
 
+### Phase F - information incrementale des tirs cadres, SOT (executee, verdict negatif, moteur GELE)
+
+`docs/sot_incremental_information_experiment.md` teste l'unique piste
+recommandee par la Phase E : `football_data_loader.py` etendu (`HST`/
+`AST` ajoutees a `_ALLOWED_COLUMNS`, couverture 100% verifiee sur les six
+fichiers reels) et un nouveau module isole,
+`data_engine/market_odds/shots_on_target.py` (appariement Understat/
+Football-Data via `matching.py` REUTILISE, historique walk-forward
+`MIN_TRAIN_MATCHES=10` REUTILISE, repli neutre translittere de
+`XGModel.fit`) - **jamais importe par `final_engine`**. Modele O (le
+moteur actuel, `poisson_simple`+E7/E8, INCHANGE) compare a Modele O+SOT
+(regression logistique walk-forward a 2 covariables SOT, meme mecanique
+qu'E16 - `fit_logistic`/`walk_forward_logistic`, INCHANGES) sur les 2012
+matchs comparables du corpus complet. Un CONTROLE obligatoire
+(« O-recalibre », meme mecanique SANS les covariables SOT) a ete ajoute
+en cours d'analyse pour isoler l'effet specifique des tirs cadres d'un
+simple effet de recalibration generique - sans lui, l'experience aurait
+conclu a tort a une information validee (~89% du gain apparent provenait
+de la seule recalibration). **Verdict : `NON VALIDE`** - IC95% de la
+difference de Brier (O+SOT vs O-recalibre) chevauchant zero au niveau
+global (p=0.073), stable dans seulement 2 sous-groupes sur 5
+(championnat/saison). Piste gelee definitivement, au meme titre que les
+six pistes deja closes en Phase E. **Le moteur final reste GELE**
+(`min_edge_threshold=None`, `BET` non active) ; aucun code de
+`final_engine` modifie a l'occasion de cette experience.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par

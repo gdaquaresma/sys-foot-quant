@@ -108,6 +108,12 @@ opportunites. `min_edge_threshold` reste `None`.
   infirmee (E9, E13) - jamais utilisee comme source d'edge ici, meme si
   des cotes secondaires (Pinnacle, Bet&Win) restent lisibles a titre
   d'audit.
+- **Les tirs cadres (historique, point-in-time) n'apportent pas
+  d'information incrementale demontree** sur Over/Under 2.5 : teste et
+  infirme (Phase F, `docs/sot_incremental_information_experiment.md`) -
+  l'essentiel du gain apparent provenait d'une simple recalibration,
+  jamais des tirs cadres eux-memes une fois ce facteur isole. Jamais
+  utilise par ce moteur.
 
 Pour le detail scientifique complet de chacune de ces limites, voir
 `docs/research_synthesis_e1_e16.md` (sections 3, 7, 8) et les sections
