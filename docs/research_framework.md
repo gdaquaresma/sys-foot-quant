@@ -4037,3 +4037,242 @@ pari, aucun signal exploitable**. `poisson_simple`, `dixon_coles` et
 
 **Arrêt.** E12 est terminé conformément au protocole. Aucune expérience
 E13 n'est lancée automatiquement.
+
+## X. Expérience E13 — dispersion multi-bookmakers et arbitrage mathématique (Over/Under 2.5 prioritaire)
+
+**Contexte et cadrage.** E12 a montré qu'avec B365 seul, aucune zone
+n'est simultanément fiable et à fort écart de prix. E13 change d'angle :
+au lieu de comparer modèle et marché, il exploite la dispersion **entre
+bookmakers** pour répondre à une question différente — « la dispersion
+entre bookmakers contient-elle une information exploitable sur les
+probabilités réelles de buts, et peut-on détecter des incohérences de
+prix (arbitrage mathématique) entre bookmakers ? ». Toujours aucune
+recherche de stratégie battant le marché. `poisson_simple`, `dixon_coles`
+et `xg_model` restent inchangés ; aucune nouvelle calibration, aucun
+tuning, aucun ROI/Kelly/staking.
+
+### 1. Correction d'inventaire (point 1 du protocole, « ne rien supposer »)
+
+E9 à E12 avaient supposé, sans jamais inspecter l'en-tête brut des six
+fichiers pour ce marché précis, que B365 était l'**unique** bookmaker
+publiant l'Over/Under 2.5 (constat documenté en section T, §4 : « 0
+instance avec ≥2 bookmakers, consensus et dispersion structurellement
+non calculables »). Une inspection directe des colonnes brutes
+(`raw_over_under_column_inventory`, scan littéral des sous-chaînes
+`>2.5`/`<2.5`, sans hypothèse de préfixe) montre que **Pinnacle publie
+aussi l'Over/Under 2.5**, sous le préfixe `P` — distinct de `PS` utilisé
+pour son 1X2, une convention de nommage Football-Data jamais vérifiée
+jusqu'ici. Couverture : ~99% en 2024/25, ~45-50% manquante en 2025/26 —
+exactement le même profil de dégradation que `PS` (1X2), ce qui corrobore
+qu'il s'agit du même bookmaker.
+
+En creusant cette découverte, un second défaut de données est apparu :
+un match (Paris SG–Le Havre, F1 2024/25, 19/04/2025) porte littéralement
+`"0"` dans `P>2.5`/`P<2.5` (et leurs équivalents de clôture) — le
+sentinelle Football-Data pour « cote non collectée » sur ce bookmaker
+précis pour ce match, distinct d'une cellule vide mais avec la même
+signification. `_parse_optional_float` a été corrigé pour traiter toute
+valeur `<= 1.0` (impossible pour une vraie cote décimale) comme absente,
+jamais comme une cote réelle de 0.0 — cohérent avec la définition déjà
+utilisée par `market_engine.overround.validate_odds`. Cette correction et
+celle du §1 ci-dessus sont documentées dans l'ADR 0006 et dans le
+docstring de `football_data_loader.py` ; l'extension WH/LB (1X2,
+`_OPTIONAL_COLUMNS`, saisons disjointes) découverte au même moment est
+sans effet sur les résultats déjà publiés (E9-E12 ne lisent jamais
+génériquement les bookmakers présents, toujours la clé `"B365"`
+explicite) et documentée pour mémoire.
+
+L'Over/Under 2.5 dispose donc réellement de **deux** bookmakers nommés
+(B365, P) — dispersion, consensus et arbitrage y redeviennent
+évaluables, ce qui était impossible en l'état documenté en section T.
+
+### 2. Six notions strictement distinguées (jamais confondues, point 9)
+
+1. **Information descriptive** : couverture, overround, dispersion
+   moyenne — ne prouvent rien en soi.
+2. **Discrimination** : capacité d'une variable à séparer les issues.
+3. **Calibration** : biais (fréquence réelle − probabilité annoncée) et
+   son IC95% — cœur des tests ci-dessous.
+4. **Anomalie de prix** : notion réservée au sens E9 (un bookmaker
+   s'écarte du consensus de *plusieurs* bookmakers).
+5. **Arbitrage mathématique** : détection **historique** pure — jamais
+   présentée comme une opportunité actuellement disponible.
+6. **Value potentielle** : **non évaluée dans ce rapport**, quel que soit
+   le résultat.
+
+### 3. Correction méthodologique découverte en cours d'exécution : sélection canonique obligatoire sur un marché à 2 issues
+
+Une première exécution réelle a révélé un artefact algébrique avant
+toute analyse des résultats de fond : pour l'Over/Under 2.5 (2 issues
+strictement complémentaires), P(Under) = 1 − P(Over) pour chaque
+bookmaker et issue(Under) = 1 − issue(Over). Regrouper les lignes Over
+**et** Under dans une même table agrégée est dégénéré — le biais agrégé
+(fréquence réelle − probabilité moyenne) vaut **exactement 0** par
+construction algébrique pour toute tranche contenant des paires
+complètes, et une comparaison de Brier appariée duplique exactement
+chaque observation. Ce n'est pas un vrai résultat d'absence de biais,
+c'est un artefact de construction — confirmé empiriquement : la première
+exécution affichait `p_moyen = freq_reelle = 0.5000` identiquement dans
+**toutes** les tranches, y compris celles à très faible effectif, un
+signal clair de dégénérescence plutôt qu'un résultat réel.
+
+Correction (`restrict_to_canonical_selection`, décision structurelle
+prise **avant** toute observation des résultats de fond, jamais un choix
+de seuil post-hoc) : seule la sélection canonique **Over** — déjà la
+priorité absolue du protocole, même convention que E10/E11/E12 — est
+retenue pour les tables agrégées de l'Over/Under. Le 1X2 (3 issues)
+n'a pas cette dégénérescence (vérifié empiriquement : `p_moyen` et
+`freq_reelle` y diffèrent légèrement par tranche, ex. 0.3233 vs 0.3248)
+et reste regroupé sur H/D/A sans restriction. Cette correction a été
+appliquée, testée (nouveaux tests unitaires démontrant l'artefact et sa
+correction) et la suite complète validée avant toute réexécution réelle.
+
+### 4. Couverture et corpus (n=1806 matchs multi-bookmaker exploitables)
+
+| Marché | Bookmaker | Couverture |
+|---|---|---|
+| Over/Under 2.5 | B365 | 1806/1806 (100.0%) |
+| Over/Under 2.5 | P (Pinnacle) | 1374/1806 (76.1%) |
+| 1X2 | B365 | 1806/1806 (100.0%) |
+| 1X2 | BW | 1453/1806 (80.5%) |
+| 1X2 | PS | 1383/1806 (76.6%) |
+| 1X2 | WH | 685/1806 (37.9%) |
+| 1X2 | LB | 676/1806 (37.4%) |
+
+WH et LB ne coexistent jamais sur un même match (fichiers de saisons
+disjointes, vérifié par test de non-régression) — aucun match n'atteint
+plus de 5 bookmakers 1X2 simultanément dans les faits (au plus B365 + BW
++ PS + un des deux).
+
+### 5. Over/Under 2.5 — dispersion (B365 vs P), sélection canonique Over, n=1374
+
+| Tranche dispersion | n | p_moyen | freq_réelle | biais | IC95% | Brier |
+|---|---|---|---|---|---|---|
+| <0.5pt | 902 | 0.5321 | 0.5399 | +0.0078 | [−0.0247, +0.0403] | 0.2431 |
+| 0.5-1.0pt | 388 | 0.5313 | 0.5000 | −0.0313 | [−0.0796, +0.0177] | 0.2345 |
+| 1.0-2.0pt | 79 | 0.5280 | 0.5443 | +0.0163 | [−0.0935, +0.1210] | 0.2324 |
+| ≥2.0pt | 5 | — | — | — | — | — (insuffisant n<30) |
+
+**Test central** (haute dispersion pooled [1.0-2.0pt + ≥2.0pt], n=84 vs
+basse [<0.5pt + 0.5-1.0pt], n=1290) : diff erreur carrée (haute−basse)
+IC95% = **[−0.0278, +0.0271]**, p=0.9534 → **VERDICT : ABSENCE DE
+PREUVE**. La dispersion entre B365 et Pinnacle n'est pas associée à une
+différence de calibration du consensus détectable sur ce corpus.
+
+**Écart meilleure-pire cote** : 100% des 1374 instances tombent dans la
+tranche « faible (<5pts) » — **aucune** instance n'atteint « modérée » ou
+« élevée » entre ces deux bookmakers sur l'Over/Under 2.5. Descriptif
+seul : avec seulement 2 bookmakers dont l'un (Pinnacle) est réputé à
+faible marge, l'écart normalisé reste structurellement petit.
+
+**Consensus vs B365 seul** : n=1374, diff Brier(B365 seul − consensus)
+IC95% = **[−0.0001, +0.0003]**, p=0.6208 → différence négligeable et non
+significative. Le consensus à 2 bookmakers n'apporte rien de mesurable
+par rapport à B365 seul sur ce marché.
+
+**Écart bookmaker individuel vs consensus** : sur 2748 instances
+(match × bookmaker), **100%** classées « proche du consensus » (seuil
+0.05) — **aucune** anomalie de prix individuelle détectée entre B365 et
+Pinnacle sur l'Over/Under 2.5 dans ce corpus.
+
+**Arbitrage mathématique** : 0/1806 matchs évaluables avec somme des
+probabilités inverses < 1 ; marge moyenne = **−0.0378** (marge
+bookmaker positive d'environ 3.8% en moyenne, jamais franchie).
+
+### 6. Modèle E8 (walk-forward) vs consensus Over/Under (B365+P), split TEST, n=275
+
+| Modèle | n | diff Brier(modèle − consensus) IC95% | p |
+|---|---|---|---|
+| poisson_simple | 275 | [−0.0051, +0.0125] | 0.4066 |
+| xg_model | 275 | [−0.0036, +0.0097] | 0.3732 |
+
+Les deux IC95% contiennent 0 : le consensus à 2 bookmakers n'est ni
+significativement meilleur ni pire que la distribution corrigée E8 —
+cohérent avec E9-E12 (marché et modèle statistiquement indiscernables
+sur Over 2.5). `dixon_coles` reproduit exactement `poisson_simple` sur
+l'Over/Under (déjà établi en E7/E8).
+
+### 7. 1X2 (secondaire) — même grille, H/D/A poolés, n=5418
+
+| Tranche dispersion | n | p_moyen | freq_réelle | biais | IC95% |
+|---|---|---|---|---|---|
+| <0.5pt | 2762 | 0.3233 | 0.3248 | +0.0014 | [−0.0150, +0.0178] |
+| 0.5-1.0pt | 2204 | 0.3361 | 0.3339 | −0.0022 | [−0.0204, +0.0158] |
+| 1.0-2.0pt | 446 | 0.3807 | 0.3812 | +0.0004 | [−0.0393, +0.0398] |
+| ≥2.0pt | 6 | — | — | — | — (insuffisant n<30) |
+
+**Test central** : n_haute=452, n_basse=4966, diff erreur carrée IC95% =
+**[−0.0259, +0.0085]**, p=0.2960 → **VERDICT : ABSENCE DE PREUVE**, même
+conclusion que sur l'Over/Under. Écart meilleure-pire cote : 100% en
+tranche « faible » (jamais ≥5pts, même avec jusqu'à 5 bookmakers).
+Consensus vs B365 seul : n=5418, IC95% = [−0.0001, +0.0001], p=0.9240 —
+aucune différence mesurable. Écart individuel vs consensus : 18009
+instances, 100% « proche du consensus » — aucune anomalie détectée.
+Arbitrage : 0/1806, marge moyenne = −0.0335 (≈3.35%).
+
+### 8. Limites
+
+- Le corpus multi-bookmaker Over/Under reste à 2 bookmakers seulement
+  (B365, Pinnacle) — la dispersion observable est mécaniquement plus
+  faible qu'avec un panel plus large, ce qui limite la puissance du test
+  central (n_haute=84 seulement).
+- Aucune tranche `≥2.0pt` n'atteint n≥30 sur aucun des deux marchés —
+  jamais interprétée en tant que telle.
+- Le test central repose sur un découpage en 2 groupes poolés fixé avant
+  exécution (point 8) — pas une exploration de tranches alternatives.
+- L'écart meilleure-pire cote ne dépasse jamais 5 points de probabilité
+  dans ce corpus (sur les deux marchés) — les tranches « modérée » et
+  « élevée » restent vides ; ceci est un résultat descriptif du corpus,
+  pas une limite de méthode.
+- Aucune conclusion de rentabilité n'est tirée ; anomalie de prix,
+  arbitrage mathématique et value potentielle ne sont ni confondus ni
+  évalués au-delà de ce qui est explicitement mesuré ci-dessus.
+
+### 9. Verdict final
+
+**Est-ce que les bookmakers, considérés individuellement et
+collectivement, donnent une information supplémentaire sur les
+probabilités réelles de buts ou sur les erreurs de prix que nous ne
+voyions pas avec B365 seul ?**
+
+**Non, pas sur ce corpus.** Tous les tests pré-enregistrés reviennent à
+« absence de preuve » : la dispersion entre bookmakers n'est associée à
+aucune différence de calibration détectable (IC95% contenant 0 sur
+Over/Under **et** 1X2) ; le consensus multi-bookmaker ne bat pas B365
+seul de façon mesurable (diff Brier ≈ 0, IC95% contenant 0 sur les deux
+marchés) ; aucun bookmaker individuel ne s'écarte jamais assez du
+consensus pour être classé « notable » ou « marqué » (0 anomalie sur les
+deux marchés) ; et le consensus Over/Under (B365+P) reste statistiquement
+indiscernable de la distribution E8 déjà validée. La dispersion mesurée
+dans ce corpus est simplement trop faible et trop homogène (bookmakers
+très alignés, marge positive stable ~3.3-3.8%) pour contenir un signal
+détectable avec la puissance disponible.
+
+**Existe-t-il des incohérences de prix mathématiques entre bookmakers
+permettant de détecter des arbitrages historiques ? Si oui, quantifier
+précisément leur fréquence et leur structure. Si non, expliquer
+pourquoi.**
+
+**Non, aucun arbitrage mathématique historique détecté : 0/1806 matchs
+évaluables sur les deux marchés** (somme des probabilités inverses au
+meilleur prix toujours ≥ 1). La marge moyenne agrégée reste positive et
+stable (−3.35% à −3.78% selon le marché) — la condition mathématique de
+l'arbitrage (marge négative, c'est-à-dire somme des inverses des
+meilleurs prix < 1) n'est jamais atteinte. Ceci s'explique
+structurellement par les données disponibles : l'écart meilleure-pire
+cote ne dépasse jamais 5 points de probabilité dans ce corpus (bookmakers
+FootballData suivis étroitement alignés), très en-deçà de ce qu'il
+faudrait pour compenser une marge bookmaker de plusieurs points de
+pourcentage — un arbitrage nécessiterait des bookmakers dont les prix
+divergent bien plus que ce que montre ce panel (B365/BW/PS/WH/LB sur le
+1X2 ; B365/P sur l'Over/Under), qui sont tous des bookmakers réglementés
+et suivis de près, pas des marchés de niche ou des exchanges à faible
+liquidité où de tels écarts sont plus documentés dans la littérature.
+
+Conformément à l'instruction du protocole, ce résultat négatif **n'est
+transformé en aucune conclusion de rentabilité, aucune stratégie de
+pari, aucun signal exploitable**. `poisson_simple`, `dixon_coles` et
+`xg_model` restent inchangés.
+
+**Arrêt.** E13 est terminé conformément au protocole. Aucune expérience
+E14 n'est lancée automatiquement.

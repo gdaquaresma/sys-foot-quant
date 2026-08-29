@@ -11,10 +11,13 @@ pas redefini). AUCUNE nouvelle hypothese temporelle.
 Different d'``over_under_odds.py`` par la FORME de la sortie uniquement :
 au lieu d'exposer un seul bookmaker par marche, chaque enregistrement
 porte une representation generique ``bookmaker -> marche -> selection ->
-cote``, couvrant a la fois le 1X2 (B365/BW/PS, cf.
-``football_data_loader.BOOKMAKERS_1X2``) et l'Over/Under 2.5 (B365
-uniquement - aucune colonne BW/PS Over/Under n'existe dans les fichiers
-sources, perimetre volontairement limite a ce qui existe reellement).
+cote``, couvrant a la fois le 1X2 (B365/BW/PS/WH/LB, cf.
+``football_data_loader.BOOKMAKERS_1X2``) et l'Over/Under 2.5 (B365 ET
+Pinnacle - colonne ``P``, cf. ``football_data_loader.OVER_UNDER_25_BOOKMAKERS``
+- CORRECTION E13 : E9 avait initialement suppose B365 seul sur ce marche
+sans verifier l'en-tete brut pour ce prefixe distinct de ``PS`` ; aucune
+colonne BW/WH/LB Over/Under n'existe dans les fichiers sources, perimetre
+reste limite a ce qui existe reellement).
 
 Un match reste exploitable des lors que B365 (le seul bookmaker complet a
 100%) est disponible sur au moins un des deux marches - un bookmaker
@@ -91,13 +94,17 @@ def _odds_1x2_snapshot(fd: FootballDataMatchRecord) -> dict[str, dict[str, float
 
 
 def _odds_over_under_snapshot(fd: FootballDataMatchRecord) -> dict[str, dict[str, float]]:
-    """B365 uniquement - aucune colonne O/U BW/PS dans les fichiers
+    """B365 ET Pinnacle (colonne ``P``, distincte de ``PS`` utilisee pour
+    le 1X2 - meme bookmaker, convention de nommage Football-Data propre a
+    ce marche) - CORRECTION E13 d'un inventaire incomplet d'E9, qui avait
+    suppose B365 seul sans verifier l'en-tete brut pour ce prefixe.
+    Reutilise ``over_under_2_5_by_bookmaker`` (INCHANGE) - aucune autre
+    colonne BW/PS/WH/LB n'existe pour l'Over/Under dans les fichiers
     sources (verifie, pas artificiellement ajoute)."""
-    out: dict[str, dict[str, float]] = {"Over": {}, "Under": {}}
-    if fd.has_complete_over_under_2_5_odds:
-        out["Over"]["B365"] = fd.b365_over_2_5
-        out["Under"]["B365"] = fd.b365_under_2_5
-    return out
+    return {
+        selection: {bk: prices[selection] for bk, prices in fd.over_under_2_5_by_bookmaker().items()}
+        for selection in ("Over", "Under")
+    }
 
 
 def build_multi_bookmaker_dataset(

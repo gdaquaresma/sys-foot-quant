@@ -143,3 +143,29 @@ construit.
   MATHEMATIQUE uniquement, jamais presentee comme une opportunite reelle).
   Voir docs/research_framework.md section T (E9) pour l'utilisation
   complete et le detail des resultats.
+- **Extension realisee (E13, inventaire multi-bookmaker approfondi)** :
+  inspection directe des six fichiers reels a revele deux colonnes
+  1X2 supplementaires jamais lues auparavant : `WHH/D/A` (William Hill,
+  present UNIQUEMENT dans les fichiers 2024/25) et `LBH/D/A` (Ladbrokes,
+  present UNIQUEMENT dans les fichiers 2025/26) - Football-Data renomme
+  ce "5e" bookmaker suivi d'une saison a l'autre ; ce sont deux
+  bookmakers DIFFERENTS, jamais fusionnes sous un meme nom, jamais
+  simultanement presents pour un meme match. Contrairement a
+  `_ALLOWED_COLUMNS` (colonnes garanties presentes dans les six fichiers,
+  echec explicite si absentes), `WHH/D/A`/`LBH/D/A` sont ajoutees a une
+  nouvelle liste `_OPTIONAL_COLUMNS` : lues seulement si presentes DANS
+  LE FICHIER (jamais une erreur si absentes du fichier entier, exactement
+  comme un bookmaker absent d'un match individuel). Couverture constatee
+  (jamais supposee) : ~70-76% de valeurs manquantes evitees selon le
+  fichier, ordre de grandeur similaire a BW/PS. Aucune colonne de
+  cloture (`WHCH/CD/CA`, `LBCH/CD/CA`), aucun agregat `Max*`/`Avg*`
+  (decision d'exclusion de l'ADR non revisitee), aucun `BFE` (nature
+  d'exchange toujours non clarifiee) - perimetre strictement limite a ce
+  qui existe reellement. `BOOKMAKERS_1X2` etendue a
+  `("B365", "BW", "PS", "WH", "LB")`. Aucune colonne Over/Under
+  WH/LB n'existe dans les fichiers sources - perimetre Over/Under reste
+  limite a B365 uniquement, structurellement inchange. Meme mecanisme
+  point-in-time, aucune nouvelle regle temporelle - `multi_bookmaker_odds.py`
+  reutilise `odds_1x2_by_bookmaker()` sans modification et beneficie de
+  l'extension automatiquement. Voir docs/research_framework.md section X
+  (E13) pour l'utilisation complete et le detail des resultats.
