@@ -485,6 +485,17 @@ créer en Phase B), jamais codés en dur dans la logique de décision, et
 chaque valeur par défaut proposée ci-dessus doit être accompagnée en
 commentaire de la mention `PARAMÈTRE OPÉRATIONNEL À VALIDER`.
 
+**Mise à jour (Phase C, cadrage)** : `min_edge_threshold` (et plus
+généralement toute règle convertissant un edge qualifié en `BET`) reste
+**non validé et non fixé** à ce stade — implémenté dans le moteur
+(`gates.py::OperationalThresholds`, `min_edge_threshold: float | None =
+None`) mais jamais activé, conformément au moteur minimal viable (section
+19). Le protocole méthodologique qui devra être suivi pour, un jour,
+proposer et tester une valeur de ce paramètre sans data snooping est
+défini dans `docs/operational_validation_specification.md` — ce document
+ne fixe aucune valeur, ne lance aucune expérience, et ne modifie pas le
+moteur ; il cadre uniquement la démarche future.
+
 ---
 
 ## 14. NO BET comme sortie de premier ordre

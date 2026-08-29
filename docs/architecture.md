@@ -108,6 +108,29 @@ des decisions `NO_BET` motivees, faute de regle de conversion edge->pari
 validee - voir `docs/final_engine_user_guide.md` pour le detail cote
 utilisateur.
 
+### Phase C - cadrage methodologique de la decision BET/NO BET (en cours)
+
+`docs/operational_validation_specification.md` cadre - sans fixer aucun
+seuil, sans lancer aucun backtest, sans modifier le moteur - la maniere
+dont un futur seuil operationnel (`min_edge_threshold`) pourrait un jour
+etre valide scientifiquement : distinction stricte entre exactitude
+probabiliste (A), existence d'un edge theorique (B) et rentabilite
+operationnelle (C, jamais demontree par E1->E16) ; proprietes qu'un
+seuil devrait demontrer (performance OOS, stabilite temporelle/
+championnat/saison, robustesse, incertitude) ; protocole train/
+validation/test pre-specifie unique (section 13 du document) ; regle de
+selection de seuil qui exclut explicitement le critere "meilleur ROI
+historique" (surajustement) ; distinction `estimated_edge` vs
+`uncertainty_of_edge` (toute metrique combinee - ex. edge/incertitude -
+marquee HYPOTHESE FUTURE, non implementee) ; traitement dedie de la
+Premier League (E15) et de la zone [0.6,0.7) d'Over 2.5 (E14), sans
+aucune decision ad hoc prise ici ; et les trois etats conceptuels de
+decision (`NO BET - NO EDGE` / `NO BET - EDGE NON VALIDE` / `BET - EDGE
+OPERATIONNELLEMENT VALIDE`, ce dernier explicitement indisponible tant
+qu'aucun protocole OOS dedie ne l'a valide). Aucun code de production
+n'a ete modifie a l'occasion de ce cadrage - la validation experimentale
+elle-meme reste une decision separee, non encore prise.
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
