@@ -31,6 +31,17 @@ def test_discrimination_status_matches_e4_e11_e15(competition: str, expected: st
     assert discrimination_status(competition) == expected
 
 
+def test_discrimination_status_matches_the_internal_pipeline_league_keys() -> None:
+    """Regression (bug trouve et corrige en Phase D) : les cles internes
+    EXACTES utilisees par tout le pipeline de donnees reelles depuis E1
+    (scripts/run_stage8_diagnostic_total_goals_over_under.py::_SEASONS -
+    'liga'/'ligue1'/'premier_league', jamais 'ligue_1' avec underscore)
+    doivent produire le meme statut que leur forme lisible normalisee."""
+    assert discrimination_status("ligue1") == DISCRIMINATION_DEMONTREE
+    assert discrimination_status("liga") == DISCRIMINATION_DEMONTREE
+    assert discrimination_status("premier_league") == DISCRIMINATION_NON_DEMONTREE
+
+
 def test_unaudited_competition_defaults_to_non_evaluee_never_demontree() -> None:
     """Position par defaut prudente (docs/final_engine_specification.md
     section 9) - un championnat jamais audite ne doit JAMAIS heriter d'une

@@ -5027,3 +5027,16 @@ conformément à cette spécification — voir `src/sys_foot_quant/final_engine/
 `docs/final_engine_user_guide.md` pour une description orientée
 utilisateur (entrées, sorties, BET/NO_BET, limites). Aucun résultat
 d'E1→E16 n'a été modifié à l'occasion de cette implémentation.
+
+**Mise à jour (Phase C puis D)** : `docs/operational_validation_specification.md`
+a cadré méthodologiquement la question du seuil opérationnel
+(`min_edge_threshold`), puis `docs/operational_validation_report.md` a
+exécuté, une seule fois, la première expérience réelle destinée à
+déterminer si le moteur peut produire des `BET`. **Verdict : `NO BET —
+EDGE NON VALIDÉ`** — aucun des seuils candidats pré-enregistrés (grille
+dérivée structurellement d'E1/E9/E13, jamais inventée) n'a satisfait les
+critères de sélection sur le segment de validation ; le segment de test
+n'a donc jamais été consulté. Résultat explicatif : les matchs à edge
+élevé se sont avérés être ceux où le modèle est sur-confiant, pas des
+opportunités — cohérent avec E5/E10/E11/E12. `min_edge_threshold` reste
+`None`, `BET` n'est pas activé. Aucun résultat d'E1→E16 n'a été modifié.

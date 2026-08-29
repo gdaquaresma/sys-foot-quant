@@ -76,8 +76,16 @@ actuellement jamais `BET`** : aucune experience n'a valide de seuil
 d'edge minimal a partir duquel une divergence entre le modele et le
 marche justifierait un pari. Le moteur reste utilisable pour la
 projection, le pricing et la comparaison au marche (niveaux 1 a 4, voir
-la synthese) - la conversion en decision de pari positive reste, a ce
-stade, une question ouverte non tranchee par la recherche.
+la synthese).
+
+Ce n'est plus seulement une prudence par defaut : une experience dediee
+(Phase D, `docs/operational_validation_report.md`) a explicitement testé
+si une selection stricte par edge pouvait produire une performance
+robuste hors echantillon, sur Liga et Ligue 1 (les championnats a
+discrimination demontree). **Verdict : `NO BET - EDGE NON VALIDE`** -
+aucun des seuils testes n'a ete retenu ; les matchs a fort edge se sont
+averes etre precisement ceux ou le modele est sur-confiant, pas des
+opportunites. `min_edge_threshold` reste `None`.
 
 ## Limites connues (a lire avant toute interpretation d'une sortie)
 

@@ -20,9 +20,19 @@ DISCRIMINATION_NON_EVALUEE = "NON_EVALUEE"
 # (E4 tranches fixes + quintiles, E11 stabilite par championnat) ; absente
 # en Premier League, confirmee 3 fois independamment (E4, E11, E15 -
 # diagnostic dedie, verdict "ABSENCE DE SIGNAL CONFIRMEE MAIS INEXPLIQUEE").
+#
+# Les deux variantes "ligue_1" (nom lisible normalise, ex. "Ligue 1") et
+# "ligue1" (identifiant interne EXACT utilise par tout le pipeline de
+# donnees reelles depuis E1 - _SEASONS/_EXPECTED_MATCHES de
+# scripts/run_stage8_diagnostic_total_goals_over_under.py, jamais "ligue_1")
+# sont toutes deux presentes - un appel avec la cle interne brute ne doit
+# jamais retomber silencieusement sur NON_EVALUEE par un simple defaut
+# d'orthographe (bug detecte et corrige en Phase D, avant toute execution
+# reelle - voir docs/operational_validation_report.md).
 _DISCRIMINATION_TABLE: dict[str, str] = {
     "liga": DISCRIMINATION_DEMONTREE,
     "ligue_1": DISCRIMINATION_DEMONTREE,
+    "ligue1": DISCRIMINATION_DEMONTREE,
     "premier_league": DISCRIMINATION_NON_DEMONTREE,
 }
 

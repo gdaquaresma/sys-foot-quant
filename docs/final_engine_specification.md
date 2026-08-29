@@ -496,6 +496,12 @@ défini dans `docs/operational_validation_specification.md` — ce document
 ne fixe aucune valeur, ne lance aucune expérience, et ne modifie pas le
 moteur ; il cadre uniquement la démarche future.
 
+**Mise à jour (Phase D, exécutée)** : ce protocole a été suivi une seule
+fois sur données réelles — voir `docs/operational_validation_report.md`.
+Verdict : `NO BET — EDGE NON VALIDÉ`. Aucun des seuils candidats
+pré-enregistrés n'a satisfait les critères de sélection. `min_edge_threshold`
+reste `None` ; `BET` n'est pas activé.
+
 ---
 
 ## 14. NO BET comme sortie de premier ordre

@@ -108,7 +108,7 @@ des decisions `NO_BET` motivees, faute de regle de conversion edge->pari
 validee - voir `docs/final_engine_user_guide.md` pour le detail cote
 utilisateur.
 
-### Phase C - cadrage methodologique de la decision BET/NO BET (en cours)
+### Phase C - cadrage methodologique de la decision BET/NO BET (terminee)
 
 `docs/operational_validation_specification.md` cadre - sans fixer aucun
 seuil, sans lancer aucun backtest, sans modifier le moteur - la maniere
@@ -128,8 +128,32 @@ aucune decision ad hoc prise ici ; et les trois etats conceptuels de
 decision (`NO BET - NO EDGE` / `NO BET - EDGE NON VALIDE` / `BET - EDGE
 OPERATIONNELLEMENT VALIDE`, ce dernier explicitement indisponible tant
 qu'aucun protocole OOS dedie ne l'a valide). Aucun code de production
-n'a ete modifie a l'occasion de ce cadrage - la validation experimentale
-elle-meme reste une decision separee, non encore prise.
+n'a ete modifie a l'occasion de ce cadrage.
+
+### Phase D - validation experimentale du mecanisme BET/NO BET (executee, verdict negatif)
+
+`docs/operational_validation_report.md` documente la premiere et seule
+experience destinee a determiner si le moteur peut produire des `BET` -
+protocole pre-enregistre (grille de seuils et separation temporelle
+derivees STRUCTURELLEMENT d'artefacts deja figes du projet - E9/E13 pour
+la grille de raw_edge, E1 pour price_edge>0, split_burn_in_calibration_test
+d'E2/E7/E8 pour la separation rodage/VALIDATION/TEST 40/30/30 - jamais
+choisies en observant un resultat), execute UNE SEULE FOIS sur donnees
+reelles (Liga+Ligue1, poisson_simple, Over 2.5 principal, Under 2.5 et
+Premier League en controles secondaires jamais poolables). **Verdict :
+`NO BET - EDGE NON VALIDE`** - les 3 candidats pre-enregistres
+(raw_edge>=0.05, raw_edge>=0.10, price_edge>=0.0) sont tous rejetes sur
+le segment VALIDATION (aucun IC95% de profit entierement positif ni
+superieur a la baseline marche seul) ; le segment TEST n'a donc jamais
+ete touche, conformement au protocole. Resultat explicatif cle : le
+sous-ensemble de matchs qu'un seuil d'edge selectionnerait est
+precisement celui ou le modele est SUR-CONFIANT (p_model moyen ~0.64-0.68
+vs frequence reelle ~0.48-0.49) - confirmation, via une simulation directe
+du moteur reel, du mecanisme deja identifie en E5/E10/E11/E12. `min_edge_
+threshold` reste `None`, aucun code du moteur n'a ete modifie (seul un
+bug de cle de championnat dans `reference_tables.py`, "ligue1" vs
+"ligue_1", a ete corrige avant execution - voir l'annexe du rapport).
+`BET` n'est pas active.
 
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
