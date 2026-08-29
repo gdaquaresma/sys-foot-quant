@@ -4778,3 +4778,214 @@ d'exploitation ni en modification du pipeline de production.
 
 **Arrêt.** E15 est terminé conformément au protocole. Aucune expérience
 E16 n'est lancée automatiquement.
+
+## AA. Expérience E16 — information contenue dans le mouvement de marché (ouverture → clôture)
+
+**Contexte et cadrage.** Les fichiers Football-Data contiennent des cotes
+de clôture, volontairement exclues de toutes les expériences précédentes
+(E1-E15). E16 teste, de façon strictement **rétrospective**, si le
+mouvement du marché entre l'ouverture et la clôture contient une
+information sur le résultat réel qui n'était **pas déjà** contenue dans
+la cote d'ouverture — séparément pour le 1X2 et l'Over/Under 2.5. La
+clôture n'est **jamais** utilisée comme feature d'une décision prise à
+l'ouverture ; `poisson_simple`, `dixon_coles`, `xg_model` ne sont **pas
+utilisés** (protocole explicite : étudier le marché indépendamment du
+modèle) ; E7/E8/E14/E15 ne sont ni lus ni modifiés.
+
+### 1. Extension de données et audit ouverture/clôture
+
+`football_data_loader.py` étendu (voir ADR 0006) pour lire les colonnes
+de clôture déjà présentes dans les six fichiers sources : `B365CH/CD/CA`,
+`BWCH/CD/CA`, `PSCH/CD/CA` (1X2) et `B365C>2.5/C<2.5`, `PC>2.5/PC<2.5`
+(Over/Under 2.5), toutes vérifiées présentes dans les six fichiers avant
+extension. Corpus exploitable (même mécanisme de point-in-time et mêmes
+exclusions qu'E9 — jour ambigu, B365 1X2 ouverture incomplet, violation
+PIT) : **1806 matchs**.
+
+| | Couverture |
+|---|---|
+| B365 1X2 ouverture | 100.0% |
+| B365 1X2 clôture | **100.0%** |
+| B365 O/U 2.5 ouverture | 100.0% |
+| B365 O/U 2.5 clôture | **100.0%** |
+| PS 1X2 ouverture | 76.6% |
+| PS 1X2 clôture | 76.6% |
+
+**B365 est le seul bookmaker à couverture totale ouverture ET clôture** —
+candidat primaire pour toute l'analyse ; PS sert uniquement de
+vérification secondaire (étape 9), jamais de conclusion principale,
+conformément au protocole.
+
+### 2. Définition du mouvement (figée avant exécution)
+
+Pour chaque sélection (H/D/A pour le 1X2 ; **Over uniquement** pour l'O/U
+— Under exclu, dégénérescence complémentaire déjà démontrée en E13) :
+mouvement absolu (`cote_clôture − cote_ouverture`), relatif, probabilité
+implicite **brute** (1/cote, descriptif) et **normalisée** (marge retirée
+par cote, `remove_overround_proportional`, mesure primaire) — le
+mouvement en probabilité normalisée est la mesure utilisée pour tous les
+tests statistiques.
+
+### 3. Modèles comparés (figés avant exécution)
+
+`O` (ouverture seule, zéro paramètre), `C` (clôture seule, zéro
+paramètre, **rétrospectif**), `M` (mouvement seul, régression logistique
+à 2 paramètres), `O+M` (ouverture+mouvement, 3 paramètres — **test
+central**), `O+C` (ouverture+clôture, 3 paramètres, **rétrospectif**).
+Les modèles à paramètres sont ajustés en **fenêtre glissante expansive**
+(walk-forward strict, `_MIN_TRAIN=30`) — même principe que le facteur
+`c(m)` d'E8 et la recalibration d'E14, jamais un ajustement poolé une
+seule fois sur tout le corpus.
+
+### 4. Résultats — 1X2 (n=1806, walk-forward n=1776)
+
+| Sélection | Brier O | Brier C | Brier O+M | **Test central : diff(O+M−O) IC95%** | p |
+|---|---|---|---|---|---|
+| Home | 0.2091 | 0.2078 | 0.2096 | [-0.0020, +0.0021] | 0.957 |
+| Draw | 0.1805 | 0.1804 | 0.1817 | [+0.0000, +0.0022] | 0.047 |
+| Away | 0.1857 | 0.1848 | 0.1859 | [-0.0020, +0.0028] | 0.755 |
+
+Aucun IC95% n'est entièrement négatif (ce qui aurait démontré une
+amélioration) — pour Draw, l'IC95% est marginalement entièrement
+**positif**, ce qui indiquerait au contraire une **dégradation** légère
+(O+M pire que O), pas une amélioration, jamais retenu comme un signal
+positif.
+
+### 5. Résultats — Over/Under 2.5 (n=1806, walk-forward n=1776)
+
+| | Brier O | Brier C | Brier O+M | diff(O+M−O) IC95% | p |
+|---|---|---|---|---|---|
+| Over | 0.2405 | 0.2388 | 0.2403 | [-0.0021, +0.0024] | 0.900 |
+
+Même constat : aucune amélioration démontrée de O+M par rapport à O
+seul.
+
+### 6. Information incrémentale (cœur du protocole, point 6)
+
+**Test central (O+M vs O), les 4 hypothèses primaires pré-enregistrées :**
+tous les IC95% contiennent 0 ou sont dans le mauvais sens — aucune
+amélioration OOS démontrée nulle part.
+
+**Descriptif — M seul vs O** : M est **significativement pire** que O
+sur les 4 cibles (p<0.002 partout, diff toujours positif) — attendu : le
+niveau de la cote d'ouverture porte déjà l'essentiel de l'information, le
+mouvement seul (sans le niveau) est un prédicteur nettement plus faible.
+Ce résultat valide le bon fonctionnement du mécanisme de fit (M ne
+"triche" pas), il ne constitue pas en soi une information sur le
+mouvement.
+
+**Rétrospectif — O+C vs O** (jamais décision-utilisable) : aucune
+amélioration démontrée non plus (Home p=0.993, Draw p=0.045, Away
+p=0.701, Over p=0.856) — même la clôture complète, en rétrospectif,
+n'ajoute rien de démontrable à l'ouverture seule.
+
+### 7. Analyse par amplitude du mouvement (tranches figées)
+
+| Tranche | Home diff(C−O) IC95% | Over 2.5 diff(C−O) IC95% |
+|---|---|---|
+| quasi nul (<1pt) | [-0.0006, +0.0003] | [-0.0002, +0.0002] |
+| petit (1-3pt) | [-0.0014, +0.0012] | [-0.0024, +0.0005] |
+| moyen (3-6pt) | [-0.0052, +0.0019] | [-0.0056, +0.0015] |
+| **gros (≥6pt)** | **[-0.0301, -0.0004]** (n=92) | [-0.0222, +0.0026] (n=130) |
+
+**Seule exception notable, exploratoire, non corrigée pour comparaisons
+multiples** : dans la tranche de mouvement le plus large (Home, n=92),
+la clôture est significativement plus précise que l'ouverture (IC95%
+entièrement négatif). Effectif modeste, une seule cellule sur 16
+testées (4 tranches × 4 cibles), et il s'agit d'une comparaison **C vs
+O** (rétrospective), pas du test central O+M vs O — ne change pas le
+verdict global, rapporté pour complétude plutôt que dissimulé.
+
+### 8. Robustesse (championnat, saison — exploratoire)
+
+Sur les 4×5 = 20 découpes (3 championnats + 2 saisons, par cible),
+**une seule** atteint un IC95% entièrement positif (Over 2.5, Premier
+League, n=631, IC95%=[+0.0002,+0.0058]) — indiquant, si quoi que ce
+soit, une **dégradation** marginale de O+M par rapport à O dans cette
+sous-population, pas une amélioration. Aucune découpe ne montre
+d'amélioration démontrée. Cohérent avec le résultat global : le
+phénomène (absence d'information incrémentale) est stable à travers les
+championnats et les saisons.
+
+### 9. Comparaison bookmaker (étape 9, secondaire)
+
+Même test central reproduit avec Pinnacle (PS, n=1353, couverture
+76.6%) : Home p=0.407, Draw p=0.123, Away p=0.545 — **aucune amélioration
+démontrée non plus**, cohérent avec B365. Le résultat n'est donc pas
+spécifique à un bookmaker particulier.
+
+### 10. Price discovery (jamais un CLV — aucune décision définie)
+
+| Cible | Mouvement absolu moyen | % mouvements ≥1pt | Fréq. réelle si mouvement vers la sélection | Fréq. réelle si mouvement contre |
+|---|---|---|---|---|
+| Home | 0.0235 | 71.7% | 0.475 | 0.413 |
+| Over 2.5 | 0.0248 | 74.0% | 0.580 | 0.488 |
+
+Le marché bouge fréquemment (>70% des matchs voient un mouvement ≥1
+point de probabilité) et la direction du mouvement est associée à une
+fréquence réelle légèrement plus élevée de la sélection concernée —
+cohérent avec un marché qui **absorbe de l'information** entre
+l'ouverture et la clôture (price discovery réel), mais cette information
+n'est **jamais exploitable rétroactivement au moment de l'ouverture**
+puisque O+M n'améliore pas O (section 6) : le mouvement contient une
+trace *a posteriori* de ce que le marché a appris, pas un signal
+disponible *a priori*.
+
+### 11. Correction de comparaisons multiples (Holm-Bonferroni, 4 hypothèses primaires)
+
+| Cible | p (non corrigé) | Décision Holm-Bonferroni |
+|---|---|---|
+| 1X2 / Home | 0.9570 | NON REJETÉE |
+| 1X2 / Draw | 0.0468 | NON REJETÉE |
+| 1X2 / Away | 0.7546 | NON REJETÉE |
+| O/U 2.5 / Over | 0.9000 | NON REJETÉE |
+
+**Aucune des 4 hypothèses primaires n'est rejetée** — même la seule
+valeur nominalement proche de 0,05 (Draw, p=0.047, et de surcroît dans le
+sens d'une dégradation) ne survit pas à la correction (seuil requis au
+premier rang : 0,05/4 = 0,0125).
+
+### 12. Limites
+
+- Le test M seul montre que le mouvement, isolé du niveau de prix, est
+  un piètre prédicteur — cohérent avec le design mais ne doit pas être
+  interprété comme une absence de contenu informationnel du mouvement en
+  général, seulement de son insuffisance en tant que signal autonome.
+- L'exception exploratoire (tranche de mouvement large, Home, section 7)
+  repose sur n=92 et n'est pas corrigée pour comparaisons multiples —
+  documentée, jamais utilisée pour nuancer le verdict global.
+- PS (secondaire) n'a que 76.6% de couverture — la vérification
+  inter-bookmaker reste partielle, cohérente avec la réserve du protocole
+  ("si seul B365 possède une couverture suffisante, assumer cette
+  limitation").
+- Walk-forward avec `_MIN_TRAIN=30` : les 30 premiers matchs
+  chronologiques du corpus sont exclus des modèles M/O+M/O+C (jamais du
+  modèle O ou C, qui n'ont besoin d'aucun ajustement).
+- Aucune conclusion de rentabilité n'est tirée ; aucune notion de CLV
+  n'est calculée au sens d'une stratégie de pari (aucune décision/prise
+  de position définie) — uniquement une mesure descriptive du price
+  discovery.
+
+### 13. Verdict officiel
+
+**`E16 — MOUVEMENT NON INFORMATIF`**
+
+Les 4 hypothèses primaires pré-enregistrées (O+M apporte-t-il une
+information incrémentale à O, pour Home/Draw/Away/Over 2.5) sont toutes
+**non rejetées**, y compris avant correction pour comparaisons multiples
+sur 3 des 4. Le résultat est reproduit avec un second bookmaker
+(Pinnacle), stable à travers les trois championnats et les deux saisons,
+et la seule cellule exploratoire notable (mouvements de grande amplitude
+sur Home) ne porte que sur une comparaison rétrospective C vs O, pas sur
+le test central, et repose sur un effectif modeste.
+
+**Le marché d'ouverture contient déjà l'essentiel de l'information
+exploitable détectable sur ce corpus.** Conformément au protocole,
+**aucune couche de mouvement de marché n'est ajoutée au moteur**.
+
+`poisson_simple`, `dixon_coles`, `xg_model`, E7/E8/E14/E15 restent
+inchangés. Aucune conclusion de rentabilité, aucune stratégie de pari,
+aucun ROI/Kelly/staking.
+
+**Arrêt.** E16 est terminé conformément au protocole. Aucune expérience
+E17 n'est lancée automatiquement.

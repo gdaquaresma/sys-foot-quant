@@ -72,6 +72,34 @@ def test_load_basic_rows(tmp_path: Path) -> None:
         "B365": {"Over": pytest.approx(1.85), "Under": pytest.approx(1.95)},
         "P": {"Over": pytest.approx(1.80), "Under": pytest.approx(1.90)},
     }
+    # --- cotes de CLOTURE (E16) - RETROSPECTIF uniquement -----------------
+    assert r0.b365_close_home == pytest.approx(1.66)
+    assert r0.b365_close_draw == pytest.approx(4.15)
+    assert r0.b365_close_away == pytest.approx(5.33)
+    assert r0.bw_close_home == pytest.approx(1.68)
+    assert r0.bw_close_draw == pytest.approx(4.1)
+    assert r0.bw_close_away == pytest.approx(5.4)
+    assert r0.ps_close_home == pytest.approx(1.64)
+    assert r0.ps_close_draw == pytest.approx(4.2)
+    assert r0.ps_close_away == pytest.approx(5.25)
+    assert r0.b365_close_over_2_5 == pytest.approx(1.88)
+    assert r0.b365_close_under_2_5 == pytest.approx(1.92)
+    assert r0.p_close_over_2_5 == pytest.approx(1.82)
+    assert r0.p_close_under_2_5 == pytest.approx(1.87)
+    assert r0.has_complete_close_odds is True
+    assert r0.has_complete_close_over_under_2_5_odds is True
+    assert r0.has_complete_p_close_over_under_2_5_odds is True
+    assert r0.has_complete_bw_close_odds is True
+    assert r0.has_complete_ps_close_odds is True
+    assert r0.closing_odds_1x2_by_bookmaker() == {
+        "B365": {"H": pytest.approx(1.66), "D": pytest.approx(4.15), "A": pytest.approx(5.33)},
+        "BW": {"H": pytest.approx(1.68), "D": pytest.approx(4.1), "A": pytest.approx(5.4)},
+        "PS": {"H": pytest.approx(1.64), "D": pytest.approx(4.2), "A": pytest.approx(5.25)},
+    }
+    assert r0.closing_over_under_2_5_by_bookmaker() == {
+        "B365": {"Over": pytest.approx(1.88), "Under": pytest.approx(1.92)},
+        "P": {"Over": pytest.approx(1.82), "Under": pytest.approx(1.87)},
+    }
 
 
 def test_missing_b365_values_are_flagged_not_dropped(tmp_path: Path) -> None:
@@ -96,6 +124,17 @@ def test_missing_b365_values_are_flagged_not_dropped(tmp_path: Path) -> None:
     # bookmaker absent/partiel -> simplement absent du dict, jamais invente
     assert set(records[0].odds_1x2_by_bookmaker()) == {"BW"}
     assert records[0].over_under_2_5_by_bookmaker() == {}
+    # les cotes de CLOTURE restent lisibles independamment de l'ouverture
+    # (constat reel possible - une cote peut manquer a l'ouverture mais
+    # etre presente a la cloture, ou l'inverse) - jamais couplees.
+    assert records[0].b365_close_home == pytest.approx(1.66)
+    assert records[0].has_complete_close_odds is True
+    assert records[0].ps_close_home == pytest.approx(1.64)
+    assert records[0].has_complete_ps_close_odds is True
+    assert records[0].b365_close_over_2_5 == pytest.approx(1.88)
+    assert records[0].has_complete_close_over_under_2_5_odds is True
+    assert records[0].p_close_over_2_5 == pytest.approx(1.82)
+    assert records[0].has_complete_p_close_over_under_2_5_odds is True
 
 
 def test_missing_expected_column_raises(tmp_path: Path) -> None:
@@ -105,45 +144,42 @@ def test_missing_expected_column_raises(tmp_path: Path) -> None:
         load_football_data_csv(path, league="premier_league", season="2024_25")
 
 
-def test_closing_odds_columns_are_never_read_even_when_present(tmp_path: Path) -> None:
-    """Meme si le fichier contient des colonnes de cloture avec des
-    valeurs manifestement differentes des cotes pre-match, le loader ne
-    doit produire QUE les cotes pre-match (B365/BW/PS H/D/A et
-    B365>2.5/B365<2.5/P>2.5/P<2.5) - jamais une colonne suffixee C."""
+def test_closing_odds_columns_are_read_and_distinct_from_opening(tmp_path: Path) -> None:
+    """Extension E16 : les cotes de cloture SONT desormais lues (colonnes
+    deja presentes dans les fichiers sources, jamais inventees) - mais
+    restent des champs SEPARES et DISTINCTS des cotes d'ouverture, jamais
+    confondus ni substitues l'un a l'autre."""
     rows = [
         "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
         "1.65,4.1,5.3,1.63,4.15,5.2,"
-        "99.9,99.9,99.9,99.9,99.9,99.9,99.9,99.9,99.9,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,99.9,99.9,99.9,99.9"
+        "1.70,4.30,5.10,1.72,4.20,5.15,1.71,4.25,5.05,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.90,1.90,1.86,1.86"
     ]
     path = _write_csv(tmp_path / "E0.csv", rows)
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
-    assert records[0].b365_home == pytest.approx(1.6)  # jamais 99.9 (valeur de cloture)
-    assert records[0].bw_home == pytest.approx(1.65)  # jamais 99.9 (valeur de cloture BW)
-    assert records[0].ps_home == pytest.approx(1.63)  # jamais 99.9 (valeur de cloture PS)
-    assert records[0].b365_over_2_5 == pytest.approx(1.85)  # jamais 99.9 (valeur de cloture)
-    assert records[0].p_over_2_5 == pytest.approx(1.80)  # jamais 99.9 (valeur de cloture P)
-    assert not hasattr(records[0], "b365_close_home")
-    assert not hasattr(records[0], "b365_close_over_2_5")
+    r = records[0]
+    # ouverture et cloture different reellement l'une de l'autre ici
+    assert r.b365_home == pytest.approx(1.6)
+    assert r.b365_close_home == pytest.approx(1.70)
+    assert r.b365_home != r.b365_close_home
+    assert r.b365_over_2_5 == pytest.approx(1.85)
+    assert r.b365_close_over_2_5 == pytest.approx(1.90)
+    assert r.b365_over_2_5 != r.b365_close_over_2_5
 
 
-def test_allowed_columns_never_contain_a_closing_over_under_column() -> None:
+def test_allowed_columns_contain_exactly_the_documented_closing_columns() -> None:
+    """Perimetre de cloture volontairement limite (E16) : B365/BW/PS 1X2 et
+    B365/P Over/Under - jamais Max/Avg/BFE (deja exclus, ADR 0006), jamais
+    une colonne de cloture au-dela de celles documentees."""
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _ALLOWED_COLUMNS
 
-    assert "B365C>2.5" not in _ALLOWED_COLUMNS
-    assert "B365C<2.5" not in _ALLOWED_COLUMNS
-    assert "PC>2.5" not in _ALLOWED_COLUMNS
-    assert "PC<2.5" not in _ALLOWED_COLUMNS
-
-
-def test_allowed_columns_never_contain_a_closing_suffix() -> None:
-    from sys_foot_quant.data_engine.market_odds.football_data_loader import _ALLOWED_COLUMNS
-
-    for col in _ALLOWED_COLUMNS:
-        if col in ("B365>2.5", "B365<2.5", "P>2.5", "P<2.5"):
-            continue  # pas un suffixe CH/CD/CA - couvert par le test dedie ci-dessus
-        assert not col.endswith("CH") and not col.endswith("CD") and not col.endswith("CA"), (
-            f"Colonne de cloture detectee dans _ALLOWED_COLUMNS : {col}"
-        )
+    closing_columns = {c for c in _ALLOWED_COLUMNS if c.endswith(("CH", "CD", "CA")) or c.startswith(("B365C", "PC"))}
+    assert closing_columns == {
+        "B365CH", "B365CD", "B365CA",
+        "BWCH", "BWCD", "BWCA",
+        "PSCH", "PSCD", "PSCA",
+        "B365C>2.5", "B365C<2.5",
+        "PC>2.5", "PC<2.5",
+    }
 
 
 def test_allowed_columns_never_contain_bfe() -> None:
@@ -156,7 +192,8 @@ def test_allowed_columns_never_contain_bfe() -> None:
 
 def test_allowed_columns_never_contain_max_or_avg_aggregates() -> None:
     """Max*/Avg* sont des agregats de marche a composition opaque -
-    exclus par l'ADR 0006, decision non revisitee en E13."""
+    exclus par l'ADR 0006, decision non revisitee en E13/E16 (y compris
+    leurs variantes de cloture MaxC*/AvgC*)."""
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _ALLOWED_COLUMNS, _OPTIONAL_COLUMNS
 
     for col in list(_ALLOWED_COLUMNS) + list(_OPTIONAL_COLUMNS):
@@ -172,7 +209,7 @@ def test_optional_columns_absent_from_file_yield_none_not_error(tmp_path: Path) 
         "1.65,4.1,5.3,1.63,4.15,5.2,"
         "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87"
     ]
-    path = _write_csv(tmp_path / "E0.csv", rows)  # _HEADER n'a pas WHH/LBH
+    path = _write_csv(tmp_path / "E0.csv", rows)  # _HEADER n'a pas WHH/LBH/WHCH/LBCH
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     assert records[0].wh_home is None
     assert records[0].lb_home is None
@@ -180,17 +217,33 @@ def test_optional_columns_absent_from_file_yield_none_not_error(tmp_path: Path) 
     assert records[0].has_complete_lb_odds is False
     assert "WH" not in records[0].odds_1x2_by_bookmaker()
     assert "LB" not in records[0].odds_1x2_by_bookmaker()
+    assert records[0].wh_close_home is None
+    assert records[0].lb_close_home is None
+    assert records[0].has_complete_wh_close_odds is False
+    assert records[0].has_complete_lb_close_odds is False
+    assert "WH" not in records[0].closing_odds_1x2_by_bookmaker()
+    assert "LB" not in records[0].closing_odds_1x2_by_bookmaker()
 
 
-_REQUIRED_PREFIX = "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA"
-_REQUIRED_ROW_PREFIX = "E0,{date},{time},{home},{away},{hg},{ag},{ftr},1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2"
+_REQUIRED_PREFIX = (
+    "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,"
+    "B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+    "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA"
+)
+_REQUIRED_ROW_PREFIX = (
+    "E0,{date},{time},{home},{away},{hg},{ag},{ftr},"
+    "1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+    "1.58,4.30,5.40,1.60,4.20,5.35,1.61,4.25,5.15"
+)
+_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5"
+_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89"
 
 
 def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
-    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA{_OU_SUFFIX}\n"
     row = _REQUIRED_ROW_PREFIX.format(date="16/08/2024", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.70,4.0,5.4,1.85,1.95,1.80,1.90\n")
+    path.write_text(header + f"{row},1.70,4.0,5.4{_OU_ROW_SUFFIX}\n")
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     r = records[0]
     assert r.wh_home == pytest.approx(1.70)
@@ -202,10 +255,10 @@ def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
 
 
 def test_lb_column_present_and_read_when_in_file(tmp_path: Path) -> None:
-    header = f"{_REQUIRED_PREFIX},LBH,LBD,LBA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = f"{_REQUIRED_PREFIX},LBH,LBD,LBA{_OU_SUFFIX}\n"
     row = _REQUIRED_ROW_PREFIX.format(date="16/08/2025", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.72,4.05,5.35,1.85,1.95,1.80,1.90\n")
+    path.write_text(header + f"{row},1.72,4.05,5.35{_OU_ROW_SUFFIX}\n")
     records = load_football_data_csv(path, league="premier_league", season="2025_26")
     r = records[0]
     assert r.lb_home == pytest.approx(1.72)
@@ -219,10 +272,10 @@ def test_wh_and_lb_never_both_present_is_not_enforced_but_reads_correctly_if_bot
     un fichier contenait les deux colonnes, le loader doit simplement les
     lire toutes les deux sans les fusionner - comportement mecanique,
     pas une hypothese sur les donnees reelles."""
-    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA,LBH,LBD,LBA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA,LBH,LBD,LBA{_OU_SUFFIX}\n"
     row = _REQUIRED_ROW_PREFIX.format(date="16/08/2024", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.70,4.0,5.4,1.72,4.05,5.35,1.85,1.95,1.80,1.90\n")
+    path.write_text(header + f"{row},1.70,4.0,5.4,1.72,4.05,5.35{_OU_ROW_SUFFIX}\n")
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     r = records[0]
     assert r.wh_home == pytest.approx(1.70)
@@ -231,10 +284,10 @@ def test_wh_and_lb_never_both_present_is_not_enforced_but_reads_correctly_if_bot
 
 
 def test_missing_optional_value_on_a_single_row_is_none(tmp_path: Path) -> None:
-    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA{_OU_SUFFIX}\n"
     row = _REQUIRED_ROW_PREFIX.format(date="16/08/2024", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},,,,1.85,1.95,1.80,1.90\n")
+    path.write_text(header + f"{row},,,{_OU_ROW_SUFFIX}\n")
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     assert records[0].wh_home is None
     assert records[0].has_complete_wh_odds is False
@@ -246,14 +299,47 @@ def test_literal_zero_odds_value_is_treated_as_missing_not_as_a_real_price(tmp_p
     ``P<2.5`` - le sentinelle Football-Data pour "cote non collectee" sur
     ce bookmaker precis, jamais une vraie cote (une cote decimale est
     toujours > 1.0). Doit etre traite comme absent (None), jamais comme
-    0.0 (ce qui casserait toute normalisation d'overround en aval)."""
-    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    0.0 (ce qui casserait toute normalisation d'overround en aval) - la
+    meme regle s'applique identiquement aux cotes de CLOTURE (E16)."""
+    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
     row = _REQUIRED_ROW_PREFIX.format(date="19/04/2025", time="16:00", home="A", away="B", hg=2, ag=1, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.25,4.0,0,0\n")
+    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0\n")
     records = load_football_data_csv(path, league="ligue1", season="2024_25")
     r = records[0]
     assert r.p_over_2_5 is None
     assert r.p_under_2_5 is None
     assert r.has_complete_p_over_under_2_5_odds is False
     assert "P" not in r.over_under_2_5_by_bookmaker()
+    assert r.p_close_over_2_5 is None
+    assert r.p_close_under_2_5 is None
+    assert r.has_complete_p_close_over_under_2_5_odds is False
+    assert "P" not in r.closing_over_under_2_5_by_bookmaker()
+
+
+def test_wh_closing_column_present_and_read_when_in_file(tmp_path: Path) -> None:
+    header = f"{_REQUIRED_PREFIX},WHH,WHD,WHA,WHCH,WHCD,WHCA{_OU_SUFFIX}\n"
+    row = _REQUIRED_ROW_PREFIX.format(date="16/08/2024", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
+    path = tmp_path / "E0.csv"
+    path.write_text(header + f"{row},1.70,4.0,5.4,1.75,3.95,5.30{_OU_ROW_SUFFIX}\n")
+    records = load_football_data_csv(path, league="premier_league", season="2024_25")
+    r = records[0]
+    assert r.wh_close_home == pytest.approx(1.75)
+    assert r.wh_close_draw == pytest.approx(3.95)
+    assert r.wh_close_away == pytest.approx(5.30)
+    assert r.has_complete_wh_close_odds is True
+    assert r.lb_close_home is None
+    assert r.closing_odds_1x2_by_bookmaker()["WH"] == {"H": pytest.approx(1.75), "D": pytest.approx(3.95), "A": pytest.approx(5.30)}
+
+
+def test_lb_closing_column_present_and_read_when_in_file(tmp_path: Path) -> None:
+    header = f"{_REQUIRED_PREFIX},LBH,LBD,LBA,LBCH,LBCD,LBCA{_OU_SUFFIX}\n"
+    row = _REQUIRED_ROW_PREFIX.format(date="16/08/2025", time="20:00", home="A", away="B", hg=1, ag=0, ftr="H")
+    path = tmp_path / "E0.csv"
+    path.write_text(header + f"{row},1.72,4.05,5.35,1.78,3.90,5.20{_OU_ROW_SUFFIX}\n")
+    records = load_football_data_csv(path, league="premier_league", season="2025_26")
+    r = records[0]
+    assert r.lb_close_home == pytest.approx(1.78)
+    assert r.has_complete_lb_close_odds is True
+    assert r.wh_close_home is None
+    assert r.closing_odds_1x2_by_bookmaker()["LB"]["H"] == pytest.approx(1.78)

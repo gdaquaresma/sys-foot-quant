@@ -124,14 +124,24 @@ def test_build_dispersion_dataframe_uses_all_available_bookmakers_uniformly() ->
 def test_optional_columns_never_raise_when_absent() -> None:
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _OPTIONAL_COLUMNS
 
-    assert set(_OPTIONAL_COLUMNS) == {"WHH", "WHD", "WHA", "LBH", "LBD", "LBA"}
+    # E16 etend _OPTIONAL_COLUMNS aux equivalents de CLOTURE de WH/LB
+    # (meme mecanisme, meme exclusivite saisonniere) - voir docs/research_framework.md section AA.
+    assert set(_OPTIONAL_COLUMNS) == {
+        "WHH", "WHD", "WHA", "LBH", "LBD", "LBA",
+        "WHCH", "WHCD", "WHCA", "LBCH", "LBCD", "LBCA",
+    }
 
 
-def test_wh_lb_columns_never_contain_closing_suffix() -> None:
+def test_wh_lb_columns_only_contain_documented_opening_and_closing_variants() -> None:
+    """Depuis E16, WHCH/WHCD/WHCA/LBCH/LBCD/LBCA (cloture) sont
+    legitimement presentes dans _OPTIONAL_COLUMNS - mais RIEN d'autre
+    (aucun agregat Max/Avg, deja verifie par ailleurs)."""
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _OPTIONAL_COLUMNS
 
-    for col in _OPTIONAL_COLUMNS:
-        assert not col.endswith("CH") and not col.endswith("CD") and not col.endswith("CA")
+    assert set(_OPTIONAL_COLUMNS) == {
+        "WHH", "WHD", "WHA", "LBH", "LBD", "LBA",
+        "WHCH", "WHCD", "WHCA", "LBCH", "LBCD", "LBCA",
+    }
 
 
 # --- 5. non-regression : corpus multi-bookmaker inchange par l'extension --

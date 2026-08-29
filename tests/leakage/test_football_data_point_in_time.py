@@ -51,10 +51,16 @@ def test_football_data_record_odds_are_independent_of_match_result(tmp_path: Pat
     """Deux matchs avec les memes cotes mais des scores differents doivent
     produire des cotes identiques - la cote n'est jamais derivee du
     resultat (aucune fuite du futur vers la donnee de marche)."""
-    header = "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = (
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
+    )
     rows = (
-        "E0,16/08/2024,20:00,A,B,5,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,1.85,1.95,1.80,1.90\n"
-        "E0,17/08/2024,15:00,C,D,0,0,D,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,1.85,1.95,1.80,1.90\n"
+        "E0,16/08/2024,20:00,A,B,5,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87\n"
+        "E0,17/08/2024,15:00,C,D,0,0,D,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87\n"
     )
     path = tmp_path / "E0.csv"
     path.write_text(header + rows)
@@ -64,6 +70,8 @@ def test_football_data_record_odds_are_independent_of_match_result(tmp_path: Pat
     assert records[0].b365_away == records[1].b365_away
     assert records[0].b365_over_2_5 == records[1].b365_over_2_5
     assert records[0].b365_under_2_5 == records[1].b365_under_2_5
+    assert records[0].b365_close_home == records[1].b365_close_home  # la cloture non plus n'est jamais derivee du resultat
+    assert records[0].b365_close_over_2_5 == records[1].b365_close_over_2_5
     assert records[0].home_goals != records[1].home_goals  # les scores, eux, different bien
 
 
@@ -84,9 +92,17 @@ def test_conservative_knowledge_time_always_strictly_before_kickoff(year, month,
 
 
 def test_provenance_fields_are_always_set_correctly(tmp_path: Path) -> None:
-    header = "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,B365>2.5,B365<2.5,P>2.5,P<2.5\n"
+    header = (
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5\n"
+    )
     path = tmp_path / "E0.csv"
-    path.write_text(header + "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,1.85,1.95,1.80,1.90\n")
+    path.write_text(
+        header
+        + "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        + "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87\n"
+    )
     records = load_football_data_csv(path, league="premier_league", season="2024_25")
     r = records[0]
     assert r.source == "football_data"

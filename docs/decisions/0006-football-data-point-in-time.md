@@ -169,3 +169,30 @@ construit.
   reutilise `odds_1x2_by_bookmaker()` sans modification et beneficie de
   l'extension automatiquement. Voir docs/research_framework.md section X
   (E13) pour l'utilisation complete et le detail des resultats.
+- **Extension realisee (E16, cotes de CLOTURE - reserve critique)** :
+  extension de `_ALLOWED_COLUMNS` aux equivalents de cloture des
+  bookmakers deja lus a l'ouverture, deja presents dans les six fichiers
+  (verifie colonne par colonne avant extension, jamais suppose) :
+  `B365CH/CD/CA`, `BWCH/CD/CA`, `PSCH/CD/CA` (1X2, 100% des six fichiers)
+  et `B365C>2.5/C<2.5`, `PC>2.5/PC<2.5` (Over/Under 2.5, 100% des six
+  fichiers). `WHCH/CD/CA`/`LBCH/CD/CA` ajoutees a `_OPTIONAL_COLUMNS`
+  (meme exclusivite saisonniere que leurs equivalents d'ouverture).
+  Couverture constatee (jamais supposee) : B365 cloture 100% complete sur
+  les 2132 matchs (identique a l'ouverture) ; BW/PS/P cloture 75-81%
+  complete (legerement inferieure a leur ouverture respective) - B365
+  reste le seul bookmaker offrant une couverture ouverture ET cloture
+  totale, utilise comme candidat primaire pour toute analyse de
+  mouvement. Nouvelles methodes `closing_odds_1x2_by_bookmaker()` et
+  `closing_over_under_2_5_by_bookmaker()` sur `FootballDataMatchRecord`,
+  STRICTEMENT SEPAREES des methodes d'ouverture deja existantes (jamais
+  fusionnees, jamais substituees). **RESERVE CRITIQUE NON NEGOCIABLE** :
+  la cloture n'est disponible qu'au voisinage du coup d'envoi, jamais au
+  `decision_time` (kickoff - `DECISION_OFFSET_HOURS`, meme regle que
+  partout ailleurs) - elle sert EXCLUSIVEMENT a une etude RETROSPECTIVE
+  du mouvement de marche (ouverture -> cloture -> resultat), et ne doit
+  JAMAIS etre utilisee comme feature d'une prediction censee etre
+  disponible a l'ouverture. Meme mecanisme point-in-time pour l'ouverture
+  (aucune nouvelle regle temporelle) ; aucun script anterieur (E1-E15) ne
+  lit ces nouveaux champs, leur ajout n'affecte donc aucun resultat deja
+  publie. Voir docs/research_framework.md section AA (E16) pour
+  l'utilisation complete et le detail des resultats.
