@@ -3891,3 +3891,149 @@ interprété comme une rentabilité démontrée**.
 
 **Arrêt.** E11 est terminé conformément au protocole. Aucune expérience
 E12 n'est lancée automatiquement.
+
+## W. Expérience E12 — intersection entre fiabilité et écart de prix (Over 2.5)
+
+**Contexte et cadrage.** E9-E11 ont établi que le marché est généralement
+très informé et qu'aucun désaccord modèle/marché n'est fiable en soi
+(E10). E12 pose une question plus précise, jamais testée auparavant dans
+ce projet : **les tranches de probabilité où notre modèle est
+historiquement bien calibré sont-elles aussi celles où l'écart de prix
+avec B365 est le plus grand ?** Il ne s'agit toujours pas de battre le
+marché ni de construire une stratégie — uniquement de mesurer si ces deux
+propriétés (fiabilité, amplitude du désaccord) coïncident. `poisson_simple`,
+`dixon_coles` et `xg_model` restent inchangés ; aucune nouvelle
+calibration, aucun tuning, aucun ROI/Kelly/staking.
+
+### 1. Quatre notions strictement distinguées (jamais confondues)
+
+1. **Probabilité fiable** : tranche de probabilité (grille fixe à 10
+   points, identique à E11) où l'IC95% bootstrap du biais contient 0,
+   avec n≥30.
+2. **Désaccord avec le marché** : simple différence numérique gap =
+   P_model − P_market normalisée — une différence n'est pas en soi une
+   preuve (déjà établi en E10).
+3. **Anomalie de prix** : notion réservée à E9 (un bookmaker s'écarte du
+   consensus de *plusieurs* bookmakers) — **structurellement non
+   évaluable ici**, un seul bookmaker (B365) existe sur l'Over/Under.
+4. **Value potentielle** : **non évaluée dans ce rapport**, quel que soit
+   le résultat — aucun ROI, Kelly, staking, coût de transaction réel pris
+   en compte.
+
+### 2. Limitation de données (documentée, jamais contournée)
+
+Football-Data ne publie l'Over/Under que sur la ligne **2.5**, et B365
+est l'unique bookmaker sur ce marché. L'intersection fiabilité × écart de
+prix n'est donc **testable que sur Over 2.5** — les seuils 0.5/1.5/3.5/4.5
+ne reçoivent qu'un diagnostic de fiabilité seul (déjà établi en détail en
+E11), sans aucune comparaison au marché possible.
+
+### 3. Table jointe (Over 2.5, GLOBAL, n=640 pour la fiabilité, n=542 pour le marché)
+
+Grille de verdict fixée avant exécution (point 9 du protocole) :
+IC95% du diff \|gap\|(fiable−non fiable) entièrement >0 → **démontrée
+statistiquement** ; entièrement <0 → **contradictoire** ; contient 0 avec
+diff moyen >0 → **directionnelle mais non démontrée** ; sinon → **absence
+de preuve**.
+
+`poisson_simple` / `dixon_coles` (identiques par construction) :
+
+| Tranche | n | n marché | Fiabilité | \|gap\| moyen |
+|---|---|---|---|---|
+| [0.2-0.3) | 16 | 14 | insuffisant | 0.108 |
+| [0.3-0.4) | 69 | 63 | **non fiable** (biais +0.133) | **0.091** |
+| [0.4-0.5) | 178 | 151 | fiable | 0.066 |
+| [0.5-0.6) | 201 | 168 | fiable | 0.053 |
+| [0.6-0.7) | 128 | 105 | **non fiable** (biais −0.123) | 0.059 |
+| [0.7-0.8) | 37 | 31 | fiable | 0.078 |
+| [0.8-0.9) / [0.9-1.0) | 10 / 1 | 9 / 1 | insuffisant | 0.10 / 0.14 |
+
+**Test central** : n_fiable=350, n_non_fiable=168, diff \|gap\|
+(fiable−non fiable) IC95% = **[−0.0189, −0.0013]**, p=0.0236 →
+**VERDICT : CONTRADICTOIRE**. Les tranches fiables ont, en moyenne, un
+écart de prix **plus petit** que les tranches non fiables — l'inverse
+exact de l'hypothèse testée.
+
+`xg_model` :
+
+| Tranche | n | n marché | Fiabilité | \|gap\| moyen |
+|---|---|---|---|---|
+| [0.3-0.4) | 46 | 40 | fiable | 0.064 |
+| [0.4-0.5) | 192 | 168 | fiable | 0.050 |
+| [0.5-0.6) | 253 | 208 | fiable | 0.045 |
+| [0.6-0.7) | 117 | 96 | **non fiable** (biais −0.113) | 0.047 |
+| autres | ≤24 | ≤22 | insuffisant | — |
+
+**Test central** : n_fiable=416, n_non_fiable=96, diff IC95% =
+**[−0.0060, +0.0092]**, p=0.6456 → **VERDICT : DIRECTIONNELLE MAIS NON
+DÉMONTRÉE** (direction positive, non significative).
+
+### 4. Lecture mécanique du résultat
+
+Pour `poisson_simple`/`dixon_coles`, le résultat contradictoire
+s'explique directement par la table jointe : la tranche non fiable
+[0.3-0.4) (le modèle **sous-estime** significativement, biais +0.133)
+affiche le \|gap\| moyen le **plus élevé** de tout le tableau (0.091) —
+précisément parce que le marché (probabilité normalisée moyenne 0.447)
+s'écarte fortement d'un modèle que l'on sait déjà mal calibré à cet
+endroit. Le grand écart de prix, dans ce cas, coïncide avec un endroit où
+le marché a probablement raison et le modèle a tort — **pas** avec une
+zone où le modèle serait fiable et le marché simplement en désaccord.
+
+### 5. Diagnostic de fiabilité seul sur les autres seuils (aucune comparaison au marché possible)
+
+| Modèle | Over 0.5 | Over 1.5 | Over 3.5 | Over 4.5 |
+|---|---|---|---|---|
+| poisson_simple | 2 fiable / 0 non fiable | 3 / 0 | 3 / 1 | 3 / 1 |
+| dixon_coles | 2 / 0 | 2 / 1 | 3 / 1 | 3 / 1 |
+| xg_model | 2 / 0 | 2 / 1 | 3 / 1 | 3 / 0 |
+
+Cohérent avec le détail déjà établi en E11 (section V) — aucune nouvelle
+information, rappelé ici uniquement pour compléter le balayage demandé
+par le protocole (point 10).
+
+### 6. Limites
+
+- Le test central repose sur un seul split TEST (n=640, walk-forward),
+  sans réplication indépendante — cohérent avec les limites de puissance
+  déjà documentées en section G2.
+- Les tranches extrêmes ([0.2-0.3), [0.8-0.9), [0.9-1.0)) restent à très
+  faible effectif — non concluantes, jamais interprétées.
+- L'intersection fiabilité × écart de prix ne peut être testée que sur
+  Over 2.5 — limitation structurelle des données, pas une décision
+  d'analyse.
+- Aucune conclusion de rentabilité n'est tirée ; « anomalie de prix » et
+  « value potentielle » ne sont ni mesurées ni évaluées ici.
+
+### 7. Verdict final
+
+**Avons-nous une zone où notre probabilité de buts est suffisamment
+fiable ET où le marché B365 affiche régulièrement un prix sensiblement
+différent, sans sélection faite après observation des résultats ?**
+
+**Non.** Pour `poisson_simple`/`dixon_coles`, le test pré-enregistré est
+**statistiquement significatif dans le sens contraire** de l'hypothèse
+(verdict *contradictoire*) : les zones fiables ont des écarts de prix
+plus *petits*, pas plus grands. Pour `xg_model`, le test ne démontre rien
+(verdict *directionnelle mais non démontrée*) : une tendance positive
+existe mais n'atteint pas la significativité.
+
+**Ce qui manque précisément** : (1) une source de données Over/Under
+multi-bookmaker pour confirmer ou infirmer le phénomène indépendamment de
+B365 ; (2) une réplication sur un corpus plus large ou une saison
+supplémentaire pour lever les limites de puissance déjà documentées ;
+(3) surtout, la mécanique même du résultat pour poisson_simple/dixon_coles
+indique que les grands écarts de prix observés ici sont associés à des
+zones où le **modèle est en tort** (biais démontré), pas à des zones où
+le modèle serait fiable et le marché simplement en désaccord — la
+prémisse recherchée par l'hypothèse d'E12 ne se vérifie pas
+structurellement sur ce corpus.
+
+Conformément à l'instruction du protocole, ce résultat négatif (et
+significativement contraire pour deux des trois modèles) **n'est
+transformé en aucune conclusion de rentabilité, aucune stratégie de
+pari, aucun signal exploitable**. `poisson_simple`, `dixon_coles` et
+`xg_model` restent inchangés.
+
+**Arrêt.** E12 est terminé conformément au protocole. Aucune expérience
+E13 n'est lancée automatiquement.
