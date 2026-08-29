@@ -5020,3 +5020,10 @@ seuils opérationnels non validés, objet de sortie structuré, moteur
 minimal viable). Aucun résultat d'E1→E16 n'y est modifié ; aucun code de
 moteur de production n'a été écrit à cette étape (Phase A = spécification
 pure). L'implémentation (Phase B) reste soumise à une instruction séparée.
+
+**Mise à jour (Phase B)** : le MVP du moteur final a été implémenté
+conformément à cette spécification — voir `src/sys_foot_quant/final_engine/`,
+`docs/architecture.md` section 2.0 pour le détail des modules, et
+`docs/final_engine_user_guide.md` pour une description orientée
+utilisateur (entrées, sorties, BET/NO_BET, limites). Aucun résultat
+d'E1→E16 n'a été modifié à l'occasion de cette implémentation.

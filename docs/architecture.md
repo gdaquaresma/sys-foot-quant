@@ -37,32 +37,76 @@ du projet, implementee dans un unique composant : le Repository
 | `market_engine` (snapshot, retrait de marge proportionnel + Shin, comparaison, `correlated_events.py` ajoute etape 5 pour C7, `model_vs_market.py` phase economique, `consensus.py`/`anomaly.py`/`arbitrage.py` E9) | Implemente (**`model_vs_market.py` (phase economique)** : interface generique modele<->marche (probabilite implicite, overround, normalisation, diff) reutilisant `overround.py` sans modification, desormais utilisee par `economic_dataset.py` pour l'Experience 1 (verdict SIGNAL NEGATIF - voir `data_engine` ci-dessus et docs/research_framework.md section I) ; **C7 phase 1 (parlays correles, `correlated_events.py`) REJETE - absence d'association demontree pour cette paire precise, sans generalisation aux autres marches/parlays** - aucune correlation exploitable detectee entre favori a domicile selon poisson_simple et Over 2.5 buts, coherent sur 3 championnats et 2 saisons (estimation 2024/25, confirmation 2025/26) - teste uniquement l'EXISTENCE d'une correlation, aucune cote de marche combine dans le schema actuel donc aucune conclusion possible sur la rentabilite reelle d'un combine - voir docs/research_framework.md section C7 pour le detail complet ; **experience E9 (couche multi-bookmakers, `consensus.py`/`anomaly.py`/`arbitrage.py` nouveaux, purement descriptif, aucun ROI/strategie de pari, poisson_simple/dixon_coles/xg_model INCHANGES)** : overround retire PAR BOOKMAKER (`overround.py` reutilise sans modification) ; consensus = moyenne/mediane/min/max/ecart-type entre bookmakers SANS poids optimise ; anomalie book-vs-consensus classee selon grille PRE-ENREGISTREE (seuils 0.05/0.10 point, jamais qualifiee de "value") ; arbitrage detecte MATHEMATIQUEMENT (somme des probabilites inverses des meilleurs prix), toujours presente comme une detection historique jamais une opportunite reelle ; resultats reels (n=1806 matchs) - 1X2 : 3 bookmakers (B365 100%, BW 80.5%, PS 76.6%), overround PS (~3.6%) nettement plus bas que B365/BW (~5.6%), dispersion entre bookmakers tres faible (ecart-type moyen 0.0053) -> AUCUNE anomalie ni arbitrage detecte sur les 13926 instances evaluables ; Over/Under 2.5 : un seul bookmaker (B365) dans les donnees sources -> detection d'anomalie/arbitrage inter-bookmakers structurellement non evaluable sur ce marche ; comparaison modele/marche (Over 2.5, split TEST walk-forward valide en E8, n=542) : ecart modele-consensus legerement negatif pour les deux modeles (poisson_simple -0.0114, xg_model -0.0078), jamais qualifie de "value" - voir docs/research_framework.md section T pour le detail complet ; **experience E10 (fiabilite des zones de desaccord modele/marche, Over/Under 2.5, poisson_simple/dixon_coles/xg_model INCHANGES, aucune nouvelle calibration)** : gap = P_model (walk-forward E8) - P_market (B365 normalise), tranches FIGEES identiques a E5 (pas de 5 points) ; sur n=542 (intersection E8 test x E9 corpus), UNE SEULE tranche significative globalement - poisson_simple/dixon_coles sous-estiment P(Over2.5) dans la tranche de desaccord extreme ou le modele est bien plus pessimiste que le marche (biais +0.256, IC95% [+0.066,+0.435], n=22) ; AUCUNE zone de desaccord ne montre une difference de Brier significative par rapport a la zone d'accord (toutes IC95% contenant 0) ; test d'asymetrie SIGNIFICATIF pour poisson_simple/dixon_coles (diff IC95% [-0.210,-0.043] p=0.004) - quelle que soit la direction du desaccord avec le marche, le modele s'eloigne plutot qu'il ne se rapproche de la realite (non reproduit avec la meme significativite pour xg_model) ; verdict : AUCUNE zone de desaccord fiable demontree, cohérent avec le diagnostic post-E1/E5/E6 - voir docs/research_framework.md section U pour le detail complet, y compris le diagnostic secondaire 1X2 ; **experience E11 (cartographie de la fiabilite ABSOLUE des probabilites de buts E8 vs B365, poisson_simple/dixon_coles/xg_model INCHANGES, aucune nouvelle calibration)** : les 5 seuils Over/Under (0.5/1.5/2.5/3.5/4.5) sont derives EN UN SEUL APPEL de la MEME matrice corrigee walk-forward - propriete de coherence structurelle reconfirmee ; calibration absolue (H1, tranches de probabilite fixees ex ante [0-10%)...[90-100%], pente/intercept de Cox, correlation, decomposition de Brier E2/E4 reutilisee) - resultat central REPRODUIT SUR LES TROIS MODELES : sur-confiance significative dans la tranche [0.6-0.7) d'Over 2.5 (biais -0.11 a -0.12, IC95% entierement <0), zone [0.4-0.6) (la plus peuplee) bien calibree partout ; pentes de Cox uniformement <1 (sur-confiance systemique moderee, tous seuils) ; AUCUNE difference de Brier significative entre poisson_simple et xg_model sur aucun des 5 seuils (paires appariees) malgre un biais brut tres different avant correction (deja etabli en K/E7) ; Premier League confirme (3e fois, apres E4) une discrimination quasi nulle ou negative sur presque toutes les combinaisons seuil/modele, Liga/Ligue1 restent discriminants ; H2 (EXPLORATOIRE, restreint aux tranches jugees fiables au sens H1, decidees AVANT examen des prix) - un seul ecart significatif : xg_model, categorie d'ecart de prix >=10% avec B365 (n=205, biais +0.074, IC95% [+0.006,+0.141]), jamais qualifie de "value" ni de strategie - voir docs/research_framework.md section V pour le detail complet ; **experience E12 (intersection fiabilite x ecart de prix, Over 2.5 prioritaire, poisson_simple/dixon_coles/xg_model INCHANGES, aucune nouvelle calibration, aucune strategie de pari)** : teste si les tranches de probabilite ou le modele est fiable (H1) coincident avec les tranches a plus fort ecart de prix B365 - quatre notions distinguees explicitement (fiable / desaccord / anomalie de prix reservee a E9 / value potentielle jamais evaluee) ; grille de verdict a 4 niveaux FIGEE avant execution (demontree / contradictoire / directionnelle non demontree / absence de preuve) ; resultat reel - poisson_simple/dixon_coles : VERDICT CONTRADICTOIRE (n_fiable=350, n_non_fiable=168, diff IC95% [-0.0189,-0.0013] p=0.024) - les tranches fiables ont un ecart de prix PLUS PETIT, pas plus grand, l'inverse de l'hypothese ; xg_model : VERDICT DIRECTIONNELLE MAIS NON DEMONTREE (IC95% [-0.0060,+0.0092] p=0.646) ; lecture mecanique : le plus grand ecart de prix observe coincide avec la tranche [0.3-0.4) ou poisson_simple/dixon_coles sont eux-memes demontres non fiables (biais +0.133) - le desaccord de prix y reflete probablement une erreur du modele plutot qu'une opportunite ; intersection non testable au-dela d'Over 2.5 (Football-Data ne publie que cette ligne pour l'O/U) - voir docs/research_framework.md section W pour le detail complet) ; **experience E13 (dispersion multi-bookmakers et arbitrage mathematique, Over/Under 2.5 prioritaire, poisson_simple/dixon_coles/xg_model INCHANGES, aucune nouvelle calibration, aucune strategie de pari)** : question distincte de E9-E12 - la dispersion entre bookmakers contient-elle une information exploitable, et existe-t-il un arbitrage mathematique historique ? Correction d'inventaire prealable (Pinnacle publie aussi l'O/U 2.5, cf. `data_engine` ci-dessus) rend enfin evaluable la dispersion sur ce marche (2 bookmakers, n=1374) ; correction methodologique decouverte en cours d'execution (`restrict_to_canonical_selection`) - regrouper Over ET Under dans une meme table est degenere pour un marche a 2 issues strictement complementaires (biais force a exactement 0 par construction algebrique), seule la selection canonique Over est retenue, IDENTIQUE a la convention deja utilisee en E10/E11/E12 ; resultats reels - Over/Under 2.5 : test central dispersion haute/basse ABSENCE DE PREUVE (IC95% [-0.0278,+0.0271] p=0.953), consensus B365+P n'ameliore pas mesurablement B365 seul (IC95% [-0.0001,+0.0003]), 0 anomalie individuelle (100% "proche du consensus"), consensus statistiquement indiscernable de la distribution E8 (poisson_simple IC95% [-0.0051,+0.0125], xg_model [-0.0036,+0.0097]) ; 1X2 (5 bookmakers, n=5418) : meme conclusion ABSENCE DE PREUVE (IC95% [-0.0259,+0.0085] p=0.296), 0 anomalie sur 18009 instances ; **0/1806 matchs avec arbitrage mathematique detecte sur les DEUX marches** (marge moyenne stable +3.35% a +3.78%, ecart meilleure-pire cote ne depassant jamais 5 points de probabilite dans ce corpus) - reponse NEGATIVE aux deux questions du protocole (information supplementaire des bookmakers ; existence d'arbitrages historiques), expliquee par une dispersion structurellement trop faible et homogene sur ce panel de bookmakers reglementes - voir docs/research_framework.md section X pour le detail complet) | 2 (benchmark) / 3 (complet) / 5 (C7) / phase economique (E9, E10, E11, E12, E13) |
 | `value_engine` (edge, EV, CLV, selection - AUCUNE selection sur EV seule) | Implemente (`edge.py::expected_value`/`edge` reutilises sans modification par l'Experience 1 economique, voir `data_engine` ci-dessus - `selection.py` non utilise, la strategie EV>0 de l'Experience 1 est deliberement plus simple, definie localement dans `scripts/run_stage6_economic_b365_ev.py`) | 3 |
 | `risk_engine` (bankroll, Flat Betting, Kelly informatif + quality gates, limites, metriques de risque, Monte Carlo) | Implemente (Flat Betting seul active en production - Kelly verrouille, voir `risk_engine/kelly.py`) | 4 |
+| `final_engine` (**MVP du moteur final, Phase B**, `prediction.py`/`calibration.py`/`pricing.py`/`market.py`/`gates.py`/`decision.py`/`orchestrator.py`/`types.py`/`reference_tables.py`/`reason_codes.py`) | Implemente (voir section 2.0 ci-dessous pour le detail complet - pipeline A->F derive de `docs/final_engine_specification.md`, aucune nouvelle hypothese scientifique, decision `NO_BET` par defaut tant qu'aucun seuil d'edge n'est valide) | Phase B |
 | `live_betting_engine` | Non implemente | 6 (conditionnel) |
 
-## 2.0 Specification technique du moteur final (Phase A, en cours)
+## 2.0 Moteur final - specification (Phase A) et implementation (Phase B)
 
-La campagne E1->E16 etant close (section 2.1 ci-dessous), la phase de
-construction a demarre par une **specification technique pure** (Phase A -
-aucun code de moteur ecrit) : `docs/final_engine_specification.md`. Ce
-document traduit les conclusions d'E1->E16 en un contrat d'implementation
-precis - pipeline en 6 niveaux (A Prediction / B Calibration / C Pricing /
-D Market comparison / E Qualification / F Decision), inventaire des
-primitives deja testees a reutiliser sans reimplementation (`score_matrix`,
-`fit_scale_correction_as_of`/`attach_walk_forward_scale` d'E8,
-`compare_model_to_market`, `edge`/`expected_value`, `matching.py`/
-`time_resolution.py`), inputs exacts par categorie (obligatoire/optionnel/
-recherche uniquement - la cloture restant exclue du chemin de decision),
-liste exhaustive des scientific gates justifies par E1->E16 (zone
-[0.6,0.7) d'Over 2.5 issue d'E11/E14, gate de discrimination Premier
-League issu d'E15, gate anti-mouvement issu d'E16, gate anti-dispersion
-multi-bookmaker issu d'E9/E13) explicitement separes des operational
-thresholds (marques `PARAMETRE OPERATIONNEL A VALIDER`, jamais presentes
-comme scientifiquement optimaux), objet de sortie structure complet, et
-definition du moteur minimal viable (Niveaux A-E pleinement implementables
-aujourd'hui, Niveau F limite a l'abstention faute de regle de conversion
-edge->pari validee). Aucun code de production n'a ete ecrit ou modifie a
-l'occasion de cette specification - implementation reportee a la Phase B,
-sur instruction separee.
+La campagne E1->E16 etant close (section 2.1 ci-dessous), la construction
+s'est faite en deux phases : **Phase A**, specification technique pure
+(`docs/final_engine_specification.md`, aucun code ecrit) traduisant les
+conclusions d'E1->E16 en un contrat d'implementation precis - pipeline en
+6 niveaux (A Prediction / B Calibration / C Pricing / D Market comparison
+/ E Qualification / F Decision), inventaire des primitives a reutiliser,
+inputs exacts par categorie (la cloture restant exclue du chemin de
+decision), gates scientifiques exhaustifs separes des operational
+thresholds (marques `PARAMETRE OPERATIONNEL A VALIDER`), objet de sortie
+structure, moteur minimal viable ; puis **Phase B**, implementation du MVP
+strictement conforme a cette specification.
+
+### Module `final_engine` (nouveau, Phase B)
+
+`src/sys_foot_quant/final_engine/` - orchestrateur en 6 modules, un par
+niveau, jamais un monolithe :
+
+| Module | Niveau | Contenu |
+|---|---|---|
+| `prediction.py` | A - Prediction | `predict_match()` - reutilise SANS MODIFICATION `PoissonModel`/`DixonColesModel`/`XGModel` ; `PRIMARY_MODEL = "poisson_simple"` (**CHOIX ARCHITECTURAL - NON VALIDE COMME SOURCE D'EDGE**), `dixon_coles`/`xg_model` calcules en parallele comme modeles de controle, jamais fusionnes (aucun ensemble, aucune ponderation apprise - **HYPOTHESE FUTURE** non integree) |
+| `calibration.py` | B - Calibration | `calibrate_prediction()` - applique la correction scalaire E7/E8 (**VALIDEE SCIENTIFIQUEMENT**, principe non modifie) puis derive la distribution de buts ET les probabilites O/U d'une seule matrice reconstruite |
+| `pricing.py` | C - Pricing | `compute_fair_price()` - transformation deterministe `1/p`, aucune donnee de marche |
+| `market.py` | D - Market comparison | `compare_over_under_to_market()` - reutilise SANS MODIFICATION `market_engine.model_vs_market.compare_model_to_market` et `value_engine.edge.{edge,expected_value}` ; n'accepte QUE des cotes d'ouverture (aucune reference de code a `closing_odds_1x2_by_bookmaker`/`closing_over_under_2_5_by_bookmaker`, verifie par test AST) |
+| `gates.py` | E - Qualification | Gates scientifiques (`insufficient_data_gate`, `insufficient_calibration_history_gate`, `ambiguous_day_gate`, `incomplete_market_odds_gate`, `distribution_consistency_gate`, `calibration_zone_gate`, `discrimination_gate`) et operational gates (`OperationalThresholds` - **PARAMETRE OPERATIONNEL A VALIDER**, `min_edge_threshold` explicitement `None` par defaut, jamais fixe par E1-E16) |
+| `decision.py` | F - Decision | `decide()` - `NO_BET` des qu'un gate se declenche, sinon `BET` (chemin de code atteignable mais jamais emprunte avec la configuration operationnelle par defaut du MVP, puisque `edge_threshold_gate` se declenche systematiquement tant que `min_edge_threshold` reste `None`) |
+| `orchestrator.py` | A->F | `run_match_decision()` - assemble les 6 niveaux, produit `MatchDecisionOutput` |
+| `types.py` | - | Dataclasses de sortie immuables par niveau (`ModelPrediction`, `CalibratedGoalDistribution`, `PricingResult`, `MarketComparisonResult`, `GateResult`, `QualificationResult`, `DecisionResult`, `MatchDecisionOutput`) |
+| `reference_tables.py` | - | Tables FIGEES issues d'E4/E11/E15 (`discrimination_status` par championnat - Liga/Ligue 1 = DEMONTREE, Premier League = NON_DEMONTREE, tout autre championnat = NON_EVALUEE par defaut prudent ; `calibration_status_for` par seuil - zone [0.6,0.7) d'Over 2.5 = ZONE_BIAISEE_NON_CORRIGEE, seuils 0.5/4.5 = INSUFFICIENT_VALIDATION) - jamais recalculees en ligne |
+| `reason_codes.py` | - | Codes `NO_BET` stables (section 14 de la specification) |
+
+Primitives **portees verbatim** de `scripts/` vers `src/` (aucune nouvelle
+logique, section 1 de la specification) :
+`football_model/goal_distribution.py` (`over_under_probs`,
+`total_goals_distribution`, `check_distribution_validity`,
+`check_over_under_monotonic`, `check_over_under_matches_distribution` -
+identiques a `scripts/run_stage15_e7_total_goals_distribution.py`) et
+`calibration_engine/scalar_correction.py` (`fit_scale_correction_as_of`,
+`attach_walk_forward_scale` - identiques a
+`scripts/run_stage16_e8_walk_forward_validation.py`, verifie par un test
+de non-regression numerique dedie).
+
+### Exclusions verifiees (Etape 19 de la Phase B)
+
+Le code du moteur final ne contient, comme source de signal ou de
+decision : ni recalibration locale E14, ni mouvement de marche E16, ni
+desaccord modele/marche comme signal, ni coefficient Premier League, ni
+dispersion multi-bookmaker comme edge, ni ensemble de modeles non valide,
+ni seuil de pari optimise, ni backtest de rentabilite - chacune de ces
+exclusions est verifiee par un test dedie (`tests/unit/test_final_engine_scientific_non_regression.py`,
+`tests/leakage/test_final_engine_point_in_time.py`), pas seulement
+affirmee en commentaire.
+
+### Ce que le moteur final EST et N'EST PAS
+
+Le moteur final est un systeme d'analyse probabiliste et de qualification
+de prix : il projette une distribution de buts calibree (E7/E8), la
+compare a un prix de marche d'ouverture (benchmark, jamais un adversaire),
+et qualifie la confiance de cette projection via des gates scientifiques
+avant de rendre une decision. Il n'est **jamais** presente comme rentable,
+predictif garanti, ou superieur au marche - aucune experience d'E1-E16 ne
+demontre une telle propriete. Dans sa configuration MVP par defaut
+(`docs/final_engine_specification.md` section 19), il ne produit **que**
+des decisions `NO_BET` motivees, faute de regle de conversion edge->pari
+validee - voir `docs/final_engine_user_guide.md` pour le detail cote
+utilisateur.
 
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
