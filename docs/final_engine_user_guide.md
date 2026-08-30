@@ -127,6 +127,13 @@ opportunites. `min_edge_threshold` reste `None`.
   lui-meme une fois ce facteur isole. Le modele surestime en outre
   substantiellement la probabilite de push sur l'AH (limite de
   calibration distincte, non corrigee). Jamais utilise par ce moteur.
+- **L'ecart de rating Elo pre-match (ClubElo) n'apporte pas
+  d'information incrementale demontree** par rapport au modele
+  recalibre : teste et infirme (Phase K,
+  `docs/elo_incremental_information_experiment.md`) - Brier identique a
+  la 4e decimale entre le modele recalibre seul et le modele
+  recalibre+Elo, sur la population globale et sur les 5 sous-groupes de
+  robustesse. Jamais utilise par ce moteur.
 
 Pour le detail scientifique complet de chacune de ces limites, voir
 `docs/research_synthesis_e1_e16.md` (sections 3, 7, 8) et les sections

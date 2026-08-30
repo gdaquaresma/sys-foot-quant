@@ -253,11 +253,37 @@ def test_tag_burn_in_validation_test_labels_rows_correctly(stage30) -> None:
 # --------------------------------------------------------------------------
 
 
-def test_main_is_blocked(stage30) -> None:
-    with pytest.raises(RuntimeError):
-        stage30.main()
-
-
-def test_load_all_elo_records_is_blocked_without_real_files(stage30) -> None:
+def test_load_elo_ratings_by_club_raises_if_archive_missing(stage30, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(stage30, "_ELO_ARCHIVE_PATH", tmp_path / "does_not_exist.csv")
     with pytest.raises(FileNotFoundError):
-        stage30.load_all_elo_records()
+        stage30.load_elo_ratings_by_club()
+
+
+def test_load_elo_ratings_by_club_works_with_real_archive(stage30) -> None:
+    """Non-regression : l'archive reelle (Phase K, option b) doit
+    charger sans erreur et couvrir nos 67 clubs."""
+    if not stage30._ELO_ARCHIVE_PATH.exists():
+        pytest.skip("Archive ClubElo reelle non presente.")
+    by_club = stage30.load_elo_ratings_by_club()
+    assert len(by_club) == 67
+
+
+# --------------------------------------------------------------------------
+# Restriction de corpus (docs/elo_experiment_specification.md, annexe
+# archive) : tout match dont decision_time > _CORPUS_CUTOFF_DATE doit
+# etre exclu, jamais impute.
+# --------------------------------------------------------------------------
+
+
+def test_corpus_cutoff_date_excludes_matches_strictly_after_it(stage30) -> None:
+    import pandas as pd
+
+    df = pd.DataFrame(
+        {
+            "decision_time": pd.to_datetime(
+                ["2026-01-13 18:00", "2026-01-14 18:00", "2026-01-15 18:00"], utc=True
+            )
+        }
+    )
+    kept = df[df["decision_time"].dt.date <= stage30._CORPUS_CUTOFF_DATE]
+    assert len(kept) == 2  # le 13 et le 14 (inclus), jamais le 15

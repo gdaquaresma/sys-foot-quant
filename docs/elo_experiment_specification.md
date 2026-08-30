@@ -130,6 +130,87 @@ précédente : « ne jamais supposer une couverture, toujours la mesurer »).
 
 ---
 
+## 0ter. Annexe — audit de l'archive ClubElo réellement utilisée (option b)
+
+**Contexte.** `clubelo.com`/`api.clubelo.com` se sont révélés inaccessibles
+au moment de l'exécution réelle (timeout constaté indépendamment par
+l'utilisateur — capture d'écran Chrome — et par cet environnement via
+`curl`). Conformément à la décision explicite de l'utilisateur (« option
+b »), la source réellement utilisée est l'archive quotidienne publique du
+dépôt GitHub `tonyelhabr/club-rankings`
+(`https://github.com/tonyelhabr/club-rankings/releases/download/club-rankings/clubelo-club-rankings.csv`,
+581 279 lignes), alimentée automatiquement par un robot interrogeant
+l'API ClubElo en direct chaque jour depuis 2023.
+
+**Provenance et structure vérifiées directement (pas supposées)** :
+colonnes `Rank, Club, Country, Level, Elo, From, To, date, updated_at` —
+les sept premières reproduisent le format natif ClubElo déjà documenté en
+§0bis ; `date`/`updated_at` sont propres à cette archive (horodatage du
+jour de collecte). **Le fichier brut est un journal de scrapes
+quotidiens**, pas une table de fenêtres déjà dédupliquées : la même
+fenêtre `[From, To]` logique apparaît autant de fois que de jours de
+collecte où elle est restée d'actualité. La colonne `To` brute n'est
+**pas fiable telle quelle** pour la fenêtre la plus récente (elle dérive
+légèrement d'un jour de scrape à l'autre) — vérifié directement sur
+Barcelone (233 fenêtres reconstruites, aucune anomalie structurelle une
+fois `To` ignorée au profit de la seule séquence de `From`).
+
+**Couverture mesurée sur nos 67 clubs (Liga/Ligue 1/Premier League)** :
+61 394 lignes filtrées, **914/914 jours de collecte présents pour chacun
+des 67 clubs** (couverture quotidienne totale sur la période couverte),
+du **2023-03-27 au 2026-01-14**. Fichier conservé dans le dépôt :
+`research/market_odds/clubelo/runs/clubelo_daily_archive.csv` (5,2 Mo).
+
+**Restriction de corpus — décidée explicitement par l'utilisateur,
+jamais choisie unilatéralement** : l'archive s'arrête au **2026-01-14**,
+alors que le corpus 2025/26 déjà utilisé par ce projet va jusqu'à fin mai
+2026. Conséquence mesurée : sur les matchs déjà présents dans le corpus,
+**170/380 (44,7%) Premier League, 153/306 (50,0%) Ligue 1, 191/380
+(50,3%) Liga** de la saison 2025/26 tombent après cette date et sont
+**exclus** (jamais imputés) — la saison 2024/25 est, elle, intégralement
+couverte. Règle verrouillée : `decision_time.date() <= 2026-01-14`
+(`_CORPUS_CUTOFF_DATE`, `scripts/run_stage30_...py`) — un match dont la
+décision tomberait après cette date est exclu et compté explicitement,
+jamais silencieusement.
+
+**Mapping — trois noms spécifiques à CETTE archive, distincts du site en
+direct déjà vérifié (§4)** : `Bilbao` → `Athletic Club`, `Atletico` →
+`Atlético`, `Sociedad` → `Real Sociedad` — aucune ambiguïté possible dans
+ce contexte championnat/pays (un seul club correspondant), mais traduits
+explicitement (`elo_archive_ingest.ARCHIVE_NAME_TO_LIVE_NAME`), jamais
+laissés tels quels ce qui aurait rompu silencieusement la jointure avec
+le mapping déjà vérifié à la main (§4).
+
+**Reconstruction des fenêtres — méthode verrouillée avant lecture des
+résultats de l'expérience elle-même (mesures de couverture/qualité
+seulement, jamais un résultat de performance)** : pour chaque club, les
+fenêtres sont reconstruites à partir de la seule séquence des valeurs
+**distinctes** de `From` (vérifiée stable : un changement de `From`
+correspond toujours à un match réel) ; `To_i = From_{i+1} - 1` jour,
+jamais la colonne `To` brute. Valeur d'Elo retenue par fenêtre : la
+**première** observée dans l'archive pour ce `From` — jamais une
+observation ultérieure. **Justification mesurée, pas une hypothèse** :
+19,3% des fenêtres (3213/16 644 sur nos 67 clubs) montrent un écart
+>1 point entre leur première et leur dernière observation archivée
+(médiane ~6,2 points, max 34,5 points) — un effet modeste mais réel de
+raffinement rétroactif du moteur ClubElo lui-même sur l'historique
+récent. Retenir la première observation garantit que la feature
+n'utilise jamais une information publiée après le moment où elle aurait
+été disponible — le choix strictement correct pour une expérience PIT,
+jamais la valeur « la plus à jour avec le recul ». Implémentation :
+`data_engine/market_odds/elo_archive_ingest.py`, testée isolément avant
+toute exécution réelle (7 tests, dont un test de non-régression sur
+l'archive réelle).
+
+**Conséquence sur les critères de validation (§13)** : la restriction de
+corpus est appliquée **avant** toute lecture de résultat (règle
+structurelle mesurée, pas un choix a posteriori) — si l'effectif final
+(post-cutoff, post-exclusions PIT/mapping/fenêtres ambiguës) tombe sous
+30, le verdict `DONNÉES INSUFFISANTES` s'applique mécaniquement, comme
+prévu.
+
+---
+
 ## 1. Primitives réutilisées (aucune réimplémentation)
 
 | Besoin | Primitive | Emplacement | Modification |

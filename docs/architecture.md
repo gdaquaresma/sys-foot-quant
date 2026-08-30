@@ -305,31 +305,39 @@ des la conception). **Le moteur final reste GELE**
 (`min_edge_threshold=None`, `BET` non active) ; aucun code modifie a
 l'occasion de cet audit.
 
-### Phase K - Elo pre-match (ClubElo), EN ATTENTE DE DONNEES (protocole verrouille, execution reelle BLOQUEE)
+### Phase K - Elo pre-match (ClubElo), executee, verdict negatif, moteur GELE
 
 `docs/elo_experiment_specification.md` verrouille le protocole complet
 (definition PIT du rating, `elo_diff`, matching, split 40/30/30 reutilise
-de la Phase D, modeles A/B/C/D avec controle de recalibration obligatoire
-des la conception - meme discipline que Phases F/G/H) pour tester si
-l'ecart de rating Elo pre-match (ClubElo) apporte une information
-incrementale sur Over 2.5. Primitives ecrites et testees (41 tests
-verts) : `data_engine/market_odds/elo_ratings.py` (parseur CSV + lookup
-PIT pur `elo_as_of`, propriete demontree que la fenetre `[From,To]` d'une
-date ne reflete jamais le match de ce jour-la), `elo_team_mapping.py`
-(mapping Football-Data -> ClubElo, **EBAUCHE NON VERIFIEE contre des
-donnees reelles**, bloque explicitement toute resolution hors test tant
-que `MAPPING_VERIFIED_AGAINST_REAL_DATA=False`), `elo_join.py` (jointure
-point-in-time isolee, jamais importee par `final_engine`), et
-`scripts/run_stage30_phase_k_elo_incremental_information.py`
-(regression logistique a offset, split walk-forward, grille de verdict -
-`main()` refuse explicitement de s'executer). **Blocage operationnel
-constate et signale, pas contourne** : cet environnement ne peut pas
-atteindre `clubelo.com`/`api.clubelo.com` (politique de sortie reseau de
-la session) - aucun fichier ClubElo reel n'a donc pu etre obtenu, et
-aucune execution reelle n'a eu lieu. **Aucun verdict n'est rendu.** Le
-moteur final reste GELE (`min_edge_threshold=None`, `BET` non active) ;
-aucun code de `final_engine` modifie. Suite a une decision separee de
-l'utilisateur (acces reseau accorde, ou fichiers fournis manuellement).
+de la Phase D, modeles A/B/C/D en conception factorielle 2x2
+recalibration x Elo avec controle de recalibration obligatoire des la
+conception - meme discipline que Phases F/G/H) pour tester si l'ecart de
+rating Elo pre-match (ClubElo) apporte une information incrementale sur
+Over 2.5. `clubelo.com`/`api.clubelo.com` etant inaccessibles (timeout
+constate independamment par l'utilisateur et par cet environnement),
+l'utilisateur a fourni les donnees via une archive quotidienne publique
+alternative (depot GitHub `tonyelhabr/club-rankings`, 2023-03-27 a
+2026-01-14) - le mapping d'equipes a ete verifie a la main par
+l'utilisateur directement contre le site clubelo.com en direct
+(`elo_team_mapping.py`, 66 clubs). Nouveau module
+`elo_archive_ingest.py` reconstruit des fenetres `[From,To]` propres a
+partir du journal brut de scrapes quotidiens (la premiere observation
+par fenetre est retenue - un raffinement retroactif mesurable du moteur
+ClubElo, 19.3% des fenetres, est ainsi neutralise plutot qu'ignore).
+**Restriction de corpus decidee explicitement par l'utilisateur** :
+matchs apres le 2026-01-14 exclus (~45-50% de la saison 2025/26), jamais
+imputes - corpus final n=1313. Modeles A (brut, 0 param) / B (naif+Elo,
+offset) / C (recalibre seul, CONTROLE) / D (recalibre+Elo, TEST) -
+nouvelle regression logistique a offset testee isolement.
+**Verdict : `NON VALIDE`** - Brier(C)=Brier(D)=0.2489 (identiques a la
+4e decimale), IC95% de la difference de Brier (D vs C) chevauchant zero
+sur la population primaire (p=0.893), sur VALIDATION seule, sur TEST
+seul, et sur les 5 sous-groupes de robustesse (3 championnats, 2
+saisons) - reproduisant, une 4e fois consecutive, le schema deja etabli
+en Phases F/G/H (la recalibration generique explique l'essentiel de tout
+gain apparent, jamais la nouvelle source elle-meme). Piste gelee.
+**Le moteur final reste GELE** (`min_edge_threshold=None`, `BET` non
+active) ; aucun code de `final_engine` modifie.
 
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
