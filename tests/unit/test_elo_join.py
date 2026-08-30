@@ -11,7 +11,6 @@ import pytest
 
 from sys_foot_quant.data_engine.market_odds.elo_join import build_elo_dataset
 from sys_foot_quant.data_engine.market_odds.elo_ratings import parse_clubelo_csv_rows
-from sys_foot_quant.data_engine.market_odds.elo_team_mapping import EloMappingUnverifiedError
 from sys_foot_quant.data_engine.market_odds.football_data_loader import FootballDataMatchRecord
 
 _LEAGUE = "liga"
@@ -60,11 +59,13 @@ def test_matched_record_computes_elo_diff_correctly() -> None:
     assert rec.elo_diff == pytest.approx(250.0)
 
 
-def test_default_call_without_allow_unverified_is_blocked() -> None:
-    """Garde-fou de production : sans `allow_unverified_mapping=True`
-    explicite, toute jointure reelle echoue - jamais silencieusement."""
-    with pytest.raises(EloMappingUnverifiedError):
-        build_elo_dataset(_LEAGUE, _SEASON, [_us("1", _T0)], [_fd(_T0)], _elo_by_club())
+def test_default_call_without_allow_unverified_now_works() -> None:
+    """Le mapping ClubElo a ete verifie a la main (elo_team_mapping.py) -
+    une jointure reelle n'a donc plus besoin de `allow_unverified_mapping=True`
+    pour aboutir (le garde-fou `EloMappingUnverifiedError` ne se
+    declenche plus que si le mapping redevenait un jour non verifie)."""
+    report = build_elo_dataset(_LEAGUE, _SEASON, [_us("1", _T0)], [_fd(_T0)], _elo_by_club())
+    assert report.n_exploitable == 1
 
 
 def test_match_excluded_when_team_not_mapped(monkeypatch) -> None:

@@ -4,23 +4,37 @@ docs/elo_experiment_specification.md section 4). Analogue exact de
 championnat, jamais de fuzzy matching, echec explicite si une equipe est
 absente.
 
-AVERTISSEMENT NON NEGOCIABLE (docs/elo_experiment_specification.md
-section 0bis/4) : cet environnement d'execution ne peut pas atteindre
-``clubelo.com``/``api.clubelo.com`` (bloque par la politique de sortie
-reseau de la session). Le mapping ci-dessous est donc une EBAUCHE fondee
-sur des conventions de nommage observees dans des wrappers communautaires
-tiers (``soccerdata``, archives GitHub citees en Phase J/K) - il n'a PAS
-ete verifie a la main contre la liste reelle des clubs presents dans des
-fichiers ClubElo reellement obtenus, contrairement a l'exigence explicite
-de la Phase K (« matching... verifie manuellement pour les cas
-ambigus »). ``MAPPING_VERIFIED_AGAINST_REAL_DATA`` reste ``False`` tant
-que cette verification manuelle n'a pas ete faite - ``resolve_clubelo_name``
-refuse toute resolution non explicitement marquee comme test/audit tant
-que ce drapeau n'est pas passe a ``True``."""
+MAPPING VERIFIE A LA MAIN CONTRE LES DONNEES REELLES (Phase K, option b
+de l'audit ClubElo) : cet environnement d'execution ne peut toujours pas
+atteindre ``clubelo.com``/``api.clubelo.com`` directement (bloque par la
+politique de sortie reseau de la session), mais l'utilisateur a consulte
+directement les pages reelles ``clubelo.com/ENG``, ``clubelo.com/ESP`` et
+``clubelo.com/FRA`` et en a transcrit le contenu integralement (captures
+d'ecran et texte copie-colle, dates 2026-08-29/30) - chacune des 66
+entrees ci-dessous a ete confrontee individuellement a cette liste reelle,
+jamais devinee ni approximee. Trois corrections notables par rapport a
+l'ebauche initiale (fondee sur des conventions de wrappers tiers, jamais
+verifiee) : ``Man City`` -> ``Man City`` (pas ``Manchester City``),
+``Man United`` -> ``Man United`` (pas ``Manchester United``),
+``Nott'm Forest`` -> ``Forest`` (pas ``Nottingham``), ``St Etienne`` ->
+``Saint-Etienne`` (pas ``St Etienne``), ``Ath Bilbao`` -> ``Athletic
+Club`` (pas ``Athletic``), ``Ath Madrid`` -> ``Atlético`` (accent
+present, pas ``Atletico``), ``Sociedad`` -> ``Real Sociedad`` (pas
+``Sociedad`` seul). Les trois clubs initialement absents de la capture
+Espagne (``Leganes``, ``Oviedo``, ``Valladolid``) ont ete retrouves via
+une recherche Ctrl+F dediee sur la page reelle et confirmes presents,
+sans aucune ambiguite silencieuse.
+
+``MAPPING_VERIFIED_AGAINST_REAL_DATA`` est desormais ``True``. La donnee
+ainsi confirmee est le rating ACTUEL (jour de consultation) et le nom
+exact du club - elle ne constitue PAS, a elle seule, une preuve de la
+couverture historique (fenetres ``[From,To]`` 2024-2026) necessaire a
+l'experience : celle-ci reste a obtenir (fichiers CSV d'historique par
+club, section 0bis/3 du protocole) avant toute execution reelle."""
 
 from __future__ import annotations
 
-MAPPING_VERIFIED_AGAINST_REAL_DATA = False
+MAPPING_VERIFIED_AGAINST_REAL_DATA = True
 
 FOOTBALL_DATA_TO_CLUBELO: dict[str, dict[str, str]] = {
     "premier_league": {
@@ -38,15 +52,15 @@ FOOTBALL_DATA_TO_CLUBELO: dict[str, dict[str, str]] = {
         "Leeds": "Leeds",
         "Leicester": "Leicester",
         "Liverpool": "Liverpool",
-        "Man City": "Manchester City",
-        "Man United": "Manchester United",
+        "Man City": "Man City",
+        "Man United": "Man United",
         "Newcastle": "Newcastle",
-        "Nott'm Forest": "Nottingham",
+        "Nott'm Forest": "Forest",
         "Southampton": "Southampton",
         "Sunderland": "Sunderland",
         "Tottenham": "Tottenham",
         "West Ham": "West Ham",
-        "Wolves": "Wolverhampton",
+        "Wolves": "Wolves",
     },
     "ligue1": {
         "Angers": "Angers",
@@ -67,14 +81,14 @@ FOOTBALL_DATA_TO_CLUBELO: dict[str, dict[str, str]] = {
         "Paris SG": "Paris SG",
         "Reims": "Reims",
         "Rennes": "Rennes",
-        "St Etienne": "St Etienne",
+        "St Etienne": "Saint-Etienne",
         "Strasbourg": "Strasbourg",
         "Toulouse": "Toulouse",
     },
     "liga": {
         "Alaves": "Alaves",
-        "Ath Bilbao": "Athletic",
-        "Ath Madrid": "Atletico",
+        "Ath Bilbao": "Athletic Club",
+        "Ath Madrid": "Atlético",
         "Barcelona": "Barcelona",
         "Betis": "Betis",
         "Celta": "Celta",
@@ -90,7 +104,7 @@ FOOTBALL_DATA_TO_CLUBELO: dict[str, dict[str, str]] = {
         "Oviedo": "Oviedo",
         "Real Madrid": "Real Madrid",
         "Sevilla": "Sevilla",
-        "Sociedad": "Sociedad",
+        "Sociedad": "Real Sociedad",
         "Valencia": "Valencia",
         "Valladolid": "Valladolid",
         "Vallecano": "Rayo Vallecano",
