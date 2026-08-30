@@ -16,16 +16,27 @@ Ce module charge donc des fichiers JSON locaux DEJA obtenus hors-bande
 environnement disposant d'un acces reseau reel). Il n'invente, ne simule
 et ne devine AUCUNE reponse API.
 
-Correspondance documentee (sources publiques tierces, NON verifiee par
-appel reel dans cet environnement - a confirmer avant tout chargement de
-donnees reelles) :
+Correspondance documentee (sources publiques tierces convergentes, NON
+verifiee par appel reel dans cet environnement - a confirmer avant tout
+chargement de donnees reelles ; Phase M, docs/polymarket_data_feasibility_audit.md
+section 2) :
 
-| Fonction ci-dessous | API Polymarket documentee | Endpoint |
-|---|---|---|
-| ``load_gamma_markets_json`` | Gamma API (public, sans authentification) | GET https://gamma-api.polymarket.com/markets |
-| ``load_gamma_events_json`` | Gamma API | GET https://gamma-api.polymarket.com/events |
-| ``load_data_api_trades_json`` | Data API (public, sans authentification) | GET https://data-api.polymarket.com/trades |
-| ``load_data_api_positions_json`` | Data API | GET https://data-api.polymarket.com/positions |
+| Fonction ci-dessous | API Polymarket documentee | Endpoint | Parametres cles documentes (non verifies) |
+|---|---|---|---|
+| ``load_gamma_markets_json`` | Gamma API (public, sans authentification, ~4000 req/10s documente) | GET https://gamma-api.polymarket.com/markets | ``closed``/``archived`` (filtrage statut), tags |
+| ``load_gamma_events_json`` | Gamma API | GET https://gamma-api.polymarket.com/events | idem |
+| ``load_data_api_trades_json`` | Data API (public, sans authentification, ~1000 req/10s documente) | GET https://data-api.polymarket.com/trades | ``limit`` (defaut 100, max 500 documentes), ``offset`` (plafond documente a 10000 - au-dela, 400 explicite, jamais silencieux ; paginer par fenetre temporelle au-dela) |
+| ``load_data_api_positions_json`` | Data API | GET https://data-api.polymarket.com/positions | ``user`` (wallet, obligatoire) |
+| *(non charge par ce module - voir PIT ci-dessous)* | CLOB API | GET https://clob.polymarket.com/prices-history | ``market`` (token id), ``startTs``/``endTs`` (Unix, exclusifs de) ``interval``, ``fidelity`` (minutes) |
+
+Resolution (UMA Optimistic Oracle, documentation publique) : requete ->
+proposition (bond 750 USDC) -> fenetre de contestation de 2h -> si
+contestee, second arbitrage puis vote DVM si contestee une seconde fois.
+Pertinent pour ``Market.resolution_time`` (etape 5/6 de l'audit Phase M) :
+un marche n'est determinable au plus tot que 2h apres la proposition
+d'issue, jamais avant - mais cette regle generale n'a pas ete verifiee
+specifiquement sur un marche football reel (mecanisme de resolution
+sportive potentiellement distinct, cf. audit Phase M section 9).
 
 Pomet n'a pas d'export/API public documente identifie lors de cet audit -
 aucun chargeur Pomet n'est cree ici (voir l'audit, section 2 : aucune
