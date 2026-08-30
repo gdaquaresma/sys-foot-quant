@@ -27,7 +27,7 @@ section 2) :
 | ``load_gamma_events_json`` | Gamma API | GET https://gamma-api.polymarket.com/events | idem |
 | ``load_data_api_trades_json`` | Data API (public, sans authentification, ~1000 req/10s documente) | GET https://data-api.polymarket.com/trades | ``limit`` (defaut 100, max 500 documentes), ``offset`` (plafond documente a 10000 - au-dela, 400 explicite, jamais silencieux ; paginer par fenetre temporelle au-dela) |
 | ``load_data_api_positions_json`` | Data API | GET https://data-api.polymarket.com/positions | ``user`` (wallet, obligatoire) |
-| *(non charge par ce module - voir PIT ci-dessous)* | CLOB API | GET https://clob.polymarket.com/prices-history | ``market`` (token id), ``startTs``/``endTs`` (Unix, exclusifs de) ``interval``, ``fidelity`` (minutes) |
+| ``load_clob_prices_history_json`` | CLOB API | GET https://clob.polymarket.com/prices-history | ``market`` (token id), ``startTs``/``endTs`` (Unix, exclusifs de) ``interval``, ``fidelity`` (minutes) - **disponibilite non demontree pour un marche deja resolu, voir avertissement ci-dessous** |
 
 Resolution (UMA Optimistic Oracle, documentation publique) : requete ->
 proposition (bond 750 USDC) -> fenetre de contestation de 2h -> si
@@ -95,4 +95,20 @@ def load_data_api_positions_json(path: str | Path) -> list[dict]:
     (reconstruction depuis le journal de trades, filtre par timestamp)
     est PIT-sur. Ce chargeur reste utile uniquement pour un audit ponctuel
     de l'etat present, jamais pour une analyse historique."""
+    return _load_json_records(path)
+
+
+def load_clob_prices_history_json(path: str | Path) -> list[dict]:
+    """Charge un export local de la reponse CLOB API ``GET
+    /prices-history`` (liste de points ``{t, p}`` ou equivalent, un par
+    observation de prix). A passer a ``imports.parse_price_point``
+    (Phase N) pour normalisation.
+
+    RESERVE CRITIQUE NON RESOLUE (Phase N, docs/polymarket_data_feasibility_audit.md
+    section 7) : un signalement tiers non verifie indique que cet
+    endpoint pourrait ne renvoyer AUCUNE donnee a granularite fine pour un
+    marche DEJA RESOLU - precisement le cas d'usage recherche ici
+    (reconstruire le prix tel qu'il etait avant un match deja joue). Ce
+    chargeur ne fait QUE lire un fichier local deja obtenu - il ne peut ni
+    confirmer ni infirmer cette limite ; seul un export reel le pourra."""
     return _load_json_records(path)

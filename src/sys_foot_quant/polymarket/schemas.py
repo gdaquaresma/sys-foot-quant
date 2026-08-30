@@ -105,6 +105,24 @@ class TraderInformationAsOf:
 
 
 @dataclass(frozen=True)
+class PricePoint:
+    """Une observation de prix ponctuelle sur un marche (typiquement
+    ``CLOB /prices-history``, Phase N) - le point le plus incertain de
+    l'audit de faisabilite (docs/polymarket_data_feasibility_audit.md
+    section 7) : la disponibilite REELLE de cette donnee pour un marche
+    DEJA RESOLU n'est pas demontree. ``token_id`` distingue l'issue
+    cotee (une ligne O/U binaire a typiquement deux tokens, Yes/No) -
+    convention documentee publiquement, non verifiee ici."""
+
+    market_id: str
+    timestamp_utc: datetime
+    price: float
+    source: str
+    token_id: str | None = None
+    outcome: str | None = None
+
+
+@dataclass(frozen=True)
 class MarketMatchResult:
     """Resultat du rattachement etape 6 - jamais une correspondance
     forcee : soit un ``match_id`` unique, soit un code de raison explicite

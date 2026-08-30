@@ -5,6 +5,7 @@ import json
 import pytest
 
 from sys_foot_quant.polymarket.client import (
+    load_clob_prices_history_json,
     load_data_api_positions_json,
     load_data_api_trades_json,
     load_gamma_events_json,
@@ -35,6 +36,12 @@ def test_load_data_api_positions_json_reads_local_file(tmp_path) -> None:
     p = tmp_path / "positions.json"
     p.write_text(json.dumps([{"market": "m1"}]))
     assert load_data_api_positions_json(p) == [{"market": "m1"}]
+
+
+def test_load_clob_prices_history_json_reads_local_file(tmp_path) -> None:
+    p = tmp_path / "prices.json"
+    p.write_text(json.dumps([{"t": 1735689600, "p": 0.5}]))
+    assert load_clob_prices_history_json(p) == [{"t": 1735689600, "p": 0.5}]
 
 
 def test_missing_file_raises_explicit_error(tmp_path) -> None:

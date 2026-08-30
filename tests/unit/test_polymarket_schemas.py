@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sys_foot_quant.polymarket.schemas import (
     Market,
     MarketMatchResult,
+    PricePoint,
     Trade,
     Trader,
     TraderInformationAsOf,
@@ -65,6 +66,12 @@ def test_trader_information_as_of_bundles_trades_positions_and_stats() -> None:
     )
     assert info.trades_as_of == ()
     assert info.stats_as_of is stats
+
+
+def test_price_point_requires_only_core_fields_rest_optional() -> None:
+    p = PricePoint(market_id="m1", timestamp_utc=datetime(2025, 1, 1, tzinfo=timezone.utc), price=0.5, source="s")
+    assert p.token_id is None
+    assert p.outcome is None
 
 
 def test_market_match_result_carries_candidates_only_when_ambiguous() -> None:
