@@ -305,6 +305,32 @@ des la conception). **Le moteur final reste GELE**
 (`min_edge_threshold=None`, `BET` non active) ; aucun code modifie a
 l'occasion de cet audit.
 
+### Phase K - Elo pre-match (ClubElo), EN ATTENTE DE DONNEES (protocole verrouille, execution reelle BLOQUEE)
+
+`docs/elo_experiment_specification.md` verrouille le protocole complet
+(definition PIT du rating, `elo_diff`, matching, split 40/30/30 reutilise
+de la Phase D, modeles A/B/C/D avec controle de recalibration obligatoire
+des la conception - meme discipline que Phases F/G/H) pour tester si
+l'ecart de rating Elo pre-match (ClubElo) apporte une information
+incrementale sur Over 2.5. Primitives ecrites et testees (41 tests
+verts) : `data_engine/market_odds/elo_ratings.py` (parseur CSV + lookup
+PIT pur `elo_as_of`, propriete demontree que la fenetre `[From,To]` d'une
+date ne reflete jamais le match de ce jour-la), `elo_team_mapping.py`
+(mapping Football-Data -> ClubElo, **EBAUCHE NON VERIFIEE contre des
+donnees reelles**, bloque explicitement toute resolution hors test tant
+que `MAPPING_VERIFIED_AGAINST_REAL_DATA=False`), `elo_join.py` (jointure
+point-in-time isolee, jamais importee par `final_engine`), et
+`scripts/run_stage30_phase_k_elo_incremental_information.py`
+(regression logistique a offset, split walk-forward, grille de verdict -
+`main()` refuse explicitement de s'executer). **Blocage operationnel
+constate et signale, pas contourne** : cet environnement ne peut pas
+atteindre `clubelo.com`/`api.clubelo.com` (politique de sortie reseau de
+la session) - aucun fichier ClubElo reel n'a donc pu etre obtenu, et
+aucune execution reelle n'a eu lieu. **Aucun verdict n'est rendu.** Le
+moteur final reste GELE (`min_edge_threshold=None`, `BET` non active) ;
+aucun code de `final_engine` modifie. Suite a une decision separee de
+l'utilisateur (acces reseau accorde, ou fichiers fournis manuellement).
+
 ## 2.1 Synthese consolidee de la campagne experimentale E1 -> E16 (phase economique)
 
 La campagne experimentale E1 -> E16 (phase economique, resumee ligne par
