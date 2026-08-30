@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
 from sys_foot_quant.data_engine.market_odds.economic_dataset import MIN_TRAIN_MATCHES
 from sys_foot_quant.data_engine.market_odds.time_resolution import (
@@ -68,6 +69,34 @@ def insufficient_calibration_history_gate(
         metric="n_calibration_used",
         observed_value=n_calibration_used,
         threshold=min_matches,
+        failure_code=reason_codes.INSUFFICIENT_HISTORY if triggered else None,
+    )
+
+
+def unknown_team_gate(home_team_id: int, away_team_id: int, goals_train_df: pd.DataFrame) -> GateResult:
+    """Audit pre-production (2026-08) - une equipe jamais presente dans
+    ``goals_train_df`` (ni domicile ni exterieur) recoit, au Niveau A,
+    une prediction NEUTRE silencieuse (comportement DELIBERE et deja
+    teste de ``PoissonModel``/``DixonColesModel``, inchange ici) -
+    ``insufficient_data_gate`` ne verifie que la taille AGREGEE de
+    l'historique, jamais la presence de CES deux equipes precises. Ce
+    gate comble cet angle mort : sans historique du tout pour l'une des
+    deux equipes, la prediction ne peut pas etre distinguee d'une
+    prediction de « moyenne de la ligue » et ne doit jamais qualifier une
+    decision positive."""
+    if len(goals_train_df) == 0:
+        known_ids: set = set()
+    else:
+        known_ids = set(goals_train_df["home_team_id"]) | set(goals_train_df["away_team_id"])
+    unknown = [t for t in (home_team_id, away_team_id) if t not in known_ids]
+    triggered = bool(unknown)
+    return GateResult(
+        name="unknown_team_gate",
+        triggered=triggered,
+        reason="Une des deux equipes n'apparait dans aucun match de l'historique d'entrainement.",
+        metric="unknown_team_ids",
+        observed_value=unknown,
+        threshold="les deux equipes doivent avoir au moins un match dans l'historique",
         failure_code=reason_codes.INSUFFICIENT_HISTORY if triggered else None,
     )
 

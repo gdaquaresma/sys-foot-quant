@@ -168,6 +168,27 @@ def test_e14_is_never_applied_probability_in_biased_zone_stays_unmodified() -> N
     assert p_over_2_5 == pytest.approx(0.6405735336528743, abs=1e-6)
 
 
+def test_unknown_team_yields_no_bet_with_insufficient_history_code() -> None:
+    """Audit pre-production : une equipe jamais presente dans
+    goals_train_df ne doit jamais glisser a travers tous les gates de
+    qualite de donnees (`unknown_team_gate`, ajoute lors de l'audit)."""
+    output = run_match_decision(
+        match_id="m1",
+        competition="Liga",
+        season="2025/26",
+        kickoff_utc=_KICKOFF_WEDNESDAY,
+        home_team_id=999,
+        away_team_id=998,
+        goals_train_df=_goals_train_df(40, _KICKOFF_WEDNESDAY),
+        xg_train_df=None,
+        calibration_df_by_model={"poisson_simple": _calibration_df(40, _KICKOFF_WEDNESDAY)},
+        market_odds_over_2_5=1.9,
+        market_odds_under_2_5=2.0,
+    )
+    assert output.decision.decision == "NO_BET"
+    assert reason_codes.INSUFFICIENT_HISTORY in output.decision.decision_reason
+
+
 def test_control_models_are_computed_but_never_drive_the_decision() -> None:
     """dixon_coles/xg_model restent des modeles de CONTROLE - aucun
     ensemble, aucune ponderation, jamais utilises pour la decision

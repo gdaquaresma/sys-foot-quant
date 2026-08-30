@@ -65,7 +65,7 @@ niveau, jamais un monolithe :
 | `calibration.py` | B - Calibration | `calibrate_prediction()` - applique la correction scalaire E7/E8 (**VALIDEE SCIENTIFIQUEMENT**, principe non modifie) puis derive la distribution de buts ET les probabilites O/U d'une seule matrice reconstruite |
 | `pricing.py` | C - Pricing | `compute_fair_price()` - transformation deterministe `1/p`, aucune donnee de marche |
 | `market.py` | D - Market comparison | `compare_over_under_to_market()` - reutilise SANS MODIFICATION `market_engine.model_vs_market.compare_model_to_market` et `value_engine.edge.{edge,expected_value}` ; n'accepte QUE des cotes d'ouverture (aucune reference de code a `closing_odds_1x2_by_bookmaker`/`closing_over_under_2_5_by_bookmaker`, verifie par test AST) |
-| `gates.py` | E - Qualification | Gates scientifiques (`insufficient_data_gate`, `insufficient_calibration_history_gate`, `ambiguous_day_gate`, `incomplete_market_odds_gate`, `distribution_consistency_gate`, `calibration_zone_gate`, `discrimination_gate`) et operational gates (`OperationalThresholds` - **PARAMETRE OPERATIONNEL A VALIDER**, `min_edge_threshold` explicitement `None` par defaut, jamais fixe par E1-E16) |
+| `gates.py` | E - Qualification | Gates scientifiques (`insufficient_data_gate`, `unknown_team_gate` - audit pre-production 2026-08, comble l'angle mort d'une equipe totalement absente de l'historique malgre un volume agrege suffisant -, `insufficient_calibration_history_gate`, `ambiguous_day_gate`, `incomplete_market_odds_gate`, `distribution_consistency_gate`, `calibration_zone_gate`, `discrimination_gate`) et operational gates (`OperationalThresholds` - **PARAMETRE OPERATIONNEL A VALIDER**, `min_edge_threshold` explicitement `None` par defaut, jamais fixe par E1-E16) |
 | `decision.py` | F - Decision | `decide()` - `NO_BET` des qu'un gate se declenche, sinon `BET` (chemin de code atteignable mais jamais emprunte avec la configuration operationnelle par defaut du MVP, puisque `edge_threshold_gate` se declenche systematiquement tant que `min_edge_threshold` reste `None`) |
 | `orchestrator.py` | A->F | `run_match_decision()` - assemble les 6 niveaux, produit `MatchDecisionOutput` |
 | `types.py` | - | Dataclasses de sortie immuables par niveau (`ModelPrediction`, `CalibratedGoalDistribution`, `PricingResult`, `MarketComparisonResult`, `GateResult`, `QualificationResult`, `DecisionResult`, `MatchDecisionOutput`) |
@@ -82,6 +82,24 @@ identiques a `scripts/run_stage15_e7_total_goals_distribution.py`) et
 `attach_walk_forward_scale` - identiques a
 `scripts/run_stage16_e8_walk_forward_validation.py`, verifie par un test
 de non-regression numerique dedie).
+
+### Audit final pre-production (2026-08)
+
+`docs/final_preproduction_audit.md` documente l'audit complet du moteur
+final avant tout usage operationnel (15 sections : pipeline, synthese
+scientifique, modeles, calibration, Premier League, NO_BET exhaustif,
+absence de contournement BET, PIT/anti-fuite, checklist de donnees,
+robustesse operationnelle, tests, reproductibilite, securite,
+classification, verdict). Trois defauts de robustesse ont ete decouverts
+et corriges (workflow test-first) sans modifier aucun resultat E1->K ni
+aucun module scientifique fige : cote de marche NaN/infinie contournant
+`validate_odds` (`market_engine/overround.py`), `total_goals` corrompu
+dans l'historique de calibration contournant `fit_scale_correction_as_of`
+(filtrage supplementaire ajoute dans `final_engine/calibration.py`
+uniquement, jamais dans le module scientifique fige), et equipe totalement
+inconnue contournant tous les gates de qualite de donnees (`unknown_team_gate`,
+ci-dessus). Verdict : **PRET POUR LE PAPER TRADING / SHADOW MODE**, `BET`
+restant structurellement inatteignable (`min_edge_threshold=None`).
 
 ### Exclusions verifiees (Etape 19 de la Phase B)
 

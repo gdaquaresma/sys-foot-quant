@@ -11,6 +11,8 @@ consigne de conserver les validations de l'etape 2.
 
 from __future__ import annotations
 
+import math
+
 
 def hold_percentage(odds: dict[str, float]) -> float:
     """Marge du bookmaker : somme des probabilites implicites brutes - 1."""
@@ -30,5 +32,10 @@ def validate_odds(odds: dict[str, float]) -> None:
     if not odds:
         raise ValueError("Le marche ne peut pas etre vide.")
     for selection, o in odds.items():
-        if o <= 1.0:
-            raise ValueError(f"Cote invalide pour '{selection}' : {o} (doit etre > 1.0).")
+        # ``not (o > 1.0)`` (plutot que ``o <= 1.0``) capture aussi NaN, dont
+        # toute comparaison (y compris ``<=``) vaut False en Python - une
+        # cote NaN traversait donc silencieusement ce controle. ``inf`` est
+        # rejete separement : ``inf > 1.0`` est True mais ne represente
+        # aucune cote reelle.
+        if not (o > 1.0) or math.isinf(o):
+            raise ValueError(f"Cote invalide pour '{selection}' : {o} (doit etre > 1.0 et finie).")

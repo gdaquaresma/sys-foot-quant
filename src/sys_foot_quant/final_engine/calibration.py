@@ -60,9 +60,18 @@ def calibrate_prediction(
     Retourne ``goal_distribution=None``/``probabilities=None`` si
     l'historique de calibration est insuffisant (``scale_c`` non
     estimable) - jamais une distribution non corrigee presentee comme
-    equivalente a la distribution corrigee (section 7)."""
+    equivalente a la distribution corrigee (section 7).
+
+    Audit pre-production (2026-08) : ``fit_scale_correction_as_of`` (E7/E8,
+    portage verbatim, jamais modifie) ne filtre les lignes sans valeur que
+    sur ``{model}_lambda``/``{model}_mu``, jamais sur ``total_goals`` - un
+    ``total_goals`` corrompu (NaN) ferait glisser un ``scale_c`` NaN jusque
+    dans la decision. Ce filtrage supplementaire, purement defensif, vit
+    ici (couche production) et non dans le module scientifique fige."""
+    lam_col, mu_col = f"{model_prediction.model}_lambda", f"{model_prediction.model}_mu"
+    clean_calibration_df = calibration_df.dropna(subset=[lam_col, mu_col, "total_goals"])
     scale_c, n_calibration_used = fit_scale_correction_as_of(
-        calibration_df, model_prediction.model, as_of_time, min_matches=min_calibration_matches
+        clean_calibration_df, model_prediction.model, as_of_time, min_matches=min_calibration_matches
     )
     if scale_c is None:
         return CalibratedGoalDistribution(

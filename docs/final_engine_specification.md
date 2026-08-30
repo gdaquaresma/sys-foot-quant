@@ -522,7 +522,7 @@ par cause racine (plusieurs codes peuvent être présents simultanément —
 | `DISCRIMINATION_NOT_DEMONSTRATED` | `discrimination_gate` (Premier League ou championnat non audité) |
 | `EDGE_BELOW_THRESHOLD` | `raw_edge`/`price_edge` sous `min_edge_threshold` |
 | `UNCERTAINTY_TOO_HIGH` | Effectif de cellule sous `min_sample_size_cell` |
-| `MARKET_NOT_USABLE` | Cote de marché rejetée par `validate_odds` |
+| `MARKET_NOT_USABLE` | Réservé — non câblé aujourd'hui. Une cote rejetée par `validate_odds` produit en réalité `MARKET_DATA_UNAVAILABLE` (`incomplete_market_odds_gate`, audit pré-production 2026-08) |
 | `OTHER_BLOCKING_CONDITION` | Toute condition bloquante non couverte ci-dessus — jamais une sortie silencieuse sans code |
 
 ---

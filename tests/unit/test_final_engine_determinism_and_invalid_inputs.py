@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import math
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import pytest
 
+from sys_foot_quant.final_engine import reason_codes
 from sys_foot_quant.final_engine.orchestrator import run_match_decision
 
 
@@ -86,6 +88,45 @@ def test_missing_calibration_dataframe_for_primary_model_never_raises() -> None:
 def test_invalid_market_odds_below_one_never_raises_and_yields_no_bet() -> None:
     output = _run(market_odds_over_2_5=0.5, market_odds_under_2_5=2.0)
     assert output.decision.decision == "NO_BET"
+
+
+def test_nan_market_odds_never_raises_and_yields_no_bet() -> None:
+    """Audit pre-production : ``float('nan') <= 1.0`` vaut ``False`` en
+    Python, donc ``validate_odds`` laissait passer une cote NaN, qui se
+    propageait ensuite jusqu'a une ValueError non capturee plus loin dans
+    le pipeline (``market_fair_prob doit etre dans [0, 1]``) au lieu de
+    produire un NO_BET motive."""
+    output = _run(market_odds_over_2_5=math.nan, market_odds_under_2_5=2.0)
+    assert output.market is None
+    assert output.decision.decision == "NO_BET"
+    assert reason_codes.MARKET_DATA_UNAVAILABLE in output.decision.decision_reason
+
+
+def test_infinite_market_odds_never_raises_and_yields_no_bet() -> None:
+    """Meme defaut structurel que le NaN : ``float('inf') <= 1.0`` vaut
+    ``False``, donc une cote infinie contournait aussi ``validate_odds``."""
+    output = _run(market_odds_over_2_5=math.inf, market_odds_under_2_5=2.0)
+    assert output.market is None
+    assert output.decision.decision == "NO_BET"
+    assert reason_codes.MARKET_DATA_UNAVAILABLE in output.decision.decision_reason
+
+
+def test_corrupted_total_goals_in_calibration_history_never_raises_and_yields_no_bet() -> None:
+    """Audit pre-production : ``fit_scale_correction_as_of`` (E7/E8, portage
+    verbatim, jamais modifie) ne filtre les NaN que sur les colonnes
+    ``{model}_lambda``/``{model}_mu``, jamais sur ``total_goals`` - une
+    corruption de cette colonne (merge fautif, ligne malformee en amont)
+    produit un ``scale_c`` NaN qui se propage jusqu'a une ValueError non
+    capturee (``model_prob doit etre dans [0, 1]``). Le filtrage
+    supplementaire vit dans ``final_engine.calibration`` (couche
+    production), jamais dans le module scientifique fige."""
+    n = 40
+    corrupted_calibration_df = _calibration_df(n, _KICKOFF)
+    corrupted_calibration_df["total_goals"] = float("nan")
+    output = _run(calibration_df_by_model={"poisson_simple": corrupted_calibration_df})
+    assert output.calibration["poisson_simple"].probabilities is None
+    assert output.decision.decision == "NO_BET"
+    assert reason_codes.INSUFFICIENT_HISTORY in output.decision.decision_reason
 
 
 def test_ambiguous_kickoff_day_never_raises_and_yields_no_bet() -> None:

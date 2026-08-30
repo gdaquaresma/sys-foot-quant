@@ -32,6 +32,7 @@ from sys_foot_quant.final_engine.gates import (
     incomplete_market_odds_gate,
     insufficient_calibration_history_gate,
     insufficient_data_gate,
+    unknown_team_gate,
 )
 from sys_foot_quant.final_engine.market import compare_over_under_to_market
 from sys_foot_quant.final_engine.decision import decide
@@ -127,6 +128,7 @@ def run_match_decision(
     # qui ont leurs propres champs dedies.
     data_quality_gates = [
         insufficient_data_gate(predictions[PRIMARY_MODEL].n_train_matches if predictions[PRIMARY_MODEL] else 0),
+        unknown_team_gate(home_team_id, away_team_id, goals_train_df),
         insufficient_calibration_history_gate(primary_calibration.n_calibration_used),
         ambiguous_day_gate(kickoff_utc),
         incomplete_market_odds_gate(market_odds),

@@ -17,9 +17,11 @@ from sys_foot_quant.final_engine.gates import (
     incomplete_market_odds_gate,
     insufficient_calibration_history_gate,
     insufficient_data_gate,
+    unknown_team_gate,
 )
 from sys_foot_quant.football_model.goal_distribution import over_under_probs, total_goals_distribution
 from sys_foot_quant.football_model.scoring import score_matrix
+import pandas as pd
 
 
 def _dt(y: int, m: int, d: int) -> datetime:
@@ -38,6 +40,52 @@ def test_insufficient_data_gate_triggers_below_threshold() -> None:
 def test_insufficient_data_gate_does_not_trigger_at_or_above_threshold() -> None:
     assert not insufficient_data_gate(10, min_train_matches=10).triggered
     assert not insufficient_data_gate(50, min_train_matches=10).triggered
+
+
+# --- unknown_team_gate --------------------------------------------------------
+# Defaut d'audit final decouvert lors de l'audit pre-production : un
+# home_team_id/away_team_id jamais present dans goals_train_df recoit une
+# prediction NEUTRE silencieuse (football_model/poisson.py, comportement
+# deliberement teste depuis l'etape 2 - `test_unknown_team_falls_back_to_neutral_parameters`)
+# mais `insufficient_data_gate` ne verifie que la taille AGREGEE de
+# goals_train_df, jamais la presence de CES equipes precises - une equipe
+# totalement inconnue passait ainsi tous les gates de qualite de donnees.
+
+
+def _goals_df_teams_0_to_3(n: int = 40) -> pd.DataFrame:
+    return pd.DataFrame(
+        [{"home_team_id": i % 4, "away_team_id": (i + 1) % 4, "home_goals": 1, "away_goals": 1} for i in range(n)]
+    )
+
+
+def test_unknown_team_gate_triggers_when_home_team_never_appeared() -> None:
+    gate = unknown_team_gate(99, 1, _goals_df_teams_0_to_3())
+    assert gate.triggered
+    assert gate.failure_code == reason_codes.INSUFFICIENT_HISTORY
+
+
+def test_unknown_team_gate_triggers_when_away_team_never_appeared() -> None:
+    gate = unknown_team_gate(0, 99, _goals_df_teams_0_to_3())
+    assert gate.triggered
+    assert gate.failure_code == reason_codes.INSUFFICIENT_HISTORY
+
+
+def test_unknown_team_gate_does_not_trigger_when_both_teams_known() -> None:
+    assert not unknown_team_gate(0, 1, _goals_df_teams_0_to_3()).triggered
+
+
+def test_unknown_team_gate_recognizes_a_team_seen_only_as_away() -> None:
+    """Un identifiant vu uniquement comme visiteur (jamais comme domicile)
+    doit tout de meme etre considere connu - la connaissance porte sur
+    l'equipe, pas sur son role dans un match precis."""
+    df = pd.DataFrame([{"home_team_id": 0, "away_team_id": 1, "home_goals": 1, "away_goals": 1}] * 10)
+    assert not unknown_team_gate(1, 0, df).triggered
+
+
+def test_unknown_team_gate_triggers_on_empty_training_data() -> None:
+    empty = pd.DataFrame(columns=["home_team_id", "away_team_id", "home_goals", "away_goals"])
+    gate = unknown_team_gate(0, 1, empty)
+    assert gate.triggered
 
 
 # --- insufficient_calibration_history_gate ----------------------------------
