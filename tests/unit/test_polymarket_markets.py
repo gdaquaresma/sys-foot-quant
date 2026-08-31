@@ -54,3 +54,45 @@ def test_parse_markets_parses_a_list() -> None:
     raws = [{"id": "m1"}, {"id": "m2"}]
     markets = parse_markets(raws, source="polymarket_gamma_api")
     assert [m.market_id for m in markets] == ["m1", "m2"]
+
+
+def test_parse_market_reads_direct_outcome_key() -> None:
+    raw = {"id": "m1", "outcome": "Yes"}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome == "Yes"
+
+
+def test_parse_market_derives_outcome_from_resolved_outcome_prices() -> None:
+    raw = {"id": "m1", "outcomes": '["Yes", "No"]', "outcomePrices": '["1", "0"]'}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome == "Yes"
+
+
+def test_parse_market_derives_outcome_from_resolved_outcome_prices_other_side() -> None:
+    raw = {"id": "m1", "outcomes": '["Yes", "No"]', "outcomePrices": '["0", "1"]'}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome == "No"
+
+
+def test_parse_market_outcome_is_none_for_open_market_prices() -> None:
+    raw = {"id": "m1", "outcomes": '["Yes", "No"]', "outcomePrices": '["0.575", "0.425"]'}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome is None
+
+
+def test_parse_market_outcome_is_none_when_outcome_prices_missing() -> None:
+    raw = {"id": "m1", "outcomes": '["Yes", "No"]'}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome is None
+
+
+def test_parse_market_outcome_is_none_when_outcome_prices_malformed() -> None:
+    raw = {"id": "m1", "outcomes": '["Yes", "No"]', "outcomePrices": "not-json"}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome is None
+
+
+def test_parse_market_outcome_accepts_native_json_lists() -> None:
+    raw = {"id": "m1", "outcomes": ["Yes", "No"], "outcomePrices": ["1", "0"]}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.outcome == "Yes"
