@@ -18,6 +18,8 @@ def test_market_requires_only_id_and_source_rest_optional() -> None:
     assert m.event_id is None
     assert m.home_team is None
     assert m.resolution_time is None
+    assert m.condition_id is None
+    assert m.token_ids is None
 
 
 def test_trade_requires_core_fields_rest_optional() -> None:
@@ -32,6 +34,7 @@ def test_trade_requires_core_fields_rest_optional() -> None:
     )
     assert t.trade_id is None
     assert t.notional is None  # calcule au parsing (trades.py), pas ici
+    assert t.token_id is None
 
 
 def test_trader_never_carries_a_statistic_field() -> None:

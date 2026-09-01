@@ -24,6 +24,14 @@ _END_KEYS = ("endDate", "end_time")
 _RESOLUTION_KEYS = ("resolvedDate", "resolution_time", "closedTime")
 _EVENT_ID_KEYS = ("eventId", "event_id")
 _OUTCOME_KEYS = ("outcome", "resolved_outcome", "winning_outcome")
+# ``conditionId`` seul (PAS l'``id`` numerique Gamma) - verifie sur
+# donnees reelles que c'est cette valeur, et pas ``Market.market_id``
+# (cf. _ID_KEYS ci-dessus), que porte ``Trade.market_id`` sur un vrai
+# payload Data API. Cle separee de ``_ID_KEYS`` a dessein : ``market_id``
+# garde son comportement/priorite existants (retro-compatibilite fixtures
+# synthetiques), ``condition_id`` est une information additionnelle.
+_CONDITION_ID_KEYS = ("conditionId", "condition_id")
+_TOKEN_IDS_KEYS = ("clobTokenIds", "token_ids")
 
 
 def _first_present(raw: dict, keys: tuple[str, ...]) -> object | None:
@@ -102,6 +110,8 @@ def parse_market(raw: dict, source: str) -> Market:
     if outcome is None:
         outcome = _resolve_outcome_from_prices(raw)
 
+    token_ids_raw = _parse_json_string_list(_first_present(raw, _TOKEN_IDS_KEYS))
+
     return Market(
         market_id=str(market_id),
         source=source,
@@ -116,6 +126,8 @@ def parse_market(raw: dict, source: str) -> Market:
         start_time=_parse_datetime(_first_present(raw, _START_KEYS)),
         end_time=_parse_datetime(_first_present(raw, _END_KEYS)),
         resolution_time=_parse_datetime(_first_present(raw, _RESOLUTION_KEYS)),
+        condition_id=(str(v) if (v := _first_present(raw, _CONDITION_ID_KEYS)) is not None else None),
+        token_ids=(tuple(str(v) for v in token_ids_raw) if token_ids_raw is not None else None),
     )
 
 

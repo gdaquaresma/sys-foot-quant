@@ -41,6 +41,19 @@ class Market:
     start_time: datetime | None = None
     end_time: datetime | None = None
     resolution_time: datetime | None = None
+    # Identifiant on-chain du marche (Gamma ``conditionId``) - DISTINCT de
+    # ``market_id`` (identifiant Gamma numerique, ex. "3872870") : verifie
+    # sur donnees reelles que c'est ``conditionId``, jamais l'``id``
+    # numerique, que porte ``Trade.market_id`` sur un payload Data API reel
+    # (celui-ci n'a pas de champ "market"/"market_id"). C'est la cle de
+    # jointure a utiliser pour retrouver un ``Market`` a partir d'un
+    # ``Trade`` (cf. ``traders._index_markets_for_join``).
+    condition_id: str | None = None
+    # Tokens CLOB du marche (Gamma ``clobTokenIds``), quand connus - permet
+    # une verification de coherence best-effort avec ``Trade.token_id``
+    # (``traders.token_id_consistent_with_market``), jamais une condition
+    # bloquante faute de donnee.
+    token_ids: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +74,9 @@ class Trade:
     event_id: str | None = None
     outcome: str | None = None
     notional: float | None = None
+    # Token CLOB effectivement trade (Gamma/Data API ``asset``), quand
+    # connu - cf. ``Market.token_ids``.
+    token_id: str | None = None
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,7 @@ _MARKET_KEYS = ("market", "market_id", "conditionId")
 _TIMESTAMP_KEYS = ("timestamp", "timestamp_utc", "matchTime")
 _TRADE_ID_KEYS = ("id", "trade_id", "transactionHash")
 _EVENT_ID_KEYS = ("eventId", "event_id")
+_TOKEN_ID_KEYS = ("asset", "token_id")
 
 
 def _first_present(raw: dict, keys: tuple[str, ...]) -> object | None:
@@ -85,6 +86,7 @@ def parse_trade(raw: dict, source: str) -> Trade:
         event_id=(str(v) if (v := _first_present(raw, _EVENT_ID_KEYS)) is not None else None),
         outcome=raw.get("outcome"),
         notional=price_f * size_f,
+        token_id=(str(v) if (v := _first_present(raw, _TOKEN_ID_KEYS)) is not None else None),
     )
 
 

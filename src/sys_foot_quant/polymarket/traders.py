@@ -27,6 +27,40 @@ def _settlement_pnl_per_share(trade: Trade, winning_outcome: str) -> float:
     return sign * (settlement - trade.price)
 
 
+def _index_markets_for_join(markets: dict[str, Market]) -> dict[str, Market]:
+    """Construit l'index utilise pour retrouver un ``Market`` a partir de
+    ``Trade.market_id``, a partir des VALEURS de ``markets`` (jamais des
+    cles du dict fourni par l'appelant - un appelant metier n'a jamais
+    besoin de re-cleer son dict lui-meme).
+
+    Sur un vrai payload Data API, ``Trade.market_id`` contient en realite
+    le ``conditionId`` on-chain, jamais l'``id`` Gamma numerique que porte
+    ``Market.market_id`` (verifie sur donnees reelles, ex. trade
+    ``market_id="0xfe0e..."`` face a un marche Gamma ``id="3872870"``/
+    ``conditionId="0xfe0e..."``). Chaque marche est donc indexee a la fois
+    par son ``market_id`` (retro-compatibilite : anciennes fixtures/tests
+    ou les deux identifiants coincident deliberement) et par son
+    ``condition_id`` quand il est connu - un ``Trade.market_id`` egal a
+    l'un ou l'autre retrouve le meme ``Market``."""
+    index: dict[str, Market] = {}
+    for market in markets.values():
+        index[market.market_id] = market
+        if market.condition_id is not None:
+            index[market.condition_id] = market
+    return index
+
+
+def token_id_consistent_with_market(trade: Trade, market: Market) -> bool | None:
+    """Verification de coherence best-effort entre le token effectivement
+    trade (``Trade.token_id``) et les tokens du marche retrouve
+    (``Market.token_ids``) - ``None`` (non verifiable) des que l'une des
+    deux informations manque, jamais une condition bloquante faute de
+    donnee (la plupart des exports n'auront ni l'un ni l'autre)."""
+    if trade.token_id is None or market.token_ids is None:
+        return None
+    return trade.token_id in market.token_ids
+
+
 def compute_trader_stats_as_of(
     wallet_id: str,
     decision_time: datetime,
@@ -37,16 +71,21 @@ def compute_trader_stats_as_of(
     trades dont ``timestamp_utc < decision_time`` et des marches dont
     ``resolution_time`` est CONNU et lui-meme ``< decision_time`` (etape 5 :
     jamais une resolution non encore connue a `decision_time`). Sans
-    ``markets`` fourni, aucun trade ne peut etre considere resolu -
-    ``realized_pnl``/``win_rate`` restent ``None``, jamais une valeur par
-    defaut optimiste."""
+    ``markets`` fourni, ou si aucun ``Market`` ne correspond au
+    ``Trade.market_id`` (``_index_markets_for_join``), aucun trade ne peut
+    etre considere resolu - ``realized_pnl``/``win_rate`` restent
+    ``None``, jamais une valeur par defaut optimiste ni une exception pour
+    une jointure simplement absente (donnee reelle intrinsequement
+    incomplete, pas une erreur de programmation)."""
     trades_before = [t for t in trades if t.wallet_id == wallet_id and t.timestamp_utc < decision_time]
     volume = sum(t.notional or 0.0 for t in trades_before)
 
+    market_index = _index_markets_for_join(markets) if markets is not None else None
+
     resolved_pnls: list[float] = []
-    if markets is not None:
+    if market_index is not None:
         for t in trades_before:
-            market = markets.get(t.market_id)
+            market = market_index.get(t.market_id)
             if market is None or market.resolution_time is None or market.resolution_time >= decision_time:
                 continue
             if market.outcome is None or t.outcome is None:

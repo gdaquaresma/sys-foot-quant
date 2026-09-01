@@ -81,3 +81,23 @@ def test_deduplicate_trades_without_trade_id_uses_full_tuple() -> None:
     t2_different_price = parse_trade(_raw_trade(price=0.7), source="polymarket_data_api")
     result = deduplicate_trades([t1, t1_identical, t2_different_price])
     assert len(result) == 2
+
+
+def test_parse_trade_market_field_carries_the_condition_id_on_real_payloads() -> None:
+    """Un vrai trade Data API n'a pas de champ ``market``/``market_id`` -
+    seulement ``conditionId``, qui devient ``Trade.market_id``."""
+    raw = _raw_trade()
+    del raw["market"]
+    raw["conditionId"] = "0xfe0ebcbb0a3de954dcf08c7d1ef0c1333d94a89d7f0effa03591e1f7bb0a0ebc"
+    t = parse_trade(raw, source="polymarket_data_api")
+    assert t.market_id == "0xfe0ebcbb0a3de954dcf08c7d1ef0c1333d94a89d7f0effa03591e1f7bb0a0ebc"
+
+
+def test_parse_trade_reads_token_id_from_asset_field() -> None:
+    t = parse_trade(_raw_trade(asset="20076506283589584596606774059885927045312670930336534845403126008074405160402"), source="polymarket_data_api")
+    assert t.token_id == "20076506283589584596606774059885927045312670930336534845403126008074405160402"
+
+
+def test_parse_trade_token_id_is_none_when_absent() -> None:
+    t = parse_trade(_raw_trade(), source="polymarket_data_api")
+    assert t.token_id is None

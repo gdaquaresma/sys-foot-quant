@@ -96,3 +96,33 @@ def test_parse_market_outcome_accepts_native_json_lists() -> None:
     raw = {"id": "m1", "outcomes": ["Yes", "No"], "outcomePrices": ["1", "0"]}
     m = parse_market(raw, source="polymarket_gamma_api")
     assert m.outcome == "Yes"
+
+
+def test_parse_market_condition_id_is_distinct_from_gamma_numeric_id() -> None:
+    """Cas reel (Phillies-Diamondbacks) : ``id`` Gamma numerique et
+    ``conditionId`` on-chain sont deux identifiants differents -
+    ``market_id`` garde la priorite existante (``id``), ``condition_id``
+    porte la valeur separee necessaire a la jointure avec les trades."""
+    raw = {"id": "3872870", "conditionId": "0xfe0ebcbb0a3de954dcf08c7d1ef0c1333d94a89d7f0effa03591e1f7bb0a0ebc"}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.market_id == "3872870"
+    assert m.condition_id == "0xfe0ebcbb0a3de954dcf08c7d1ef0c1333d94a89d7f0effa03591e1f7bb0a0ebc"
+
+
+def test_parse_market_without_condition_id_key_leaves_it_none() -> None:
+    """Ancienne fixture synthetique sans ``conditionId`` distinct - ne doit
+    jamais inventer de valeur, ``condition_id`` reste ``None``."""
+    raw = {"id": "m1"}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.condition_id is None
+
+
+def test_parse_market_reads_token_ids_from_json_string() -> None:
+    raw = {"id": "3872870", "clobTokenIds": '["1111", "2222"]'}
+    m = parse_market(raw, source="polymarket_gamma_api")
+    assert m.token_ids == ("1111", "2222")
+
+
+def test_parse_market_token_ids_is_none_when_absent() -> None:
+    m = parse_market({"id": "m1"}, source="polymarket_gamma_api")
+    assert m.token_ids is None
