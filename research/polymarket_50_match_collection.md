@@ -43,6 +43,7 @@ même filtre neutre, aucune sélection sur les trades).
 | 80 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 120 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 160 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
+| 200 | fait | 40 | 7 nouveaux (moneyline complet) + 1 partiel exclu — voir note |
 
 **Note batch offset=40** : sur les 40 événements reçus, 37 se rattachent à
 des matchs déjà connus — soit les 5 événements moneyline eux-mêmes déjà
@@ -113,6 +114,27 @@ ultérieur si retrouvé. Aucun doublon avec les 15 matchs déjà présents dans
 le tableau Étape 2 (vérifié par event id/slug et noms d'équipes, pas par
 position de pagination).
 
+**Note batch offset=200** : sur les 40 événements reçus, 7 événements
+moneyline de base (3 marchés chacun, résolus) sont **nouveaux et complets** :
+Zira FK vs Neftchi Baku PFC (Azerbaijan Premier League — confirme le match
+partiel repéré à `offset=160`, l'événement moneyline de base id 928727
+apparaît bien dans ce batch), Deportivo Tachira vs Caracas FC, Portuguesa FC
+vs Metropolitanos FC, Carabobo FC vs Zamora FC, Deportivo La Guaira vs
+Estudiantes de Merida (les 4 précédents en Primera División, Venezuela),
+Jong AZ Alkmaar vs Jong FC Utrecht, Jong PSV Eindhoven vs Jong Ajax
+Amsterdam (Netherlands Eerste Divisie, équipes réserve "Jong"). Le reste des
+40 événements correspond à des sous-marchés hors périmètre (More Markets,
+Exact Score, First to Score, Halftime/Second Half Result) de ces mêmes
+matchs. 1 match **partiel exclu** dans ce batch : Al Duhail SC vs Al Arabi
+Doha SC (event parent id 927173 absent de ce batch — seuls 3
+sous-événements sont présents : ids 927535 More Markets, 927176 Exact
+Score, 927177 First Team to Score) — à rechercher dans un batch ultérieur si
+retrouvé. Le match partiel Vólos NPS vs PS Kalamáta (repéré à `offset=160`,
+event parent id 925706) n'apparaît toujours pas dans ce batch — reste en
+attente pour un batch ultérieur. Aucun doublon avec les 21 matchs déjà
+présents dans le tableau Étape 2 (vérifié par event id/slug et noms
+d'équipes, pas par position de pagination).
+
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
 | # | Match | Compétition | Date | Home | Away | Moneyline markets | conditionIds | Trades | Wallets | QC |
@@ -138,6 +160,13 @@ position de pagination).
 | 19 | Skala IF vs. 07 Vestur Sorvagur | Betri deildin (Îles Féroé) | 2026-08-30 (closed 2026-08-30T22:13:19Z) | Skala IF | 07 Vestur Sorvagur | 3 | Home: `0x9de3c4207e0355b9dd82a6d3fb45f9c00809454a37804822000849e3b1acec55` (No) · Draw: `0xc87c7bee7689c50ad1acc9c81fa4e0649e243b161a6d224dc3a6ce50bc1a6069` (Yes/résolu — match nul) · Away: `0x2219ebff271a5dcd70d9862e3b180d81b6f51498a81a1dfa48e2415773208572` (No) | — | — | event id 930231, slug `fro1-sif-ves-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
 | 20 | Westchester SC vs. Spokane Velocity FC | USL League One | 2026-08-29 (closed 2026-08-30T03:09:19Z) | Westchester SC | Spokane Velocity FC | 3 | Home: `0x5b189a719c56dcaf624316515a22ce5b585f3b3d9814d428c62f93fcda027fc5` (No) · Draw: `0x1821baa8ca5f316d64fc919debeafef3372fbc89b5bb27fc91a9913cd5a6bd7c` (No) · Away: `0x915dedf1042ad7d28b84719c63f8e1e06fc133347db375508917d3d9e669833d` (Yes/résolu Spokane Velocity FC) | — | — | event id 929891, slug `usl1-wes-spo-2026-08-29` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
 | 21 | Deportivo Maritimo vs. CD Cieza | Club Friendlies (Espagne) | 2026-08-29 (closed 2026-08-30T00:13:19Z) | Deportivo Maritimo | CD Cieza | 3 | Home: `0xa121089ff7fcc1d9101338ce33333561b4b13390215ec2232a1f1d98cf9362ea` (No) · Draw: `0xc61b741bee652524416f0b0caf3ecb4520a6f8a27d1f2083acae003b1cfb44fb` (No) · Away: `0x193a28b95dedf4d813977978b013a70f4560e2f54ad69e7ddf1ad60c33164645` (Yes/résolu CD Cieza) | — | — | event id 929084, slug `clf-dm-cie-2026-08-29` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 22 | Zira FK vs. Neftchi Baku PFC | Azerbaijan Premier League | 2026-08-30 (closed 2026-08-30T20:18:28Z) | Zira FK | Neftchi Baku PFC | 3 | Home: `0x6e25abea1bd55b22c6e427acb2e04991a442b0c37eca5e3e98bd86c5da488c49` (Yes/résolu Zira FK) · Draw: `0xce95af6bf5e0fe81779871574b0e26fe0abd4cbd712c0e772b0052177077574a` (No) · Away: `0x3e96716fc8424416d9b175ff6d2516d58d00b7a64d87062d5935e7266367770c` (No) | — | — | event id 928727, slug `aze1-zir-neb-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 23 | Deportivo Tachira vs. Caracas FC | Primera División (Venezuela) | 2026-08-30 (closed 2026-08-31T07:52:30Z) | Deportivo Tachira | Caracas FC | 3 | Home: `0x47875ac59f3c74906792301c8c1a52f7e71d760a555ef6ec5bac1f5e0d42eaf7` (No) · Draw: `0xe44fb5cf72953a974831974891ee5f138d4c89c59f1dc16117add0c8956ccffd` (Yes/résolu — match nul) · Away: `0x9e7f8cd830267450323da22c82aac0da87c4153586ae32530571ebcd96d0fadf` (No) | — | — | event id 928452, slug `ven1-tac-car-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 24 | Portuguesa FC vs. Metropolitanos FC | Primera División (Venezuela) | 2026-08-30 (closed 2026-08-31T07:55:58Z) | Portuguesa FC | Metropolitanos FC | 3 | Home: `0xda59976dcb5291fbfe1e1ead258f8318ef0006a772757ec8873cf0616e8fe1d0` (No) · Draw: `0x8c24f04a979a1928ca2b1e5b4c22069a97e54b3a80167c86fd854a18e2bae369` (Yes/résolu — match nul) · Away: `0x58ec3ccd59a3e73ed35bcecc19648737b0b8e77a8c61b95a899a6d9d57ff17a6` (No) | — | — | event id 928453, slug `ven1-por-met-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 25 | Carabobo FC vs. Zamora FC | Primera División (Venezuela) | 2026-08-30 (closed 2026-08-31T05:36:30Z) | Carabobo FC | Zamora FC | 3 | Home: `0x93d554f4d51509d00f6d2c53fb1323870287fa08e104fcefd6e47e34f000674f` (No) · Draw: `0x584fa0a75776b6ce9b552bf29e9a2e0ea08a90f92db004d95c180c8a7268858f` (Yes/résolu — match nul) · Away: `0x98674ca45943bdf42d43c8a953559851ac07b98a32ee17983ecbd0fa76ae78af` (No) | — | — | event id 928454, slug `ven1-cfc-zam-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 26 | Deportivo La Guaira vs. Estudiantes de Merida | Primera División (Venezuela) | 2026-08-30 (closed 2026-08-31T05:26:30Z) | Deportivo La Guaira | Estudiantes de Merida | 3 | Home: `0x2d05d21999c71dd4b829c9ba1e425860da91112648f07d80476780e1a52134a3` (No) · Draw: `0x40e97bef31491c152d1481ef63373b7ce4d036d7dea4cc8d5236068766275f71` (No) · Away: `0x02628955c99bb36022561c78515e0d57cb6e62e33606916fde224ff025faae5e` (Yes/résolu Estudiantes de Merida) | — | — | event id 928455, slug `ven1-dlg-edm-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 27 | Jong AZ Alkmaar vs. Jong FC Utrecht | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T22:33:04Z) | Jong AZ Alkmaar | Jong FC Utrecht | 3 | Home: `0x3dabf3d0e39c15d0c1b3499df73e0ac07df078e28c9f681fcacc3cc398b6f72c` (Yes/résolu Jong AZ Alkmaar) · Draw: `0x8d757eb9a9eaa9e92e048457960823b11cafb219b87b454f7eae330ec42fa3ab` (No) · Away: `0xc6cbffb402672c2a773ffd0ff13dd4a225c96fdccde2c21ee997da3f13f823ad` (No) | — | — | event id 927432, slug `ned2-az-utr-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 28 | Jong PSV Eindhoven vs. Jong Ajax Amsterdam | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T23:53:33Z) | Jong PSV Eindhoven | Jong Ajax Amsterdam | 3 | Home: `0x3aac440bc07a0ebf62c79244af147437f8945d84c36974f277a8dc1ebd3cf5dc` (No) · Draw: `0xe835490a22f096a55f701c1f3fe4aa16486040bc83d11e0513815e4cc11252bf` (Yes/résolu — match nul) · Away: `0xe24e12da7bbfaaa8309cc3539ea73b7ec4d5c09ec5eafb7a1a18db6da2285901` (No) | — | — | event id 927433, slug `ned2-psv-aja-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
 
 *(rempli au fur et à mesure — checkpoint obligatoire après ~25 matchs ;
 colonnes Trades/Wallets à compléter lors de la collecte des trades par
