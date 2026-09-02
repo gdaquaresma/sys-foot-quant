@@ -42,6 +42,7 @@ même filtre neutre, aucune sélection sur les trades).
 | 40 | fait | 40 | 3 nouveaux (moneyline complet) — voir note |
 | 80 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 120 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
+| 160 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 
 **Note batch offset=40** : sur les 40 événements reçus, 37 se rattachent à
 des matchs déjà connus — soit les 5 événements moneyline eux-mêmes déjà
@@ -91,6 +92,27 @@ rechercher dans un batch ultérieur si retrouvé. Aucun doublon avec les 9
 matchs déjà présents dans le tableau Étape 2 (vérifié par event id/slug et
 noms d'équipes, pas par position de pagination).
 
+**Note batch offset=160** : sur les 40 événements reçus, 6 événements
+moneyline de base (3 marchés chacun, résolus) sont **nouveaux et complets** :
+Hatta SC vs Sharjah FC (UAE Pro League — confirmant le premier match partiel
+repéré à `offset=120`), Shandong Taishan FC vs Shanghai Port FC (China FA
+Cup — confirmant le second match partiel repéré à `offset=120`), KI
+Klaksvik vs Eb/Streymur (Betri deildin, Îles Féroé), Skala IF vs 07 Vestur
+Sorvagur (Betri deildin, Îles Féroé), Westchester SC vs Spokane Velocity FC
+(USL League One), Deportivo Maritimo vs CD Cieza (Club Friendlies,
+Espagne). Le reste des 40 événements correspond à des sous-marchés hors
+périmètre (More Markets, Exact Score, First to Score, Halftime/Second Half
+Result, Total Corners) de ces mêmes matchs, plus 2 matchs **partiels
+exclus** dans ce batch : Vólos NPS vs PS Kalamáta (event parent id 925706
+absent de ce batch — seul le sous-événement "More Markets" id 929442 est
+présent) et Zira FK vs Neftchi Baku PFC (event parent id 928727 absent de
+ce batch — seuls 6 sous-événements sont présents : ids 928807 More Markets,
+928774 Total Corners, 928730 Exact Score, 928731 First to Score, 928729
+Second Half Result, 928728 Halftime Result) — à rechercher dans un batch
+ultérieur si retrouvé. Aucun doublon avec les 15 matchs déjà présents dans
+le tableau Étape 2 (vérifié par event id/slug et noms d'équipes, pas par
+position de pagination).
+
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
 | # | Match | Compétition | Date | Home | Away | Moneyline markets | conditionIds | Trades | Wallets | QC |
@@ -110,6 +132,12 @@ noms d'équipes, pas par position de pagination).
 | 13 | UCV FC vs. Deportivo Rayo Zuliano | Primera División (Venezuela) | 2026-08-31 (closed 2026-09-01T04:29:03Z) | UCV FC | Deportivo Rayo Zuliano | 3 | Home: `0xdb7a62813f6e0ca24c75a6d38c706ef6ddb2df02ae133b5e591aaabc8c01a09e` (Yes/résolu UCV FC) · Draw: `0xf50a39147cba185de4779c6a7103a2fcb2307de4599e0c76e46d75def15edbd5` (No) · Away: `0xe472a0bdf05955f8f40365bb3870af50497536f9279fd7364e88238af41a0c51` (No) | — | — | event id 931189, slug `ven1-ucv-drz-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset120_2026-09-02.json` |
 | 14 | FC Dinamo Batumi vs. FC Spaeri | Erovnuli Liga (Géorgie) | 2026-08-30 (closed 2026-08-30T22:47:01Z) | FC Dinamo Batumi | FC Spaeri | 3 | Home: `0x6e67647f9d2f4feaf86d14d77bb9a54a54d9c2336f8118d3912c30351561aa75` (Yes/résolu FC Dinamo Batumi) · Draw: `0xee60c67f2cd92a74ed5175791ae96d051552cf77af76c634c706226ccbc8f2c8` (No) · Away: `0xd1c4466acd0e5aa79aa29dd619e9d01f6dee03f9f90c017716cfc36581ac86e9` (No) | — | — | event id 931183, slug `geo1-bat-spa-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset120_2026-09-02.json` |
 | 15 | Union Omaha SC vs. New York Cosmos | USL League One | 2026-08-29 (closed 2026-08-30T04:05:33Z) | Union Omaha SC | New York Cosmos | 3 | Home: `0x7ed0001c4507a7855c750d288b607e09d47b09a91a825aba623dc19fd0a13b53` (No) · Draw: `0x010f56746335b15b1153da9cbcea8aa9b0e2767acf839b479cfb239f496cb185` (Yes/résolu — match nul) · Away: `0x08880c2729fa2c47d7b834423f77cb00219fbdbf6a8c0a75c5da57d0a72e742c` (No) | — | — | event id 930986, slug `usl1-uni-nyc-2026-08-29` ; source `events_neutral_soccer_tagslug_closed_offset120_2026-09-02.json` |
+| 16 | Hatta SC vs. Sharjah FC | UAE Pro League | 2026-08-30 (closed 2026-08-30T17:55:30Z) | Hatta SC | Sharjah FC | 3 | Home: `0xd5f3589b8c78c6ba901fd0115e2a9611e654a2fab3bbe50d2dcf9eb0be7a7a7e` (No) · Draw: `0xb3ccd4d659e0a24ac0d203b17e6ced4ebc805c3c22a5d66d1059b09705cb2c55` (No) · Away: `0xb25f5e7b6469bdc4d952251fa2c26a4553b936e36042f605836f60007bdd330c` (Yes/résolu Sharjah FC) | — | — | event id 930955, slug `uae1-hat-shj-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 17 | Shandong Taishan FC vs. Shanghai Port FC | China FA Cup | 2026-09-01 (closed 2026-09-01T17:29:28Z) | Shandong Taishan FC | Shanghai Port FC | 3 | Home: `0x60754e5dc2d13377fc799683f436ae12f35c0bb2a4ecf2cffed2398ed5928b47` (No) · Draw: `0x121471a352f42862cdc6fa49c3e95d81d4b8e3c6d24a729ecd0b2622cfa487ee` (No) · Away: `0xe50839434d169d9f05c1ab11a336bb50ee6b5bad79d0c69952e4125f072640e9` (Yes/résolu Shanghai Port FC) | — | — | event id 930896, slug `chfa-sht-shp-2026-09-01` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 18 | KI Klaksvik vs. Eb/Streymur | Betri deildin (Îles Féroé) | 2026-08-31 (closed 2026-08-31T21:42:01Z) | KI Klaksvik | Eb/Streymur | 3 | Home: `0x1818bc4ab8028daa0b27f2fa61b8121d3e712d6f2106400dfed13ab55d6d7ea5` (Yes/résolu KI Klaksvik) · Draw: `0x447577eef0068f0be320ecb17b93252377d98b20d90aa72a618ee3b6ac445599` (No) · Away: `0x3ba02c6b6a5c867bd43584597b2814597e1442e94ee516c91149f32b3fb03766` (No) | — | — | event id 930578, slug `fro1-ki-ebs-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 19 | Skala IF vs. 07 Vestur Sorvagur | Betri deildin (Îles Féroé) | 2026-08-30 (closed 2026-08-30T22:13:19Z) | Skala IF | 07 Vestur Sorvagur | 3 | Home: `0x9de3c4207e0355b9dd82a6d3fb45f9c00809454a37804822000849e3b1acec55` (No) · Draw: `0xc87c7bee7689c50ad1acc9c81fa4e0649e243b161a6d224dc3a6ce50bc1a6069` (Yes/résolu — match nul) · Away: `0x2219ebff271a5dcd70d9862e3b180d81b6f51498a81a1dfa48e2415773208572` (No) | — | — | event id 930231, slug `fro1-sif-ves-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 20 | Westchester SC vs. Spokane Velocity FC | USL League One | 2026-08-29 (closed 2026-08-30T03:09:19Z) | Westchester SC | Spokane Velocity FC | 3 | Home: `0x5b189a719c56dcaf624316515a22ce5b585f3b3d9814d428c62f93fcda027fc5` (No) · Draw: `0x1821baa8ca5f316d64fc919debeafef3372fbc89b5bb27fc91a9913cd5a6bd7c` (No) · Away: `0x915dedf1042ad7d28b84719c63f8e1e06fc133347db375508917d3d9e669833d` (Yes/résolu Spokane Velocity FC) | — | — | event id 929891, slug `usl1-wes-spo-2026-08-29` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
+| 21 | Deportivo Maritimo vs. CD Cieza | Club Friendlies (Espagne) | 2026-08-29 (closed 2026-08-30T00:13:19Z) | Deportivo Maritimo | CD Cieza | 3 | Home: `0xa121089ff7fcc1d9101338ce33333561b4b13390215ec2232a1f1d98cf9362ea` (No) · Draw: `0xc61b741bee652524416f0b0caf3ecb4520a6f8a27d1f2083acae003b1cfb44fb` (No) · Away: `0x193a28b95dedf4d813977978b013a70f4560e2f54ad69e7ddf1ad60c33164645` (Yes/résolu CD Cieza) | — | — | event id 929084, slug `clf-dm-cie-2026-08-29` ; source `events_neutral_soccer_tagslug_closed_offset160_2026-09-02.json` |
 
 *(rempli au fur et à mesure — checkpoint obligatoire après ~25 matchs ;
 colonnes Trades/Wallets à compléter lors de la collecte des trades par
