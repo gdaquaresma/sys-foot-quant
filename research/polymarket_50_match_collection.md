@@ -45,6 +45,7 @@ même filtre neutre, aucune sélection sur les trades).
 | 160 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 200 | fait | 40 | 7 nouveaux (moneyline complet) + 1 partiel exclu — voir note |
 | 240 | fait | 40 | 0 nouveau — chevauchement complet, voir note |
+| 280 | fait | 40 | 1 nouveau (moneyline complet) — voir note |
 
 **Note batch offset=40** : sur les 40 événements reçus, 37 se rattachent à
 des matchs déjà connus — soit les 5 événements moneyline eux-mêmes déjà
@@ -156,6 +157,24 @@ pagination en termes de matchs distincts couverts par tranche de 40
 Aucune modification du tableau Étape 2 pour ce batch — poursuite prévue à
 `offset=280`.
 
+**Note batch offset=280** : sur les 40 événements reçus, **7 événements
+moneyline de base** identifiés (id sans `parentEventId`, 3 marchés tous
+`sportsMarketType: "moneyline"`) : 932003 Sariyer SK vs. Pendikspor, 931998
+Trujillanos FC vs. Monagas SC, 931812 PFC Slavia Sofia vs. PFC Levski
+Sofia, 931189 UCV FC vs. Deportivo Rayo Zuliano, 931183 FC Dinamo Batumi
+vs. FC Spaeri, 930986 Union Omaha SC vs. New York Cosmos, 930955 Hatta SC
+vs. Sharjah FC. Six de ces sept correspondent à des matchs **déjà
+présents** dans le tableau Étape 2 (lignes 11 à 16) ; leur réapparition
+dans ce batch reflète le même phénomène de chevauchement que celui déjà
+documenté pour `offset=240` (arbres de sous-marchés plus profonds
+ralentissant la progression de la pagination en matchs distincts).
+**Un seul match nouveau** : PFC Slavia Sofia vs. PFC Levski Sofia
+(Bulgaria Parva Liga, event id 931812, slug `bul-sla-lev-2026-09-02`),
+ajouté au tableau Étape 2 en ligne 29. Aucun doublon avec les 28 matchs
+déjà présents (vérifié par event id/slug et noms d'équipes). Source :
+`events_neutral_soccer_tagslug_closed_offset280_2026-09-03.json`.
+Poursuite prévue à `offset=320`.
+
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
 | # | Match | Compétition | Date | Home | Away | Moneyline markets | conditionIds | Trades | Wallets | QC |
@@ -188,6 +207,7 @@ Aucune modification du tableau Étape 2 pour ce batch — poursuite prévue à
 | 26 | Deportivo La Guaira vs. Estudiantes de Merida | Primera División (Venezuela) | 2026-08-30 (closed 2026-08-31T05:26:30Z) | Deportivo La Guaira | Estudiantes de Merida | 3 | Home: `0x2d05d21999c71dd4b829c9ba1e425860da91112648f07d80476780e1a52134a3` (No) · Draw: `0x40e97bef31491c152d1481ef63373b7ce4d036d7dea4cc8d5236068766275f71` (No) · Away: `0x02628955c99bb36022561c78515e0d57cb6e62e33606916fde224ff025faae5e` (Yes/résolu Estudiantes de Merida) | — | — | event id 928455, slug `ven1-dlg-edm-2026-08-30` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
 | 27 | Jong AZ Alkmaar vs. Jong FC Utrecht | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T22:33:04Z) | Jong AZ Alkmaar | Jong FC Utrecht | 3 | Home: `0x3dabf3d0e39c15d0c1b3499df73e0ac07df078e28c9f681fcacc3cc398b6f72c` (Yes/résolu Jong AZ Alkmaar) · Draw: `0x8d757eb9a9eaa9e92e048457960823b11cafb219b87b454f7eae330ec42fa3ab` (No) · Away: `0xc6cbffb402672c2a773ffd0ff13dd4a225c96fdccde2c21ee997da3f13f823ad` (No) | — | — | event id 927432, slug `ned2-az-utr-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
 | 28 | Jong PSV Eindhoven vs. Jong Ajax Amsterdam | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T23:53:33Z) | Jong PSV Eindhoven | Jong Ajax Amsterdam | 3 | Home: `0x3aac440bc07a0ebf62c79244af147437f8945d84c36974f277a8dc1ebd3cf5dc` (No) · Draw: `0xe835490a22f096a55f701c1f3fe4aa16486040bc83d11e0513815e4cc11252bf` (Yes/résolu — match nul) · Away: `0xe24e12da7bbfaaa8309cc3539ea73b7ec4d5c09ec5eafb7a1a18db6da2285901` (No) | — | — | event id 927433, slug `ned2-psv-aja-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
+| 29 | PFC Slavia Sofia vs. PFC Levski Sofia | Bulgaria Parva Liga | 2026-09-02 (closed 2026-09-02T23:00:01Z) | PFC Slavia Sofia | PFC Levski Sofia | 3 | Home: `0xbb120e59cfadfa90fb3011f417c3cd99acdf3351e22875b6d58826f35045acf8` (No) · Draw: `0xb5680c484a0fa9f38175e058c7b3a63bcc87a01880697da0c892e8b07425aa6f` (No) · Away: `0xef337f0aa94567a97518692f8604dc957ea91ee1b59a0773b76edb52a98ed6f9` (Yes/résolu PFC Levski Sofia) | — | — | event id 931812, slug `bul-sla-lev-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset280_2026-09-03.json` |
 
 *(rempli au fur et à mesure — checkpoint obligatoire après ~25 matchs ;
 colonnes Trades/Wallets à compléter lors de la collecte des trades par
