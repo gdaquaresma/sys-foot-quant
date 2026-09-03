@@ -44,6 +44,7 @@ même filtre neutre, aucune sélection sur les trades).
 | 120 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 160 | fait | 40 | 6 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 | 200 | fait | 40 | 7 nouveaux (moneyline complet) + 1 partiel exclu — voir note |
+| 240 | fait | 40 | 0 nouveau — chevauchement complet, voir note |
 
 **Note batch offset=40** : sur les 40 événements reçus, 37 se rattachent à
 des matchs déjà connus — soit les 5 événements moneyline eux-mêmes déjà
@@ -134,6 +135,26 @@ event parent id 925706) n'apparaît toujours pas dans ce batch — reste en
 attente pour un batch ultérieur. Aucun doublon avec les 21 matchs déjà
 présents dans le tableau Étape 2 (vérifié par event id/slug et noms
 d'équipes, pas par position de pagination).
+
+**Note batch offset=240** : sur les 40 événements reçus, **0 événement
+moneyline de base nouveau**. Les 6 événements moneyline dont l'id apparaît
+dans ce batch (933806 LDU Quito vs. Mushuc Runa SC, 933460 Delfin SC vs. CD
+Tecnico Universitario, 932786 FC Zurich vs. Young Boys Bern, 932750
+Academia Puerto Cabello vs. Academia Anzoategui FC, 932457 FK Kapaz vs.
+Turan Tovuz, 932006 Boluspor vs. Ankara Keciorengucu) correspondent tous à
+des matchs **déjà présents** dans le tableau Étape 2 (lignes 5-10). Les 40
+événements du batch sont exclusivement des sous-événements hors périmètre
+(More Markets, Exact Score, First Team to Score, Halftime/Second Half
+Result, Total Corners) de ces mêmes 6 matchs plus Sariyer SK vs. Pendikspor
+(ligne 11, event parent id 932003 — absent de ce batch mais déjà tracké).
+Chevauchement total attendu : ces matchs ont accumulé des arbres de
+sous-marchés plus profonds (ex. Delfin SC et Academia Puerto Cabello ont
+chacun un "More Markets" à 33 sous-marchés, FC Zurich et FK Kapaz ont
+gagné un marché "Total Corners"), ce qui ralentit l'avancée de la
+pagination en termes de matchs distincts couverts par tranche de 40
+événements. Source : `events_neutral_soccer_tagslug_closed_offset240_2026-09-03.json`.
+Aucune modification du tableau Étape 2 pour ce batch — poursuite prévue à
+`offset=280`.
 
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
