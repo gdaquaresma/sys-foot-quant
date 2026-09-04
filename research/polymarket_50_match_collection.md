@@ -46,6 +46,7 @@ même filtre neutre, aucune sélection sur les trades).
 | 200 | fait | 40 | 7 nouveaux (moneyline complet) + 1 partiel exclu — voir note |
 | 240 | fait | 40 | 0 nouveau — chevauchement complet, voir note |
 | 280 | fait | 40 | 1 nouveau (moneyline complet) — voir note |
+| 320 | fait | 40 | 5 nouveaux (moneyline complet) + 2 partiels exclus — voir note |
 
 **Note batch offset=40** : sur les 40 événements reçus, 37 se rattachent à
 des matchs déjà connus — soit les 5 événements moneyline eux-mêmes déjà
@@ -175,6 +176,28 @@ déjà présents (vérifié par event id/slug et noms d'équipes). Source :
 `events_neutral_soccer_tagslug_closed_offset280_2026-09-03.json`.
 Poursuite prévue à `offset=320`.
 
+**Note batch offset=320** : sur les 40 événements reçus, **5 événements
+moneyline de base** identifiés (id sans `parentEventId`, 3 marchés tous
+`sportsMarketType: "moneyline"`) : 937608 Fatih Karagumruk Istanbul vs.
+Kayserispor (Turkey 1. Lig), 937595 St. Truidense VV vs. Union
+Saint-Gilloise (Belgium Pro League), 937472 RKS Rakow Czestochowa vs.
+Gornik Zabrze (Poland Ekstraklasa), 937118 FC Thun vs. Lausanne-Sport
+(Switzerland Super League), 937119 Grasshopper Club Zurich vs. FC St.
+Gallen 1879 (Switzerland Super League). Aucun doublon avec les 29 matchs
+déjà présents (vérifié par event id/slug et noms d'équipes) ; les 5 ont
+été ajoutés au tableau Étape 2 en lignes 30 à 34. **Deux candidats
+qatariens exclus** : Al Ahli Doha SC vs. Qatar SC (id 937090) et
+Al-Sailiya SC vs. Al Arabi Doha SC (id 937091), Qatar Stars League —
+seuls leurs sous-marchés (`-more-markets`, `-exact-score`,
+`-first-to-score`, `-second-half-result`, `-halftime-result`,
+référençant `parentEventId: 937090`/`937091`) sont présents dans ce
+batch ; l'événement de base moneyline lui-même est absent du payload.
+Conformément à la règle d'intégrité des données, ces deux matchs ne sont
+**pas** ajoutés au tableau (aucune donnée fabriquée) ; à récupérer si un
+futur batch de pagination expose l'événement de base. Source :
+`events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json`.
+Poursuite prévue à `offset=360`.
+
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
 | # | Match | Compétition | Date | Home | Away | Moneyline markets | conditionIds | Trades | Wallets | QC |
@@ -208,6 +231,11 @@ Poursuite prévue à `offset=320`.
 | 27 | Jong AZ Alkmaar vs. Jong FC Utrecht | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T22:33:04Z) | Jong AZ Alkmaar | Jong FC Utrecht | 3 | Home: `0x3dabf3d0e39c15d0c1b3499df73e0ac07df078e28c9f681fcacc3cc398b6f72c` (Yes/résolu Jong AZ Alkmaar) · Draw: `0x8d757eb9a9eaa9e92e048457960823b11cafb219b87b454f7eae330ec42fa3ab` (No) · Away: `0xc6cbffb402672c2a773ffd0ff13dd4a225c96fdccde2c21ee997da3f13f823ad` (No) | — | — | event id 927432, slug `ned2-az-utr-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
 | 28 | Jong PSV Eindhoven vs. Jong Ajax Amsterdam | Netherlands Eerste Divisie | 2026-08-31 (closed 2026-08-31T23:53:33Z) | Jong PSV Eindhoven | Jong Ajax Amsterdam | 3 | Home: `0x3aac440bc07a0ebf62c79244af147437f8945d84c36974f277a8dc1ebd3cf5dc` (No) · Draw: `0xe835490a22f096a55f701c1f3fe4aa16486040bc83d11e0513815e4cc11252bf` (Yes/résolu — match nul) · Away: `0xe24e12da7bbfaaa8309cc3539ea73b7ec4d5c09ec5eafb7a1a18db6da2285901` (No) | — | — | event id 927433, slug `ned2-psv-aja-2026-08-31` ; source `events_neutral_soccer_tagslug_closed_offset200_2026-09-02.json` |
 | 29 | PFC Slavia Sofia vs. PFC Levski Sofia | Bulgaria Parva Liga | 2026-09-02 (closed 2026-09-02T23:00:01Z) | PFC Slavia Sofia | PFC Levski Sofia | 3 | Home: `0xbb120e59cfadfa90fb3011f417c3cd99acdf3351e22875b6d58826f35045acf8` (No) · Draw: `0xb5680c484a0fa9f38175e058c7b3a63bcc87a01880697da0c892e8b07425aa6f` (No) · Away: `0xef337f0aa94567a97518692f8604dc957ea91ee1b59a0773b76edb52a98ed6f9` (Yes/résolu PFC Levski Sofia) | — | — | event id 931812, slug `bul-sla-lev-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset280_2026-09-03.json` |
+| 30 | Fatih Karagumruk Istanbul vs. Kayserispor | Turkey 1. Lig | 2026-09-02 (closed 2026-09-02T23:01:45Z) | Fatih Karagumruk Istanbul | Kayserispor | 3 | Home: `0x2b767ef81d80a244377394835ecb308284f69e3c19010c6fb8a1b7e66bace7e1` (No) · Draw: `0x729da5ffecc7ac8fb06fcc2c8bc1f7525fe3cd526dd4cea655deecd9465cb38f` (Yes/résolu — match nul) · Away: `0x0954a0b6fabd7dee391c14f2dc308c577bc197745a3c29ca1475cd20332bcdd3` (No) | — | — | event id 937608, slug `tur2-kar-kay-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
+| 31 | St. Truidense VV vs. Union Saint-Gilloise | Belgium Pro League | 2026-09-02 (closed 2026-09-02T22:24:49Z) | St. Truidense VV | Union Saint-Gilloise | 3 | Home: `0x3440a7b2feadf25570abad53000a6831aafe53bd43f152b970da611a505e2435` (No) · Draw: `0x4ebd4517c4b752cb08896556980d905979717b25077d5f5e3ee7cbae8b023eee` (No) · Away: `0x2864cc17fe35d19dac514b4b45bb1001ae35b2434d5529e72cdd88b80251e2d8` (Yes/résolu Union Saint-Gilloise) | — | — | event id 937595, slug `bel1-stt-usg-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
+| 32 | RKS Rakow Czestochowa vs. Gornik Zabrze | Poland Ekstraklasa | 2026-09-03 (closed 2026-09-03T22:51:06Z) | RKS Rakow Czestochowa | Gornik Zabrze | 3 | Home: `0x4c760892ad8c9464bc60339f1c01fe68552648b8f06c3cf0a699020df83ab78b` (No) · Draw: `0x520d1601f4b0922547849a5508d02fc855501a9c513b0610a123ec1c168fd3ac` (No) · Away: `0x6690e606d07b65b65c7d930ae2249148156334ef324d5734730cfe578af6f7d6` (Yes/résolu Gornik Zabrze) | — | — | event id 937472, slug `pol-cze-gor-2026-09-03` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
+| 33 | FC Thun vs. Lausanne-Sport | Switzerland Super League | 2026-09-02 (closed 2026-09-02T22:31:01Z) | FC Thun | Lausanne-Sport | 3 | Home: `0x79c846d46e0a95a50f0dcb098041596305d5e1b5119e42e42ee5198d019623d6` (No) · Draw: `0x85dc4dd49cc210a1b891ba95cc47c09efe6287f2c7cfde350411818a32d18119` (Yes/résolu — match nul) · Away: `0xcbddc81c7056eb9d5a223f3dd6f25e636e8edc8292bb408882f87953c682431f` (No) | — | — | event id 937118, slug `sui-thu-lau-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
+| 34 | Grasshopper Club Zurich vs. FC St. Gallen 1879 | Switzerland Super League | 2026-09-02 (closed 2026-09-02T22:23:19Z) | Grasshopper Club Zurich | FC St. Gallen 1879 | 3 | Home: `0xef718ed8fefdca7b97279a41a5a3d29afbebeb24d363d1334234e250a0352800` (Yes/résolu Grasshopper Club Zurich) · Draw: `0xe7edc4274e4560fd07b86c4ebb3243f8113f746a12d11e722936fa6000b6b891` (No) · Away: `0x6825c2f1c7265d82bc079dcd8585b18a37395c950acc829f352733c7d5d8ff5a` (No) | — | — | event id 937119, slug `sui-gcz-stg-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
 
 *(rempli au fur et à mesure — checkpoint obligatoire après ~25 matchs ;
 colonnes Trades/Wallets à compléter lors de la collecte des trades par
