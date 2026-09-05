@@ -1,3 +1,14 @@
+> **NOTE DE SUPERSESSION (2026-09-05) — DÉCISION FINALE DU PILOTE.**
+> La section 4 ci-dessous (« Décision : Option B — continuer la collecte
+> jusqu'à ~50 matchs ») est **supersédée**. Le pilote a arrêté la collecte à
+> **34 matchs** (8 matchs de plus que les 28 documentés ici, batches
+> `offset=280` et `offset=320`) ; l'objectif de ~50 matchs est **abandonné**.
+> Ce document reste valide comme trace du raisonnement au moment du
+> checkpoint à 28 matchs, mais son « action concrète recommandée » (reprendre
+> la pagination) **ne doit plus être exécutée**. Voir la décision finale et
+> l'Étape 4 (« Exploitation du panel à 34 matchs ») dans
+> `research/polymarket_50_match_collection.md`.
+
 # Checkpoint méthodologique — univers à 28 matchs (STOP obligatoire)
 
 Document décisionnel court, construit exclusivement à partir des données déjà

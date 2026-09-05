@@ -1,9 +1,25 @@
-# Collecte panel élargi — ~50 nouveaux matchs football (checkpoint à 25)
+# Collecte panel élargi — univers CLÔTURÉ à 34 matchs football
+
+> **DÉCISION FINALE DU PILOTE (2026-09-05) — SUPERSÈDE TOUT CE QUI PRÉCÈDE.**
+> La collecte de l'univers est **TERMINÉE à 34 matchs**. L'objectif initial
+> de ~50 matchs (« Option 2 » ci-dessous, et l'« Option B » du document
+> `polymarket_28_match_checkpoint.md` qui recommandait de poursuivre jusqu'à
+> ~50) est **ABANDONNÉ**. Aucun batch au-delà de `offset=320` ne doit être
+> récupéré. **Ne pas demander/fetcher `offset=360` ni tout offset ultérieur.**
+> Toute mention ci-dessous de « ~50 matchs », « checkpoint à 25 », « continuer
+> la collecte » ou « poursuite prévue à offset=X » est **historique** (trace
+> du raisonnement au moment où la décision a été prise) et **n'est plus
+> actionnable**. L'étape suivante du projet est l'exploitation des 34 matchs
+> déjà collectés (trades, reconstruction PIT, agrégation wallet × match,
+> récurrence, notionnel, test du signal trader vs marché) — **pas** de
+> nouvelle pagination Polymarket. Voir aussi la note de supersession en tête
+> de `research/polymarket_28_match_checkpoint.md`.
 
 Suite du protocole validé (`research/polymarket_universe_collection_report.md`,
 `research/polymarket_trader_depth_audit.md`, `research/polymarket_trader_signal_pilot.md`,
-`research/polymarket_trader_skill_methodology.md`). Décision : **Option 2** —
-collecter ~50 nouveaux matchs, checkpoint obligatoire à ~25.
+`research/polymarket_trader_skill_methodology.md`). Décision initiale (désormais
+supersédée, voir encadré ci-dessus) : **Option 2** — collecter ~50 nouveaux
+matchs, checkpoint obligatoire à ~25.
 
 **Règles rappelées (contraintes contraignantes pour toute cette collecte)** :
 - Sélection des matchs **avant** tout examen des trades — jamais en fonction
@@ -36,6 +52,9 @@ Le premier panel (7 matchs) provenait de `offset=0` (40 événements les plus
 récents au 2026-09-01, résolus, tag `soccer`). Pour obtenir des matchs
 **différents**, on avance `offset` par pas de 40 (événements plus anciens,
 même filtre neutre, aucune sélection sur les trades).
+
+**Pagination CLÔTURÉE à `offset=320`** (décision finale du 2026-09-05, voir
+encadré en tête de document). Aucune ligne au-delà de 320 ne sera ajoutée.
 
 | Batch offset | Statut | Événements reçus | Matchs distincts identifiés |
 |---|---|---|---|
@@ -196,7 +215,10 @@ Conformément à la règle d'intégrité des données, ces deux matchs ne sont
 **pas** ajoutés au tableau (aucune donnée fabriquée) ; à récupérer si un
 futur batch de pagination expose l'événement de base. Source :
 `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json`.
-Poursuite prévue à `offset=360`.
+~~Poursuite prévue à `offset=360`.~~ **Supersédé (2026-09-05) : collecte
+arrêtée à 34 matchs, `offset=320` est le dernier batch récupéré. Les deux
+candidats qatariens partiels ci-dessus restent définitivement exclus, ils
+ne seront pas recherchés dans un batch ultérieur.**
 
 ## Étape 2 — Matchs sélectionnés pour le nouveau panel
 
@@ -237,16 +259,22 @@ Poursuite prévue à `offset=360`.
 | 33 | FC Thun vs. Lausanne-Sport | Switzerland Super League | 2026-09-02 (closed 2026-09-02T22:31:01Z) | FC Thun | Lausanne-Sport | 3 | Home: `0x79c846d46e0a95a50f0dcb098041596305d5e1b5119e42e42ee5198d019623d6` (No) · Draw: `0x85dc4dd49cc210a1b891ba95cc47c09efe6287f2c7cfde350411818a32d18119` (Yes/résolu — match nul) · Away: `0xcbddc81c7056eb9d5a223f3dd6f25e636e8edc8292bb408882f87953c682431f` (No) | — | — | event id 937118, slug `sui-thu-lau-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
 | 34 | Grasshopper Club Zurich vs. FC St. Gallen 1879 | Switzerland Super League | 2026-09-02 (closed 2026-09-02T22:23:19Z) | Grasshopper Club Zurich | FC St. Gallen 1879 | 3 | Home: `0xef718ed8fefdca7b97279a41a5a3d29afbebeb24d363d1334234e250a0352800` (Yes/résolu Grasshopper Club Zurich) · Draw: `0xe7edc4274e4560fd07b86c4ebb3243f8113f746a12d11e722936fa6000b6b891` (No) · Away: `0x6825c2f1c7265d82bc079dcd8585b18a37395c950acc829f352733c7d5d8ff5a` (No) | — | — | event id 937119, slug `sui-gcz-stg-2026-09-02` ; source `events_neutral_soccer_tagslug_closed_offset320_2026-09-04.json` |
 
-*(rempli au fur et à mesure — checkpoint obligatoire après ~25 matchs ;
-colonnes Trades/Wallets à compléter lors de la collecte des trades par
-marché, étape suivante)*
+**Univers CLÔTURÉ à 34 matchs (34 lignes ci-dessus).** Aucune ligne
+supplémentaire ne sera ajoutée à ce tableau — voir décision finale en tête
+de document. Colonnes Trades/Wallets à compléter lors de la collecte des
+trades par marché sur ces 34 matchs (étape suivante, en cours).
 
 ## Étape 3 — Journal de collecte détaillé (QC par marché)
 
 Voir `research/polymarket_raw_exports/COLLECTION_LOG.md` (fichiers numérotés
 en continuité avec la collecte des 7 matchs initiaux, à partir du Fichier 31).
 
-## Checkpoint à ~25 matchs — à calculer, PAS de test de skill
+## Checkpoint à ~25 matchs — historique (dépassé par la décision finale)
+
+*Section conservée pour la trace méthodologique ; la liste ci-dessous décrivait
+les calculs prévus au moment du checkpoint à 25/28 matchs. Elle ne décrit plus
+l'étape courante — voir `research/polymarket_28_match_checkpoint.md` (note de
+supersession en tête) et la décision finale en tête de ce document.*
 
 - nombre de matchs, marchés, trades, wallets ;
 - wallet × match PIT ;
@@ -256,6 +284,21 @@ en continuité avec la collecte des 7 matchs initiaux, à partir du Fichier 31).
 - distribution des trades par observation ;
 - comparaison avec les 7 matchs initiaux.
 
-**STOP obligatoire à ce stade. Pas de classement, pas de P&L, pas de test de
+~~STOP obligatoire à ce stade. Pas de classement, pas de P&L, pas de test de
 compétence. Décision de continuer jusqu'à ~50 prise avec l'utilisateur après
-le checkpoint.**
+le checkpoint.~~ **Dépassé : la décision finale (voir tête de document) est
+d'arrêter la collecte à 34 matchs, pas de poursuite vers 50.**
+
+## Étape 4 — Exploitation du panel à 34 matchs (étape courante)
+
+Conformément à la décision finale, la suite du travail porte exclusivement
+sur les 34 matchs déjà collectés, sans nouvelle pagination :
+
+1. Collecte des trades par marché (3 marchés moneyline × 34 matchs) avec QC,
+   suivant la même méthodologie que les 21 marchés du seed
+   (`research/polymarket_raw_exports/COLLECTION_LOG.md`).
+2. Reconstruction PIT (point-in-time) des positions par wallet × match.
+3. Agrégation wallet × match sur l'ensemble du panel (seed + 34 matchs).
+4. Mesure de récurrence des wallets (≥2, ≥3, ≥5 matchs).
+5. Notionnel et activité par wallet.
+6. Test du signal trader comparé au marché (une fois la profondeur mesurée).
