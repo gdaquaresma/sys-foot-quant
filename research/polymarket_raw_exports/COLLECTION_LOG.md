@@ -837,3 +837,38 @@ panel.
 méthodologie QC que les Fichiers 1-30 (dédup par `transactionHash`,
 vérification `resolved_outcome`, période, `suntori`), en continuité de
 numérotation dans ce journal.
+
+---
+
+## Batch pilote de validation du pipeline (15 marchés / 5 matchs) — TERMINÉ (2026-09-09)
+
+Avant d'industrialiser la collecte sur les 102 marchés du panel à 34 matchs
+(34 × 3), un batch pilote de 5 matchs (15 marchés) a été exécuté pour
+valider le pipeline marché par marché : Umraniyespor vs Muglaspor (TUR2),
+LDU Quito vs Mushuc Runa (ECU1), Sariyer SK vs Pendikspor (TUR2), Shandong
+Taishan FC vs Shanghai Port FC (CHFA), Zira FK vs Neftchi Baku PFC (AZE1).
+
+Fichiers sauvegardés (`trades_market_<slug>_<outcome>_<conditionIdPrefix8>_offset0.json`) :
+`tur2-umr-mug_umr-win_0xa68b858c`, `tur2-umr-mug_draw_0xa615042b`,
+`tur2-umr-mug_mug-win_0xf6e20281`, `ecu1-ldu-mur_ldu-win_0xd07a02c2`,
+`ecu1-ldu-mur_draw_0xf318680f`, `ecu1-ldu-mur_mur-win_0x82bfb867`,
+`tur2-sar-pen_sar-win_0x62d35c53`, `tur2-sar-pen_draw_0xfcce7fc1`,
+`tur2-sar-pen_pen-win_0x7aa0c9b9`, `chfa-sht-shp_sht-win_0x60754e5d`,
+`chfa-sht-shp_draw_0x121471a3`, `chfa-sht-shp_shp-win_0xe5083943`,
+`aze1-zir-neb_zir-win_0x6e25abea`, `aze1-zir-neb_draw_0xce95af6b`,
+`aze1-zir-neb_neb-win_0x3e96716f`. Un marché hors séquence
+(`geo1-bat-spa_bat-win_0x6e67647f`, FC Dinamo Batumi — match #14 du panel)
+a été traité par erreur de croisement de messages, conservé (données
+réelles valides) mais exclu des totaux du batch.
+
+**Résultat agrégé (15 marchés)** : 1157 trades bruts, 1157 après dédup
+(0 doublon), 421 trades PIT (`timestamp < gameStartTime`), 413 BUY / 8
+SELL en PIT. **0 anomalie** sur l'ensemble : 0 conditionId incorrect, 0
+incohérence outcome↔asset, 0 prix hors [0,1], 0 taille ≤ 0, aucune
+pagination nécessaire (max 226 trades sur un marché, seuil de 1000 jamais
+atteint). Détail marché par marché et verdict complet dans
+`research/polymarket_pilot_batch_15_markets_report.md`.
+
+**Verdict** : pipeline validé, prêt pour l'industrialisation sur les 87
+marchés restants (29 matchs × 3), même méthodologie, sans modification du
+code ni du protocole QC.
