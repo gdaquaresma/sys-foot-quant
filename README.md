@@ -69,6 +69,48 @@ projections (`lambda`/`mu`), les probabilites calibrees E7/E8, le prix
 juste, et - si une cote est fournie et exploitable - la comparaison au
 marche (probabilite implicite, edge, EV).
 
+## Shadow Mode V1
+
+Protocole d'observation hors echantillon : chaque prediction pre-match est
+**figee** au moment de son enregistrement, puis reglee avec le resultat
+reel une fois le match joue. Aucune donnee posterieure au `decision_time`
+n'est jamais reinjectee dans la prediction, et le moteur n'est jamais
+reentraine/recalibre a partir des resultats observes - **ce sont des
+decisions simulees, aucun pari reel n'est execute**.
+
+```bash
+# 1. Enregistrer une prediction pre-match (execute exactement predict_match.py,
+#    puis journalise une copie immuable - relancer la meme commande ne cree
+#    jamais de doublon).
+uv run python scripts/predict_match.py \
+    --competition liga --season 2025_26 \
+    --home-team Barcelona --away-team "Atletico Madrid" \
+    --kickoff-utc 2026-06-20T20:00:00 \
+    --market-odds-over-2-5 1.80 --market-odds-under-2-5 2.00 \
+    --record-shadow
+# -> affiche le prediction_id a la fin du rapport.
+
+# 2. Une fois le match joue, regler l'observation avec le score reel
+#    (n'ajoute que le resultat, ne modifie jamais la prediction d'origine).
+uv run python scripts/settle_shadow.py \
+    --prediction-id <prediction_id> --home-goals 2 --away-goals 1
+
+# 3. Evaluer les observations reglees (Brier/log loss par modele, et
+#    uniquement si le systeme a produit des BET : win rate/ROI theoriques).
+uv run python scripts/evaluate_shadow.py
+```
+
+Journal : `research/shadow_mode/predictions.jsonl` (une ligne
+``prediction`` par observation, une ligne ``settlement`` ajoutee apres
+coup - jamais une reecriture). `--shadow-journal-path`/`--journal-path`
+permettent d'utiliser un autre fichier (utile pour des essais).
+
+`BET`/`NO_BET` : `NO_BET` est la sortie normale et attendue (voir section
+precedente) - un grand nombre de `NO_BET` observes est une observation
+valide du comportement actuel du systeme, pas un echec du protocole.
+Tant qu'aucune observation `BET` n'existe, `evaluate_shadow.py` l'indique
+explicitement plutot que d'inventer une strategie de mise a evaluer.
+
 ## Documentation
 
 - `docs/architecture.md` : architecture technique complete et plan de developpement.

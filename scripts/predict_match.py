@@ -79,6 +79,8 @@ from sys_foot_quant.data_engine.market_odds.team_mapping import resolve_understa
 from sys_foot_quant.final_engine.orchestrator import DECISION_OFFSET_HOURS, run_match_decision  # noqa: E402
 from sys_foot_quant.final_engine.types import MatchDecisionOutput  # noqa: E402
 from sys_foot_quant.market_engine.overround import validate_odds  # noqa: E402
+from sys_foot_quant.shadow_mode.journal import DEFAULT_JOURNAL_PATH as SHADOW_DEFAULT_JOURNAL_PATH  # noqa: E402
+from sys_foot_quant.shadow_mode.journal import record_prediction as record_shadow_prediction  # noqa: E402
 
 app = typer.Typer(add_completion=False)
 
@@ -386,6 +388,14 @@ def main(
     decision_offset_hours: float = typer.Option(
         DECISION_OFFSET_HOURS, "--decision-offset-hours", help="Identique a final_engine.orchestrator.DECISION_OFFSET_HOURS."
     ),
+    record_shadow: bool = typer.Option(
+        False,
+        "--record-shadow",
+        help="Enregistre une copie immuable de cette decision dans le journal Shadow Mode (voir shadow_mode.journal).",
+    ),
+    shadow_journal_path: Path = typer.Option(
+        SHADOW_DEFAULT_JOURNAL_PATH, "--shadow-journal-path", help="Chemin du journal Shadow Mode (--record-shadow uniquement)."
+    ),
 ) -> None:
     try:
         kickoff = parse_kickoff_utc(kickoff_utc)
@@ -404,6 +414,28 @@ def main(
         raise typer.Exit(code=1) from None
 
     typer.echo(format_decision_report(output))
+
+    if record_shadow:
+        # Pipeline R3 DEJA execute ci-dessus (``output``) - ce bloc ne fait
+        # que journaliser une copie immuable, jamais un second appel au
+        # moteur ni une modification de ``output``.
+        record, already_existed = record_shadow_prediction(
+            output,
+            competition=competition,
+            season=season,
+            home_team=home_team,
+            away_team=away_team,
+            kickoff_utc=kickoff,
+            decision_offset_hours=decision_offset_hours,
+            market_odds_over_2_5=market_odds["Over"] if market_odds else None,
+            market_odds_under_2_5=market_odds["Under"] if market_odds else None,
+            journal_path=shadow_journal_path,
+        )
+        typer.echo("")
+        if already_existed:
+            typer.echo(f"Shadow Mode : observation deja enregistree, aucun doublon cree (prediction_id={record['prediction_id']}).")
+        else:
+            typer.echo(f"Shadow Mode : observation enregistree (prediction_id={record['prediction_id']}, status={record['status']}).")
 
 
 if __name__ == "__main__":
