@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 from sys_foot_quant.final_engine.types import (
     CalibratedGoalDistribution,
     DecisionResult,
+    GateResult,
     MatchDecisionOutput,
     ModelPrediction,
     PricingResult,
@@ -178,7 +179,21 @@ def _minimal_no_bet_output(predict_match) -> MatchDecisionOutput:
             calibration_status={2.5: "OK"},
             discrimination_status="DEMONTREE",
             data_quality=["OK"],
-            scientific_gates=[],
+            # incomplete_market_odds_gate fait TOUJOURS partie des
+            # data_quality_gates produits par l'orchestrateur (INCHANGE),
+            # meme non declenche - reproduit ici fidelement pour que le
+            # fixture reflete une vraie sortie moteur.
+            scientific_gates=[
+                GateResult(
+                    name="incomplete_market_odds_gate",
+                    triggered=True,
+                    reason="Aucune cote de marche disponible a decision_time.",
+                    metric="market_odds",
+                    observed_value=None,
+                    threshold="cote complete requise",
+                    failure_code="MARKET_DATA_UNAVAILABLE",
+                )
+            ],
             operational_gates=[],
         ),
         decision=DecisionResult(decision="NO_BET", decision_reason=["MARKET_DATA_UNAVAILABLE"]),

@@ -329,7 +329,22 @@ def format_decision_report(output: MatchDecisionOutput) -> str:
     lines.append("")
     lines.append("--- Niveau D : Comparaison au marche (Over/Under 2.5, cote d'ouverture) ---")
     if output.market is None:
-        lines.append("  Aucune cote de marche fournie ou valide (MARKET_DATA_UNAVAILABLE).")
+        # ``output.market`` est None soit parce qu'aucune cote valide n'a
+        # ete transmise (incomplete_market_odds_gate declenche), soit parce
+        # que le Niveau B n'a produit aucune probabilite calibree (cote
+        # valide mais Niveau D non atteignable) - distingue les deux sans
+        # rien recalculer, a partir du gate deja produit par le moteur.
+        odds_gate = next(
+            (g for g in output.qualification.scientific_gates if g.name == "incomplete_market_odds_gate"), None
+        )
+        if odds_gate is not None and odds_gate.triggered:
+            lines.append(f"  Aucune cote de marche exploitable (MARKET_DATA_UNAVAILABLE) : {odds_gate.reason}")
+        else:
+            lines.append(
+                "  Cote de marche fournie et valide, mais non exploitable : le Niveau B "
+                "(calibration E7/E8) n'a produit aucune probabilite (historique de calibration "
+                "insuffisant - voir Niveau B/C ci-dessus)."
+            )
     else:
         m = output.market
         lines.append(f"  Cote marche          : Over={m.market_odds['Over']} Under={m.market_odds['Under']}")
