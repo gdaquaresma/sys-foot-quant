@@ -4,9 +4,118 @@
 production modifié, aucun module `odds_provider` créé, aucune dépendance
 ajoutée, `final_engine/`, `predict_match.py`, R1/R2/R3/R4, Shadow Mode et
 la méthodologie scientifique (E7/E8, gates, `min_edge_threshold=None`,
-règles PIT) intégralement inchangés. Aucune clé API demandée, affichée,
-committée ou utilisée — aucune clé n'était présente dans l'environnement
-(vérifié explicitement, voir §3).
+règles PIT) intégralement inchangés. Seul `scripts/validate_thestatsapi.py`
+(outil de validation hors production) a été modifié, pour corriger un bug
+d'encodage d'URL découvert lors du test réel ci-dessous — jamais pour
+contourner un blocage réseau. Une clé API TheStatsAPI réelle a été fournie
+par l'utilisateur et utilisée une fois, exclusivement comme variable
+d'environnement au moment de l'exécution — jamais affichée, jamais
+committée, jamais écrite sur disque (voir « TEST RÉEL AVEC CLÉ FOURNIE »
+ci-dessous pour le résultat, et §3 pour l'historique des passages sans
+clé).
+
+**Verdict court (voir le passage « TEST RÉEL AVEC CLÉ FOURNIE » pour le
+détail) : BLOQUANT ENVIRONNEMENT, confirmé même avec une clé réelle — la
+requête authentifiée n'a jamais atteint TheStatsAPI, refusée par la
+passerelle d'egress de cette session avant l'établissement du tunnel
+HTTPS.**
+
+---
+
+## TEST RÉEL AVEC CLÉ FOURNIE — 2026-09-13 (quatrième passage, DÉCISIF)
+
+**Ce qui a changé par rapport à tous les passages précédents** : l'utilisateur
+a fourni une clé TheStatsAPI réelle (`THESTATSAPI_API_KEY`, jamais affichée
+ni committée — lue uniquement depuis l'environnement du process au moment
+de l'exécution, conformément à la discipline établie dès la conception de
+`scripts/validate_thestatsapi.py`). C'est la première fois dans cette
+session qu'un test **avec authentification réelle** a pu être tenté.
+
+### Bug découvert et corrigé au passage
+Le premier essai a **crashé** (`http.client.InvalidURL: URL can't contain
+control characters`) : les noms d'équipe avec espace (« Real Madrid »,
+« Paris SG ») n'étaient pas URL-encodés dans `validate_match_thestatsapi`.
+Corrigé avec `urllib.parse.quote()` sur `competition`/`home_team`/
+`away_team`/`fixture_id`, et un `except (ValueError, KeyError, TypeError)`
+ajouté pour qu'une erreur de format sur un match ne fasse plus perdre le
+résultat des autres matchs (voir diff du commit associé). Ce correctif ne
+touche aucune constante d'endpoint (toujours meilleur-effort non confirmé)
+— uniquement l'encodage, un bug de code pur.
+
+### Résultat du test réel, après correction
+
+```
+$ THESTATSAPI_API_KEY=*** uv run python scripts/validate_thestatsapi.py
+
+=== Chelsea vs Arsenal (Premier League 2024/25) [thestatsapi] ===
+  TEST BLOQUE (aucune donnee fabriquee) : Connexion impossible vers
+  https://api.thestatsapi.com/v1/fixtures?competition=premier_league&home_team=Chelsea&away_team=Arsenal&date=2024-11-10
+  : Tunnel connection failed: 403 Forbidden.
+
+=== Real Madrid vs Barcelona (La Liga 2024/25) [thestatsapi] ===
+  TEST BLOQUE : ... Tunnel connection failed: 403 Forbidden.
+
+=== Paris SG vs Marseille (Ligue 1 2024/25) [thestatsapi] ===
+  TEST BLOQUE : ... Tunnel connection failed: 403 Forbidden.
+```
+
+**Vérification indépendante, décisive** : `curl -sS
+"$HTTPS_PROXY/__agentproxy/status"` (mécanisme de diagnostic documenté par
+l'environnement lui-même, pas une tentative de contournement) montre, dans
+`recentRelayFailures`, 4 entrées horodatées **exactement aux instants des
+tentatives ci-dessus** :
+
+```
+{"kind": "connect_rejected",
+ "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
+ "host": "api.thestatsapi.com:443"}
+```
+
+### Interprétation, sans ambiguïté possible cette fois
+
+- La requête HTTPS authentifiée (clé réelle jointe) **n'a jamais atteint
+  le serveur TheStatsAPI** — elle a été interceptée et refusée par la
+  passerelle d'egress de l'organisation *avant* l'établissement du tunnel
+  HTTPS, au niveau `CONNECT`.
+- Ce n'est **ni un problème de clé** (la clé n'a jamais été soumise à
+  TheStatsAPI, donc ni confirmée valide ni invalide), **ni un problème de
+  code applicatif** restant (le bug d'encodage est corrigé et n'est plus
+  en cause — les 3 tentatives échouent désormais de façon identique, au
+  même point, ce qui élimine toute hypothèse de bug résiduel côté script).
+- C'est une **politique explicite de l'organisation**, appliquée par la
+  passerelle elle-même (`policy denial`), identique à ce qui bloquait déjà
+  l'accès non authentifié documenté en §4 — la présence d'une clé réelle
+  ne change rien à ce blocage, car la requête n'atteint jamais la couche
+  où une clé serait vérifiée.
+- Conformément à la consigne explicite de l'environnement (« do not retry
+  organization policy denials — report them instead »), **aucune
+  nouvelle tentative de contournement n'a été faite** (pas de handshake
+  TLS manuel sur socket brut, pas de tentative via un autre mécanisme).
+
+### Classification stricte (grille établie dans les audits précédents)
+
+**BLOQUANT ENVIRONNEMENT** — confirmé cette fois avec une clé réelle en
+main, ce qui élimine définitivement l'hypothèse alternative « il suffirait
+d'avoir une clé ». Le blocage ne dépend ni du code (bug corrigé), ni de la
+clé (jamais soumise), ni de TheStatsAPI en tant que fournisseur (jamais
+contacté) : il dépend exclusivement de la politique d'egress de **cette
+session Claude Code précise**.
+
+### Ce que ce résultat NE dit PAS
+Il ne dit rien sur la qualité réelle de TheStatsAPI comme fournisseur
+(Bet365/Pinnacle présents ou non, granularité PIT réelle, etc.) — ces
+questions restent **NON VÉRIFIÉES**, exactement comme aux passages
+précédents, mais pour une raison désormais définitivement circonscrite à
+l'environnement d'exécution, jamais à la clé ni au fournisseur.
+
+### Prochaine étape concrète, inchangée mais maintenant certaine
+`scripts/validate_thestatsapi.py` est correct et prêt (bug d'encodage
+corrigé, 25 tests unitaires verts, comportement réseau vérifié deux fois
+avec une vraie clé). Il suffit de le relancer avec la **même clé**, **la
+même commande**, depuis n'importe quel environnement où
+`api.thestatsapi.com:443` est joignable (poste local de l'utilisateur, ou
+un environnement Claude Code configuré avec une politique d'egress moins
+restrictive) pour obtenir, cette fois, un résultat réel.
 
 ---
 

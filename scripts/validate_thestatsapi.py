@@ -56,6 +56,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 # ---------------------------------------------------------------------------
@@ -343,11 +344,14 @@ def validate_match_thestatsapi(match: ReferenceMatch, api_key: str) -> MatchVali
     result = MatchValidationResult(match=match, provider="thestatsapi")
     try:
         # Etape A/B/C (identification) - endpoint de recherche, MEILLEUR EFFORT NON CONFIRME.
+        # quote() est indispensable : les noms d'equipe reels contiennent des
+        # espaces ("Real Madrid") qui cassent une URL non encodee (observe
+        # reellement lors du premier passage - http.client.InvalidURL).
         search_url = (
             f"{THESTATSAPI_BASE_URL}/fixtures"
-            f"?competition={match.competition}"
-            f"&home_team={match.home_team}"
-            f"&away_team={match.away_team}"
+            f"?competition={quote(match.competition)}"
+            f"&home_team={quote(match.home_team)}"
+            f"&away_team={quote(match.away_team)}"
             f"&date={match.kickoff_utc.date().isoformat()}"
         )
         fixture_response = _fetch_json(search_url, api_key)
@@ -359,11 +363,17 @@ def validate_match_thestatsapi(match: ReferenceMatch, api_key: str) -> MatchVali
             raise ValidationBlockedError("Fixture trouve mais sans identifiant exploitable (id/fixture_id absent).")
 
         # Etape D-K (historique de cotes).
-        odds_url = f"{THESTATSAPI_BASE_URL}/odds/historical?fixture_id={fixture_id}"
+        odds_url = f"{THESTATSAPI_BASE_URL}/odds/historical?fixture_id={quote(str(fixture_id))}"
         odds_response = _fetch_json(odds_url, api_key)
         result.snapshots = parse_thestatsapi_odds_response(odds_response)
     except ValidationBlockedError as exc:
         result.error = str(exc)
+        return result
+    except (ValueError, KeyError, TypeError) as exc:
+        # Erreur de format/URL/reponse inattendue (ex. InvalidURL) - rapportee
+        # comme un blocage explicite plutot que de faire planter tout le
+        # script et perdre les resultats deja obtenus pour d'autres matchs.
+        result.error = f"Erreur inattendue (format/URL) : {exc}"
         return result
 
     result.granularity_diagnosis = diagnose_pit_granularity(result.snapshots, match.kickoff_utc)
@@ -392,6 +402,9 @@ def validate_match_the_odds_api(match: ReferenceMatch, api_key: str) -> MatchVal
         result.snapshots = all_snapshots
     except ValidationBlockedError as exc:
         result.error = str(exc)
+        return result
+    except (ValueError, KeyError, TypeError) as exc:
+        result.error = f"Erreur inattendue (format/URL) : {exc}"
         return result
 
     result.granularity_diagnosis = diagnose_pit_granularity(result.snapshots, match.kickoff_utc)
