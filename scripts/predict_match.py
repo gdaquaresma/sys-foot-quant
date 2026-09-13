@@ -18,7 +18,13 @@ reellement futur), une "recuperation automatique" serait donc soit
 inutilisable pour le cas d'usage vise (match futur), soit une nouvelle
 couche fragile pour le seul cas d'un match deja joue - la cote est donc
 TOUJOURS un parametre CLI explicite (``--market-odds-over-2-5``/
-``--market-odds-under-2-5``), jamais une valeur allee chercher seule.
+``--market-odds-under-2-5``, ou ``--odds-snapshot-file`` - voir
+``snapshot_engine``), jamais une valeur allee chercher seule. Aucun
+fournisseur externe : ``--odds-snapshot-file`` encapsule une saisie
+MANUELLE structuree (voir ``research/free_historical_odds_sources.md``
+pour l'abandon de la recherche d'un fournisseur PIT externe), avec
+``decision_time = capture_timestamp`` genere par le systeme au moment
+de l'appel - jamais une valeur fournie par l'utilisateur.
 
 Decoupage (competition, saison) -> fichier IDENTIQUE a
 ``scripts/run_stage8_diagnostic_total_goals_over_under.py`` (``_SEASONS``)
@@ -47,6 +53,13 @@ Sans cote de marche (mode projection seule, Niveaux A-C uniquement) :
         --competition liga --season 2024_25 \\
         --home-team "Real Madrid" --away-team Barcelona \\
         --kickoff-utc 2025-05-11T19:00:00
+
+Avec un snapshot manuel structure (voir snapshot_engine.schema) :
+    uv run python scripts/predict_match.py \\
+        --competition liga --season 2024_25 \\
+        --home-team "Real Madrid" --away-team Barcelona \\
+        --kickoff-utc 2025-05-11T19:00:00 \\
+        --odds-snapshot-file mon_snapshot.json
 """
 
 from __future__ import annotations
@@ -54,7 +67,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -81,6 +94,13 @@ from sys_foot_quant.final_engine.types import MatchDecisionOutput  # noqa: E402
 from sys_foot_quant.market_engine.overround import validate_odds  # noqa: E402
 from sys_foot_quant.shadow_mode.journal import DEFAULT_JOURNAL_PATH as SHADOW_DEFAULT_JOURNAL_PATH  # noqa: E402
 from sys_foot_quant.shadow_mode.journal import record_prediction as record_shadow_prediction  # noqa: E402
+from sys_foot_quant.snapshot_engine.schema import (  # noqa: E402
+    OddsObservation,
+    SnapshotValidationError,
+    create_snapshot,
+    decision_offset_hours_from_snapshot,
+    extract_over_under_2_5,
+)
 
 app = typer.Typer(add_completion=False)
 
@@ -151,6 +171,64 @@ def validate_market_odds(
     except ValueError as exc:
         raise PredictMatchError(str(exc)) from exc
     return odds
+
+
+def load_odds_snapshot_from_file(
+    path: Path,
+    competition: str,
+    season: str,
+    home_team: str,
+    away_team: str,
+    kickoff_utc: datetime,
+    bookmaker: str | None = None,
+) -> tuple[dict[str, float], float]:
+    """Alternative structuree aux deux cotes manuelles
+    (``--market-odds-over-2-5``/``--market-odds-under-2-5``) : lit un
+    fichier JSON de snapshot (voir ``docs`` du CLI), construit un
+    ``snapshot_engine.schema.OddsSnapshot`` (``capture_timestamp`` genere
+    par le systeme A CET INSTANT, JAMAIS lu depuis le fichier - voir
+    ``create_snapshot``), puis extrait exactement la paire Over/Under 2.5
+    deja consommee par ``run_match_decision`` (INCHANGE) et le
+    ``decision_offset_hours`` correspondant (``decision_time =
+    capture_timestamp``, design valide).
+
+    ``kickoff_utc`` est ici le meme datetime NAIF deja produit par
+    ``parse_kickoff_utc`` (convention R3 existante) - reinterprete
+    explicitement comme UTC (jamais un autre fuseau) pour construire le
+    snapshot, qui exige lui-meme des datetimes timezone-aware."""
+    try:
+        raw = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictMatchError(f"Fichier de snapshot illisible : {path} ({exc}).") from exc
+
+    raw_observations = raw.get("observations")
+    if not raw_observations:
+        raise PredictMatchError(f"Le fichier de snapshot {path} ne contient aucune 'observations'.")
+
+    try:
+        observations = [
+            OddsObservation(
+                bookmaker=o["bookmaker"], market=o["market"], selection=o["selection"],
+                odds=o["odds"], line=o.get("line"),
+            )
+            for o in raw_observations
+        ]
+    except (KeyError, SnapshotValidationError) as exc:
+        raise PredictMatchError(f"Observation de snapshot invalide dans {path} : {exc}.") from exc
+
+    snapshot_bookmaker = bookmaker or raw.get("bookmaker")
+    kickoff_utc_aware = kickoff_utc.replace(tzinfo=timezone.utc)
+
+    try:
+        snapshot = create_snapshot(
+            competition=competition, season=season, home_team=home_team, away_team=away_team,
+            kickoff_utc=kickoff_utc_aware, observations=observations,
+        )
+        market_odds = extract_over_under_2_5(snapshot, bookmaker=snapshot_bookmaker)
+    except SnapshotValidationError as exc:
+        raise PredictMatchError(str(exc)) from exc
+
+    return market_odds, decision_offset_hours_from_snapshot(snapshot)
 
 
 def _load_understat_raw(competition: str, season: str) -> tuple[list[dict], str]:
@@ -385,6 +463,20 @@ def main(
     kickoff_utc: str = typer.Option(..., "--kickoff-utc", help="Coup d'envoi, UTC naif : AAAA-MM-JJTHH:MM:SS."),
     market_odds_over_2_5: float | None = typer.Option(None, "--market-odds-over-2-5", help="Cote d'ouverture B365 Over 2.5."),
     market_odds_under_2_5: float | None = typer.Option(None, "--market-odds-under-2-5", help="Cote d'ouverture B365 Under 2.5."),
+    odds_snapshot_file: Path | None = typer.Option(
+        None,
+        "--odds-snapshot-file",
+        help="Alternative structuree a --market-odds-over-2-5/--market-odds-under-2-5 : fichier JSON de "
+        "snapshot manuel (voir snapshot_engine.schema). Mutuellement exclusif avec les deux options "
+        "precedentes. decision_offset_hours est alors TOUJOURS derive du snapshot (capture_timestamp genere "
+        "au moment de cet appel) - toute valeur de --decision-offset-hours est ignoree dans ce mode.",
+    ),
+    odds_snapshot_bookmaker: str | None = typer.Option(
+        None,
+        "--odds-snapshot-bookmaker",
+        help="Filtre le bookmaker a utiliser si le snapshot en contient plusieurs pour Over/Under 2.5 "
+        "(--odds-snapshot-file uniquement).",
+    ),
     decision_offset_hours: float = typer.Option(
         DECISION_OFFSET_HOURS, "--decision-offset-hours", help="Identique a final_engine.orchestrator.DECISION_OFFSET_HOURS."
     ),
@@ -399,7 +491,18 @@ def main(
 ) -> None:
     try:
         kickoff = parse_kickoff_utc(kickoff_utc)
-        market_odds = validate_market_odds(market_odds_over_2_5, market_odds_under_2_5)
+        if odds_snapshot_file is not None:
+            if market_odds_over_2_5 is not None or market_odds_under_2_5 is not None:
+                raise PredictMatchError(
+                    "--odds-snapshot-file est mutuellement exclusif avec --market-odds-over-2-5/"
+                    "--market-odds-under-2-5 (fournir l'un ou l'autre, jamais les deux)."
+                )
+            market_odds, decision_offset_hours = load_odds_snapshot_from_file(
+                odds_snapshot_file, competition, season, home_team, away_team, kickoff,
+                bookmaker=odds_snapshot_bookmaker,
+            )
+        else:
+            market_odds = validate_market_odds(market_odds_over_2_5, market_odds_under_2_5)
         output = run_prediction(
             competition=competition,
             season=season,

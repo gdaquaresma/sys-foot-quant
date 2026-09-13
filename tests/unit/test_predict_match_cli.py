@@ -3,13 +3,22 @@ parsing/validation des arguments, refus propre des parametres manquants ou
 incoherents, et formatage du rapport - AUCUN de ces tests n'appelle
 ``run_match_decision`` sur donnees reelles (voir
 ``tests/leakage/test_predict_match_point_in_time.py`` pour l'integration
-bout-en-bout)."""
+bout-en-bout).
+
+La section ``--odds-snapshot-file`` (integration du snapshot manuel,
+voir ``snapshot_engine.schema``) verifie explicitement la
+retrocompatibilite : les arguments ``--market-odds-over-2-5``/
+``--market-odds-under-2-5`` existants doivent continuer a fonctionner
+EXACTEMENT comme avant (voir la section 1 ci-dessus, executee sans modification pour le
+prouver), et le nouveau chemin ne doit jamais faire fuiter une cote de
+cloture dans le calcul pre-match."""
 
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -213,3 +222,155 @@ def test_format_decision_report_shows_decision_and_reason(predict_match) -> None
 def test_format_decision_report_handles_no_market(predict_match) -> None:
     report = predict_match.format_decision_report(_minimal_no_bet_output(predict_match))
     assert "Aucune cote de marche" in report
+
+
+# --- 3. --odds-snapshot-file : integration du snapshot manuel --------------
+
+def _future_kickoff_naive() -> datetime:
+    """Naif (convention R3 existante), toujours dans le futur par
+    rapport a l'horloge reelle - jamais une date fixe qui deviendrait
+    perimee (capture_timestamp = 'maintenant' doit rester < kickoff)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
+
+
+_SNAPSHOT_KICKOFF = _future_kickoff_naive()
+
+
+def _write_snapshot_file(tmp_path: Path, observations: list[dict], bookmaker: str | None = None) -> Path:
+    payload: dict = {"observations": observations}
+    if bookmaker is not None:
+        payload["bookmaker"] = bookmaker
+    path = tmp_path / "snapshot.json"
+    path.write_text(json.dumps(payload))
+    return path
+
+
+def _ou25_observations(bookmaker: str = "Bet365") -> list[dict]:
+    return [
+        {"bookmaker": bookmaker, "market": "over_under", "selection": "OVER", "line": 2.5, "odds": 1.60},
+        {"bookmaker": bookmaker, "market": "over_under", "selection": "UNDER", "line": 2.5, "odds": 2.30},
+    ]
+
+
+def test_load_odds_snapshot_from_file_returns_market_odds_and_offset(predict_match, tmp_path) -> None:
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    market_odds, offset = predict_match.load_odds_snapshot_from_file(
+        path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+    )
+    assert market_odds == {"Over": 1.60, "Under": 2.30}
+    assert offset > 0.0  # capture_timestamp (maintenant) est forcement avant le kickoff futur
+
+
+def test_load_odds_snapshot_from_file_rejects_missing_file(predict_match, tmp_path) -> None:
+    with pytest.raises(predict_match.PredictMatchError, match="illisible"):
+        predict_match.load_odds_snapshot_from_file(
+            tmp_path / "absent.json", "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+        )
+
+
+def test_load_odds_snapshot_from_file_rejects_empty_observations(predict_match, tmp_path) -> None:
+    path = tmp_path / "empty.json"
+    path.write_text(json.dumps({"observations": []}))
+    with pytest.raises(predict_match.PredictMatchError, match="observations"):
+        predict_match.load_odds_snapshot_from_file(
+            path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+        )
+
+
+def test_load_odds_snapshot_from_file_rejects_snapshot_after_kickoff(predict_match, tmp_path) -> None:
+    """capture_timestamp est TOUJOURS 'maintenant' - si kickoff_utc est
+    deja passe, le snapshot est refuse (jamais une capture apres le coup
+    d'envoi)."""
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    past_kickoff = datetime(2000, 1, 1, 0, 0, 0)
+    with pytest.raises(predict_match.PredictMatchError):
+        predict_match.load_odds_snapshot_from_file(
+            path, "liga", "2025_26", "Real Madrid", "Barcelona", past_kickoff,
+        )
+
+
+def test_load_odds_snapshot_from_file_requires_explicit_bookmaker_when_ambiguous(predict_match, tmp_path) -> None:
+    path = _write_snapshot_file(tmp_path, _ou25_observations("Bet365") + _ou25_observations("Pinnacle"))
+    with pytest.raises(predict_match.PredictMatchError, match="Plusieurs bookmakers"):
+        predict_match.load_odds_snapshot_from_file(
+            path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+        )
+    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+        path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF, bookmaker="Pinnacle",
+    )
+    assert market_odds == {"Over": 1.60, "Under": 2.30}
+
+
+def test_load_odds_snapshot_from_file_bookmaker_in_json_payload_is_honored(predict_match, tmp_path) -> None:
+    """Le champ 'bookmaker' au niveau racine du JSON sert de filtre par
+    defaut si --odds-snapshot-bookmaker n'est pas passe en CLI."""
+    path = _write_snapshot_file(tmp_path, _ou25_observations("Bet365") + _ou25_observations("Pinnacle"), bookmaker="Bet365")
+    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+        path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+    )
+    assert market_odds == {"Over": 1.60, "Under": 2.30}
+
+
+def test_load_odds_snapshot_from_file_never_accepts_a_closing_odds_field(predict_match, tmp_path) -> None:
+    """Meme si un fichier de snapshot contient malencontreusement un champ
+    'closing_odds', il est simplement ignore - jamais utilise pour
+    remplacer/completer la cote pre-match."""
+    payload = {"observations": _ou25_observations(), "closing_odds": {"Over": 1.30, "Under": 3.50}}
+    path = tmp_path / "snapshot_with_closing.json"
+    path.write_text(json.dumps(payload))
+    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+        path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+    )
+    assert market_odds == {"Over": 1.60, "Under": 2.30}  # jamais 1.30/3.50
+
+
+def test_cli_rejects_odds_snapshot_file_combined_with_manual_floats(predict_match, tmp_path) -> None:
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--market-odds-over-2-5", "1.85", "--market-odds-under-2-5", "1.95",
+            "--odds-snapshot-file", str(path),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "mutuellement exclusif" in result.output
+
+
+def test_cli_rejects_odds_snapshot_file_with_only_one_manual_float(predict_match, tmp_path) -> None:
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--market-odds-over-2-5", "1.85",
+            "--odds-snapshot-file", str(path),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "mutuellement exclusif" in result.output
+
+
+def test_existing_manual_float_arguments_still_work_unchanged(predict_match) -> None:
+    """Retrocompatibilite explicite : le chemin --market-odds-over-2-5/
+    --market-odds-under-2-5 (sans --odds-snapshot-file) produit exactement
+    le meme dict qu'avant l'ajout du snapshot."""
+    assert predict_match.validate_market_odds(1.85, 1.95) == {"Over": 1.85, "Under": 1.95}
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--market-odds-over-2-5", "1.85",
+        ],
+    )
+    # Meme comportement qu'avant (test_cli_exits_1_on_partial_market_odds) :
+    # une seule des deux cotes manuelles reste refusee de la meme facon.
+    assert result.exit_code == 1
+    assert "ensemble" in result.output
