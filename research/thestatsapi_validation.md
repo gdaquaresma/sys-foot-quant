@@ -10,6 +10,89 @@ committée ou utilisée — aucune clé n'était présente dans l'environnement
 
 ---
 
+## OUTILLAGE DE VALIDATION PRÊT À L'EMPLOI — 2026-09-13 (troisième passage)
+
+**Demande de cette étape** : arrêter de refaire le diagnostic réseau à
+chaque tour (il est établi, voir §4, et reste inchangé) et préparer un
+protocole de validation **exécutable dès qu'une vraie clé existe**, sans
+bloquer davantage sur l'accès réseau de cette session précise.
+
+**Ce qui a été fait, concrètement, ce tour-ci** :
+
+1. **Recherche de clé (à nouveau, minimale)** : `env | grep -iE
+   "thestatsapi|theoddsapi|odds_api|stats_api"` → aucun résultat.
+   Recherche de fichier `.env`/`.env.*` dans le dépôt → aucun. Aucune clé
+   n'a été demandée, inventée ni utilisée. **Rien n'a changé** depuis les
+   passages précédents (`df73664`, `5bc2781`) : toujours aucune clé
+   disponible dans cet environnement.
+
+2. **Création de `scripts/validate_thestatsapi.py`** — un outil de
+   validation **autonome, hors production** (jamais importé par
+   `final_engine/`, `predict_match.py`, R1-R4 ou `shadow_mode/`) qui :
+   - lit `THESTATSAPI_API_KEY` / `THE_ODDS_API_KEY` **uniquement** depuis
+     l'environnement (jamais en dur, jamais loggée) ;
+   - s'arrête **immédiatement** avec un message explicite et un code de
+     sortie 1 si aucune des deux clés n'est présente — **vérifié
+     réellement dans cette session** (aucune donnée fabriquée, voir
+     point 4 ci-dessous) ;
+   - si une clé existe, interroge l'endpoint historique du fournisseur
+     pour les 3 matchs de référence (§8), applique la règle PIT stricte
+     (`timestamp < decision_time`, jamais `<=`) aux points de contrôle
+     T-24h/T-12h/T-6h/T-1h avant chaque kickoff, et diagnostique
+     explicitement une granularité insuffisante (« PIT HISTORIQUE
+     INSUFFISAMMENT GARANTI ») si 2 observations distinctes ou moins
+     existent avant le coup d'envoi ;
+   - **réserve documentée dans le fichier lui-même** : le chemin exact
+     des endpoints REST (base URL, nom d'en-tête d'authentification,
+     structure de la recherche de fixture) n'a **pas** pu être vérifié
+     contre une réponse HTTP réelle (réseau bloqué, §4) — ce sont des
+     constantes en meilleur effort, explicitement marquées comme à
+     corriger sur place lors de la première exécution réelle, jamais
+     présentées comme confirmées.
+
+3. **Tests unitaires** (`tests/unit/test_validate_thestatsapi.py`, 25
+   tests, tous verts) couvrant la logique **pure** du script — parsing
+   TheStatsAPI et The Odds API à partir de fixtures JSON synthétiques
+   explicitement non confirmées contre une réponse réelle, la règle PIT
+   centrale (`select_last_snapshot_before` : `<` strict, exclusion d'un
+   snapshot exactement à `decision_time`, exclusion d'un snapshot futur),
+   le diagnostic de granularité, le garde-fou anti-timestamp-naïf
+   (`_require_aware`), et le chemin « aucune clé » de `main()`. Ces tests
+   **n'appellent jamais le réseau** — ils valident uniquement que le code
+   de parsing/PIT lui-même est correct, indépendamment de l'exactitude
+   des endpoints HTTP (qui reste non confirmée, cf. point 2).
+
+4. **Exécution réelle du script dans cette session** (smoke-test de son
+   propre chemin d'échec, pas un test du fournisseur) :
+   ```
+   $ uv run python scripts/validate_thestatsapi.py
+   ERREUR : aucune cle disponible (variables d'environnement
+   THESTATSAPI_API_KEY / THE_ODDS_API_KEY absentes toutes les deux).
+   Ce script ne fabrique jamais de donnee : arret immediat, aucun test
+   execute.
+   [code de sortie : 1]
+   ```
+   Ce comportement est **PROUVÉ** (observé réellement dans cette
+   session) — contrairement à toute affirmation sur TheStatsAPI/The Odds
+   API elles-mêmes, qui reste **NON VÉRIFIÉ** (aucune requête n'a atteint
+   ces serveurs, §4 inchangé).
+
+**Ce qui reste inchangé et n'a PAS été refait** : le diagnostic réseau
+DNS/TCP/HTTPS par couche (§4) — toujours valable, toujours non contourné,
+conformément à la consigne explicite de ne pas recommencer ce diagnostic
+tant que rien n'indique qu'il ait changé.
+
+**Conclusion de ce passage** : le protocole de validation empirique est
+désormais **entièrement prêt** (script + fixtures de référence + tests +
+mécanique PIT) et n'attend plus qu'une seule chose pour produire un
+résultat réel : une clé API valide dans un environnement avec accès
+réseau. Aucune validation empirique n'a eu lieu ici — le verdict PASS/
+PARTIAL/FAIL (§17) reste **FAIL de validation** (test impossible), pas
+**FAIL de qualité fournisseur**, exactement comme lors des deux passages
+précédents.
+
+---
+
 ## TENTATIVE DE TEST RÉEL — 2026-09-13 (deuxième passage)
 
 **Demande de cette étape** : effectuer le test API réel décisif
@@ -277,24 +360,38 @@ trouvés) — Pinnacle resterait alors le bookmaker de repli, déjà une
 référence légitime dans ce projet depuis E9/E13/E16.
 
 ## 19. Recommandation finale pour l'architecture Shadow Mode
-**Ne pas coder de connecteur maintenant.** Aucune des deux options n'a
-passé la validation empirique — coder maintenant reviendrait à bâtir sur
-une hypothèse non vérifiée, exactement le risque que cette étape visait à
-éliminer. Prochaine étape concrète et minimale, à faire **depuis un
-environnement avec accès réseau réel** (pas cette session) :
-1. Créer un compte d'essai gratuit TheStatsAPI.
-2. Faire un seul appel réel sur l'endpoint historique pour l'un des trois
-   matchs de la section 8 (Chelsea-Arsenal recommandé, le plus simple à
-   identifier).
-3. Comparer la cote B365 Over/Under 2.5 retournée à la valeur déjà
-   connue dans notre corpus (1.73/2.10) — un écart cohérent (l'ouverture
-   TheStatsAPI ne sera pas identique à l'ouverture Football-Data, mais
-   du même ordre de grandeur) validerait le mapping ; une valeur aberrante
-   ou un bookmaker absent invaliderait immédiatement le fournisseur.
-4. Vérifier le nombre réel d'observations temporelles disponibles avant
-   le kickoff et le format exact du timestamp.
-5. Si TheStatsAPI échoue sur l'un de ces points, répéter à l'identique
-   avec The Odds API avant toute décision finale.
+**Ne pas coder de connecteur de production maintenant.** Aucune des deux
+options n'a passé la validation empirique — coder un module
+`odds_provider/` maintenant reviendrait à bâtir sur une hypothèse non
+vérifiée, exactement le risque que cette étape visait à éliminer.
+
+**Ce qui EST prêt** (voir « OUTILLAGE DE VALIDATION PRÊT À L'EMPLOI »
+ci-dessus) : `scripts/validate_thestatsapi.py`, un outil autonome, hors
+production, qui exécute automatiquement dès qu'une clé existe exactement
+le protocole ci-dessous — plus besoin de le refaire manuellement.
+Prochaine étape concrète et minimale, à faire **depuis un environnement
+avec accès réseau réel** (pas cette session) :
+1. Créer un compte d'essai gratuit TheStatsAPI (et optionnellement The
+   Odds API pour le repli).
+2. Définir la variable d'environnement `THESTATSAPI_API_KEY` (et/ou
+   `THE_ODDS_API_KEY`) — jamais en dur, jamais committée.
+3. Lancer `uv run python scripts/validate_thestatsapi.py` : il interroge
+   automatiquement les 3 matchs de référence (§8), applique la règle PIT
+   stricte aux points de contrôle T-24h/T-12h/T-6h/T-1h, et imprime un
+   rapport structuré (bookmakers observés, granularité PIT réelle,
+   snapshot disponible à chaque point de contrôle).
+4. Comparer la cote B365 Over/Under 2.5 retournée à la valeur déjà
+   connue dans notre corpus (ex. Chelsea-Arsenal : 1.73/2.10) — un écart
+   cohérent validerait le mapping ; une valeur aberrante ou un bookmaker
+   absent invaliderait immédiatement le fournisseur.
+5. Si le script signale « PIT HISTORIQUE INSUFFISAMMENT GARANTI » ou une
+   erreur HTTP/format pour TheStatsAPI, relancer avec `THE_ODDS_API_KEY`
+   seule avant toute décision finale.
+6. **Avant toute implémentation de `src/sys_foot_quant/odds_provider/`**,
+   corriger dans `scripts/validate_thestatsapi.py` lui-même (jamais dans
+   un futur module de production) toute constante d'endpoint qui se
+   révélerait fausse contre la réponse réelle observée — le fichier
+   documente déjà cette consigne dans son propre docstring.
 
 ---
 
