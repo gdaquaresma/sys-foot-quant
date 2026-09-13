@@ -254,11 +254,24 @@ def _ou25_observations(bookmaker: str = "Bet365") -> list[dict]:
 
 def test_load_odds_snapshot_from_file_returns_market_odds_and_offset(predict_match, tmp_path) -> None:
     path = _write_snapshot_file(tmp_path, _ou25_observations())
-    market_odds, offset = predict_match.load_odds_snapshot_from_file(
+    resolution = predict_match.load_odds_snapshot_from_file(
         path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
     )
-    assert market_odds == {"Over": 1.60, "Under": 2.30}
-    assert offset > 0.0  # capture_timestamp (maintenant) est forcement avant le kickoff futur
+    assert resolution.market_odds == {"Over": 1.60, "Under": 2.30}
+    assert resolution.decision_offset_hours > 0.0  # capture_timestamp (maintenant) est forcement avant le kickoff futur
+
+
+# --- Tracabilite : bookmaker/marche/ligne conserves (amelioration demandee) --
+
+
+def test_load_odds_snapshot_from_file_preserves_bookmaker_market_and_line(predict_match, tmp_path) -> None:
+    path = _write_snapshot_file(tmp_path, _ou25_observations("Pinnacle"))
+    resolution = predict_match.load_odds_snapshot_from_file(
+        path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
+    )
+    assert resolution.bookmaker == "Pinnacle"
+    assert resolution.market == "OU"
+    assert resolution.line == 2.5
 
 
 def test_load_odds_snapshot_from_file_rejects_missing_file(predict_match, tmp_path) -> None:
@@ -295,20 +308,20 @@ def test_load_odds_snapshot_from_file_requires_explicit_bookmaker_when_ambiguous
         predict_match.load_odds_snapshot_from_file(
             path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
         )
-    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+    resolution = predict_match.load_odds_snapshot_from_file(
         path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF, bookmaker="Pinnacle",
     )
-    assert market_odds == {"Over": 1.60, "Under": 2.30}
+    assert resolution.market_odds == {"Over": 1.60, "Under": 2.30}
 
 
 def test_load_odds_snapshot_from_file_bookmaker_in_json_payload_is_honored(predict_match, tmp_path) -> None:
     """Le champ 'bookmaker' au niveau racine du JSON sert de filtre par
     defaut si --odds-snapshot-bookmaker n'est pas passe en CLI."""
     path = _write_snapshot_file(tmp_path, _ou25_observations("Bet365") + _ou25_observations("Pinnacle"), bookmaker="Bet365")
-    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+    resolution = predict_match.load_odds_snapshot_from_file(
         path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
     )
-    assert market_odds == {"Over": 1.60, "Under": 2.30}
+    assert resolution.market_odds == {"Over": 1.60, "Under": 2.30}
 
 
 def test_load_odds_snapshot_from_file_never_accepts_a_closing_odds_field(predict_match, tmp_path) -> None:
@@ -318,10 +331,10 @@ def test_load_odds_snapshot_from_file_never_accepts_a_closing_odds_field(predict
     payload = {"observations": _ou25_observations(), "closing_odds": {"Over": 1.30, "Under": 3.50}}
     path = tmp_path / "snapshot_with_closing.json"
     path.write_text(json.dumps(payload))
-    market_odds, _ = predict_match.load_odds_snapshot_from_file(
+    resolution = predict_match.load_odds_snapshot_from_file(
         path, "liga", "2025_26", "Real Madrid", "Barcelona", _SNAPSHOT_KICKOFF,
     )
-    assert market_odds == {"Over": 1.60, "Under": 2.30}  # jamais 1.30/3.50
+    assert resolution.market_odds == {"Over": 1.60, "Under": 2.30}  # jamais 1.30/3.50
 
 
 def test_cli_rejects_odds_snapshot_file_combined_with_manual_floats(predict_match, tmp_path) -> None:
@@ -374,3 +387,157 @@ def test_existing_manual_float_arguments_still_work_unchanged(predict_match) -> 
     # une seule des deux cotes manuelles reste refusee de la meme facon.
     assert result.exit_code == 1
     assert "ensemble" in result.output
+
+
+# --- 4. --odds-snapshot-file + --decision-offset-hours : desormais une erreur --
+
+
+def test_cli_rejects_odds_snapshot_file_combined_with_decision_offset_hours(predict_match, tmp_path) -> None:
+    """Amelioration demandee : plutot que d'ignorer silencieusement
+    --decision-offset-hours quand --odds-snapshot-file est fourni, le CLI
+    refuse desormais explicitement la combinaison."""
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--odds-snapshot-file", str(path),
+            "--decision-offset-hours", "3.0",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "mutuellement exclusif" in result.output
+    assert "decision_time = capture_timestamp" in result.output
+
+
+def test_cli_accepts_decision_offset_hours_alone_without_snapshot(predict_match) -> None:
+    """Ne change pas le comportement quand une seule des deux options est
+    utilisee : --decision-offset-hours seul (sans snapshot) continue de
+    fonctionner exactement comme avant."""
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--decision-offset-hours", "3.0",
+        ],
+    )
+    # Pas d'erreur de mutuelle exclusivite - le match/l'appel au moteur
+    # peut echouer pour d'autres raisons (donnees), mais jamais celle-la.
+    assert "mutuellement exclusif" not in result.output
+
+
+def test_cli_accepts_odds_snapshot_file_alone_without_decision_offset_hours(predict_match, tmp_path) -> None:
+    """Ne change pas le comportement quand --odds-snapshot-file est
+    utilise seul (sans --decision-offset-hours explicite) - c'est le
+    chemin nominal, deja teste par ailleurs, revalide ici pour la
+    non-regression de ce point precis."""
+    path = _write_snapshot_file(tmp_path, _ou25_observations())
+    result = runner.invoke(
+        predict_match.app,
+        [
+            "--competition", "liga", "--season", "2024_25",
+            "--home-team", "Real Madrid", "--away-team", "Barcelona",
+            "--kickoff-utc", "2025-05-11T19:00:00",
+            "--odds-snapshot-file", str(path),
+        ],
+    )
+    assert "mutuellement exclusif" not in result.output
+
+
+# --- 5. Tracabilite bout-en-bout dans le journal Shadow Mode ----------------
+
+
+def test_record_prediction_stores_odds_bookmaker_market_and_line(tmp_path) -> None:
+    """Verifie directement au niveau de shadow_mode.journal (sans repasser
+    par tout le pipeline R3) que les nouveaux champs de tracabilite sont
+    bien ecrits et relisibles depuis le journal."""
+    from sys_foot_quant.shadow_mode.journal import load_journal, record_prediction
+
+    output = _minimal_no_bet_output(None)
+    journal_path = tmp_path / "journal.jsonl"
+    record, _ = record_prediction(
+        output,
+        competition="liga", season="2024_25", home_team="Real Madrid", away_team="Barcelona",
+        kickoff_utc=datetime(2025, 5, 11, 19, 0, 0),
+        decision_offset_hours=2.0,
+        market_odds_over_2_5=1.60, market_odds_under_2_5=2.20,
+        journal_path=journal_path,
+        odds_bookmaker="Pinnacle", odds_market="OU", odds_line=2.5,
+    )
+    assert record["odds_bookmaker"] == "Pinnacle"
+    assert record["odds_market"] == "OU"
+    assert record["odds_line"] == 2.5
+
+    reloaded = load_journal(journal_path)
+    assert len(reloaded) == 1
+    assert reloaded[0]["odds_bookmaker"] == "Pinnacle"
+    assert reloaded[0]["odds_market"] == "OU"
+    assert reloaded[0]["odds_line"] == 2.5
+
+
+def test_record_prediction_traceability_fields_default_to_none_for_historical_path(tmp_path) -> None:
+    """Retrocompatibilite : un appel sans les nouveaux parametres (le
+    chemin --market-odds-over-2-5/--market-odds-under-2-5 historique)
+    stocke explicitement None, jamais une valeur devinee."""
+    from sys_foot_quant.shadow_mode.journal import record_prediction
+
+    output = _minimal_no_bet_output(None)
+    journal_path = tmp_path / "journal.jsonl"
+    record, _ = record_prediction(
+        output,
+        competition="liga", season="2024_25", home_team="Real Madrid", away_team="Barcelona",
+        kickoff_utc=datetime(2025, 5, 11, 19, 0, 0),
+        decision_offset_hours=2.0,
+        market_odds_over_2_5=1.85, market_odds_under_2_5=1.95,
+        journal_path=journal_path,
+    )
+    assert record["odds_bookmaker"] is None
+    assert record["odds_market"] is None
+    assert record["odds_line"] is None
+
+
+def test_traceability_fields_never_affect_prediction_id_dedup(tmp_path) -> None:
+    """Les nouveaux champs sont une metadonnee pure : deux enregistrements
+    avec les MEMES cotes/match/offset mais des bookmakers differents
+    partagent le meme prediction_id (comportement de dedup inchange,
+    jamais silencieusement modifie par cet ajout)."""
+    from sys_foot_quant.shadow_mode.journal import record_prediction
+
+    output = _minimal_no_bet_output(None)
+    journal_path = tmp_path / "journal.jsonl"
+    record1, existed1 = record_prediction(
+        output, competition="liga", season="2024_25", home_team="Real Madrid", away_team="Barcelona",
+        kickoff_utc=datetime(2025, 5, 11, 19, 0, 0), decision_offset_hours=2.0,
+        market_odds_over_2_5=1.60, market_odds_under_2_5=2.20, journal_path=journal_path,
+        odds_bookmaker="Bet365", odds_market="OU", odds_line=2.5,
+    )
+    record2, existed2 = record_prediction(
+        output, competition="liga", season="2024_25", home_team="Real Madrid", away_team="Barcelona",
+        kickoff_utc=datetime(2025, 5, 11, 19, 0, 0), decision_offset_hours=2.0,
+        market_odds_over_2_5=1.60, market_odds_under_2_5=2.20, journal_path=journal_path,
+        odds_bookmaker="Pinnacle", odds_market="OU", odds_line=2.5,
+    )
+    assert existed1 is False
+    assert existed2 is True  # deduplique sur le meme prediction_id malgre le bookmaker different
+    assert record1["prediction_id"] == record2["prediction_id"]
+
+
+def test_predict_match_cli_end_to_end_journal_never_contains_closing_odds_key(tmp_path) -> None:
+    """Verification structurelle : aucune cle liee a une cloture n'existe
+    dans le schema du journal, meme apres l'ajout des champs de
+    tracabilite."""
+    from sys_foot_quant.shadow_mode.journal import record_prediction
+
+    output = _minimal_no_bet_output(None)
+    journal_path = tmp_path / "journal.jsonl"
+    record, _ = record_prediction(
+        output, competition="liga", season="2024_25", home_team="Real Madrid", away_team="Barcelona",
+        kickoff_utc=datetime(2025, 5, 11, 19, 0, 0), decision_offset_hours=2.0,
+        market_odds_over_2_5=1.60, market_odds_under_2_5=2.20, journal_path=journal_path,
+        odds_bookmaker="Bet365", odds_market="OU", odds_line=2.5,
+    )
+    assert not any("closing" in str(k).lower() for k in record.keys())

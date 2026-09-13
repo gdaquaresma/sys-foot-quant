@@ -143,10 +143,21 @@ def _build_prediction_fields(
     decision_offset_hours: float,
     market_odds_over_2_5: float | None,
     market_odds_under_2_5: float | None,
+    odds_bookmaker: str | None = None,
+    odds_market: str | None = None,
+    odds_line: float | None = None,
 ) -> dict:
     """Champs pre-match IMMUABLES d'une observation - construits par simple
     LECTURE d'un ``output`` DEJA produit par ``run_match_decision``
-    (INCHANGE) : aucun recalcul, aucune nouvelle logique."""
+    (INCHANGE) : aucun recalcul, aucune nouvelle logique.
+
+    ``odds_bookmaker``/``odds_market``/``odds_line`` sont des metadonnees
+    de TRACABILITE PURE, optionnelles (``None`` par defaut - retrocompat
+    totale avec les appels existants) : jamais utilisees par
+    ``compute_prediction_id`` (le calcul/dedup reste identique a avant),
+    jamais lues par ``final_engine``. Elles proviennent de la source
+    fournie par l'appelant (le snapshot, voir ``snapshot_engine.schema``)
+    - jamais deduites a posteriori des deux cotes."""
     market = output.market
     return {
         "prediction_id": compute_prediction_id(
@@ -166,6 +177,11 @@ def _build_prediction_fields(
         "decision_offset_hours": decision_offset_hours,
         "market_odds_over_2_5": market_odds_over_2_5,
         "market_odds_under_2_5": market_odds_under_2_5,
+        # Tracabilite pure (voir docstring) - None si non fournie (chemin
+        # historique --market-odds-over-2-5/--market-odds-under-2-5).
+        "odds_bookmaker": odds_bookmaker,
+        "odds_market": odds_market,
+        "odds_line": odds_line,
         "primary_model": output.primary_model,
         "models": _model_summary(output),
         "market_comparison": None
@@ -242,6 +258,10 @@ def record_prediction(
     market_odds_over_2_5: float | None,
     market_odds_under_2_5: float | None,
     journal_path: Path = DEFAULT_JOURNAL_PATH,
+    *,
+    odds_bookmaker: str | None = None,
+    odds_market: str | None = None,
+    odds_line: float | None = None,
 ) -> tuple[dict, bool]:
     """Enregistre une observation pre-match dans le journal Shadow Mode -
     APPEND-ONLY, jamais une reecriture. Deduplique explicitement sur
@@ -250,10 +270,15 @@ def record_prediction(
     existante et ``already_existed=True`` plutot que de creer
     silencieusement un doublon.
 
+    ``odds_bookmaker``/``odds_market``/``odds_line`` : metadonnees de
+    tracabilite optionnelles (voir ``_build_prediction_fields``) -
+    n'affectent jamais ``prediction_id``, donc jamais la deduplication.
+
     Retourne ``(vue_resolue, already_existed)``."""
     fields = _build_prediction_fields(
         output, competition, season, home_team, away_team, kickoff_utc, decision_offset_hours,
         market_odds_over_2_5, market_odds_under_2_5,
+        odds_bookmaker=odds_bookmaker, odds_market=odds_market, odds_line=odds_line,
     )
     prediction_id = fields["prediction_id"]
     existing = find_prediction(journal_path, prediction_id)

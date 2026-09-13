@@ -99,7 +99,7 @@ from sys_foot_quant.snapshot_engine.schema import (  # noqa: E402
     SnapshotValidationError,
     create_snapshot,
     decision_offset_hours_from_snapshot,
-    extract_over_under_2_5,
+    extract_over_under_2_5_with_source,
 )
 
 app = typer.Typer(add_completion=False)
@@ -173,6 +173,20 @@ def validate_market_odds(
     return odds
 
 
+@dataclass(frozen=True)
+class SnapshotOddsResolution:
+    """Resultat complet de la lecture d'un snapshot - cotes exploitables
+    par le moteur EXISTANT + metadonnees de tracabilite pure (bookmaker,
+    marche, ligne) destinees UNIQUEMENT au journal Shadow Mode, jamais a
+    ``run_match_decision``."""
+
+    market_odds: dict[str, float]
+    decision_offset_hours: float
+    bookmaker: str
+    market: str
+    line: float
+
+
 def load_odds_snapshot_from_file(
     path: Path,
     competition: str,
@@ -181,16 +195,17 @@ def load_odds_snapshot_from_file(
     away_team: str,
     kickoff_utc: datetime,
     bookmaker: str | None = None,
-) -> tuple[dict[str, float], float]:
+) -> SnapshotOddsResolution:
     """Alternative structuree aux deux cotes manuelles
     (``--market-odds-over-2-5``/``--market-odds-under-2-5``) : lit un
     fichier JSON de snapshot (voir ``docs`` du CLI), construit un
     ``snapshot_engine.schema.OddsSnapshot`` (``capture_timestamp`` genere
     par le systeme A CET INSTANT, JAMAIS lu depuis le fichier - voir
     ``create_snapshot``), puis extrait exactement la paire Over/Under 2.5
-    deja consommee par ``run_match_decision`` (INCHANGE) et le
+    deja consommee par ``run_match_decision`` (INCHANGE), le
     ``decision_offset_hours`` correspondant (``decision_time =
-    capture_timestamp``, design valide).
+    capture_timestamp``, design valide), et la provenance (bookmaker/
+    marche/ligne) destinee au journal Shadow Mode.
 
     ``kickoff_utc`` est ici le meme datetime NAIF deja produit par
     ``parse_kickoff_utc`` (convention R3 existante) - reinterprete
@@ -224,11 +239,17 @@ def load_odds_snapshot_from_file(
             competition=competition, season=season, home_team=home_team, away_team=away_team,
             kickoff_utc=kickoff_utc_aware, observations=observations,
         )
-        market_odds = extract_over_under_2_5(snapshot, bookmaker=snapshot_bookmaker)
+        extraction = extract_over_under_2_5_with_source(snapshot, bookmaker=snapshot_bookmaker)
     except SnapshotValidationError as exc:
         raise PredictMatchError(str(exc)) from exc
 
-    return market_odds, decision_offset_hours_from_snapshot(snapshot)
+    return SnapshotOddsResolution(
+        market_odds=extraction.market_odds,
+        decision_offset_hours=decision_offset_hours_from_snapshot(snapshot),
+        bookmaker=extraction.bookmaker,
+        market=extraction.market,
+        line=extraction.line,
+    )
 
 
 def _load_understat_raw(competition: str, season: str) -> tuple[list[dict], str]:
@@ -477,8 +498,12 @@ def main(
         help="Filtre le bookmaker a utiliser si le snapshot en contient plusieurs pour Over/Under 2.5 "
         "(--odds-snapshot-file uniquement).",
     ),
-    decision_offset_hours: float = typer.Option(
-        DECISION_OFFSET_HOURS, "--decision-offset-hours", help="Identique a final_engine.orchestrator.DECISION_OFFSET_HOURS."
+    decision_offset_hours: float | None = typer.Option(
+        None,
+        "--decision-offset-hours",
+        help=f"Identique a final_engine.orchestrator.DECISION_OFFSET_HOURS (defaut si omis : {DECISION_OFFSET_HOURS}). "
+        "Mutuellement exclusif avec --odds-snapshot-file (qui fixe deja decision_time = capture_timestamp) - "
+        "fournir les deux leve une erreur explicite plutot que d'ignorer silencieusement l'un des deux.",
     ),
     record_shadow: bool = typer.Option(
         False,
@@ -489,6 +514,9 @@ def main(
         SHADOW_DEFAULT_JOURNAL_PATH, "--shadow-journal-path", help="Chemin du journal Shadow Mode (--record-shadow uniquement)."
     ),
 ) -> None:
+    odds_bookmaker: str | None = None
+    odds_market: str | None = None
+    odds_line: float | None = None
     try:
         kickoff = parse_kickoff_utc(kickoff_utc)
         if odds_snapshot_file is not None:
@@ -497,12 +525,25 @@ def main(
                     "--odds-snapshot-file est mutuellement exclusif avec --market-odds-over-2-5/"
                     "--market-odds-under-2-5 (fournir l'un ou l'autre, jamais les deux)."
                 )
-            market_odds, decision_offset_hours = load_odds_snapshot_from_file(
+            if decision_offset_hours is not None:
+                raise PredictMatchError(
+                    "--odds-snapshot-file est mutuellement exclusif avec --decision-offset-hours : "
+                    "le snapshot fixe deja decision_time = capture_timestamp (design valide) - fournir "
+                    "explicitement les deux serait ambigu plutot qu'ignorer l'un d'eux silencieusement."
+                )
+            resolution = load_odds_snapshot_from_file(
                 odds_snapshot_file, competition, season, home_team, away_team, kickoff,
                 bookmaker=odds_snapshot_bookmaker,
             )
+            market_odds = resolution.market_odds
+            decision_offset_hours = resolution.decision_offset_hours
+            odds_bookmaker = resolution.bookmaker
+            odds_market = resolution.market
+            odds_line = resolution.line
         else:
             market_odds = validate_market_odds(market_odds_over_2_5, market_odds_under_2_5)
+            if decision_offset_hours is None:
+                decision_offset_hours = DECISION_OFFSET_HOURS
         output = run_prediction(
             competition=competition,
             season=season,
@@ -533,6 +574,9 @@ def main(
             market_odds_over_2_5=market_odds["Over"] if market_odds else None,
             market_odds_under_2_5=market_odds["Under"] if market_odds else None,
             journal_path=shadow_journal_path,
+            odds_bookmaker=odds_bookmaker,
+            odds_market=odds_market,
+            odds_line=odds_line,
         )
         typer.echo("")
         if already_existed:

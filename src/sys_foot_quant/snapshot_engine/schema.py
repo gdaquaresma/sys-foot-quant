@@ -164,14 +164,26 @@ def kickoff_utc_naive_for_r3(snapshot: OddsSnapshot) -> datetime:
     return snapshot.kickoff_utc.replace(tzinfo=None)
 
 
-def extract_over_under_2_5(snapshot: OddsSnapshot, bookmaker: str | None = None) -> dict[str, float]:
-    """Extrait la paire Over/Under 2.5 exploitable par le moteur EXISTANT
-    (``run_match_decision(market_odds_over_2_5=..., market_odds_under_2_5=...)``,
-    INCHANGE) - jamais un nouveau calcul, uniquement une lecture filtree
-    du snapshot. Refuse explicitement toute ambiguite (plusieurs
-    bookmakers presents pour ce marche sans ``bookmaker`` explicite,
-    selection manquante ou dupliquee) plutot que de choisir
-    silencieusement une valeur."""
+@dataclass(frozen=True)
+class OverUnderExtraction:
+    """Paire Over/Under 2.5 ACCOMPAGNEE de sa provenance exacte - pour la
+    tracabilite du journal Shadow Mode (bookmaker/marche/ligne), jamais
+    pour un nouveau calcul. ``market``/``line`` sont ici la
+    representation EXPLICITE demandee (``"OU"``/``2.5``), distincte du
+    libelle interne libre (``over_under``/``over_under_2_5``/...) accepte
+    en entree par ``OddsObservation.market``."""
+
+    market_odds: dict[str, float]
+    bookmaker: str
+    market: str
+    line: float
+
+
+def extract_over_under_2_5_with_source(snapshot: OddsSnapshot, bookmaker: str | None = None) -> OverUnderExtraction:
+    """Meme extraction/memes refus que ``extract_over_under_2_5`` (qui
+    delegue desormais ICI) - ajoute uniquement la provenance (bookmaker
+    resolu, marche/ligne explicites) necessaire a la tracabilite, jamais
+    un nouveau calcul ni une nouvelle regle de selection."""
     candidates = [
         obs
         for obs in snapshot.observations
@@ -202,4 +214,19 @@ def extract_over_under_2_5(snapshot: OddsSnapshot, bookmaker: str | None = None)
             f"Attendu exactement une observation OVER et une UNDER pour Over/Under 2.5 "
             f"(trouve {len(over_obs)} OVER, {len(under_obs)} UNDER)."
         )
-    return {"Over": over_obs[0].odds, "Under": under_obs[0].odds}
+    return OverUnderExtraction(
+        market_odds={"Over": over_obs[0].odds, "Under": under_obs[0].odds},
+        bookmaker=distinct_bookmakers[0],
+        market="OU",
+        line=_TARGET_LINE_OVER_UNDER_2_5,
+    )
+
+
+def extract_over_under_2_5(snapshot: OddsSnapshot, bookmaker: str | None = None) -> dict[str, float]:
+    """Extrait la paire Over/Under 2.5 exploitable par le moteur EXISTANT
+    (``run_match_decision(market_odds_over_2_5=..., market_odds_under_2_5=...)``,
+    INCHANGE) - jamais un nouveau calcul, uniquement une lecture filtree
+    du snapshot. INCHANGE (signature et comportement identiques) - delegue
+    desormais a ``extract_over_under_2_5_with_source`` pour eviter toute
+    duplication de la logique de filtrage/refus d'ambiguite."""
+    return extract_over_under_2_5_with_source(snapshot, bookmaker=bookmaker).market_odds
