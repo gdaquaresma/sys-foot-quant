@@ -8,8 +8,74 @@ règles PIT) intégralement inchangés. Aucune clé API demandée, affichée,
 committée ou utilisée — aucune clé n'était présente dans l'environnement
 (vérifié explicitement, voir §3).
 
+---
+
+## TENTATIVE DE TEST RÉEL — 2026-09-13 (deuxième passage)
+
+**Demande de cette étape** : effectuer le test API réel décisif
+(Chelsea-Arsenal, 10/11/2024) avec un compte/clé TheStatsAPI, sans
+refaire le diagnostic réseau complet déjà établi ci-dessous si rien n'a
+changé.
+
+**Vérification effectuée (minimale, sans répéter le diagnostic DNS/TCP/
+HTTPS déjà réalisé — voir §4 plus bas, inchangé)** :
+- `env | grep -iE "thestatsapi|theoddsapi|odds_api|stats_api"` →
+  **aucun résultat**.
+- Recherche de fichier `.env`/`.env.*` dans le dépôt → **aucun**.
+- Aucune clé n'a été demandée à l'utilisateur, inventée, ou utilisée.
+
+**Résultat : aucune clé API TheStatsAPI (ni The Odds API) n'est
+disponible dans cet environnement — rien n'a changé depuis le commit
+`df73664`.**
+
+Conformément à l'instruction explicite de cette étape (« si aucune clé
+réelle n'est disponible, ne prétends pas que le test réel a été
+effectué... documente exactement le blocage et arrête-toi »), **le test
+API réel décrit dans cette section N'A PAS été exécuté.** Aucune donnée
+n'a été obtenue, fabriquée, ni présentée comme provenant d'une réponse
+API réelle. Les sections numérotées ci-dessous (reprenant la structure
+demandée pour ce tour) sont donc remplies avec la même discipline que le
+document précédent : **OBSERVÉ / DOCUMENTÉ / NON VÉRIFIÉ**, jamais l'un
+à la place de l'autre.
+
+Le diagnostic réseau détaillé (DNS/TCP/HTTPS par couche) réalisé lors du
+passage précédent reste valable et **n'a pas été refait** — voir §4
+ci-dessous pour son contenu intégral, conservé tel quel.
+
+### Réponses factuelles aux questions A→L (sans nouvelle donnée réelle)
+
+| # | Question | Réponse |
+|---|---|---|
+| A | Bet365 fourni ? | NON VÉRIFIÉ (test impossible, aucune clé) |
+| B | Pinnacle fourni ? | NON VÉRIFIÉ |
+| C | Over/Under 2.5 fourni ? | NON VÉRIFIÉ |
+| D | Timestamps fournis ? | NON VÉRIFIÉ |
+| E | Plusieurs observations historiques ? | NON VÉRIFIÉ |
+| F | Sélection automatique de la dernière observation < decision_time ? | NON VÉRIFIÉ |
+| G | Faisable sur un match déjà joué ? | NON VÉRIFIÉ |
+| H | Données suffisamment structurées pour automatiser ? | NON VÉRIFIÉ |
+| I | Premier League couverte ? | NON VÉRIFIÉ empiriquement (DOCUMENTÉ : « 1000+ compétitions ») |
+| J | Test Liga/Ligue 1 ? | Non fait — aucun test n'a pu commencer, PL incluse |
+| K | Coût/quota réel nécessaire ? | NON VÉRIFIÉ empiriquement (DOCUMENTÉ : voir §16 plus bas) |
+| L | Limite historique bloquante ? | NON VÉRIFIÉ |
+
+**The Odds API** : non testé non plus, pour la même raison (aucune clé,
+même blocage réseau déjà établi) — conformément à la consigne, ce test
+de repli n'a de sens que si TheStatsAPI échoue *après un vrai test*, ce
+qui n'a pas pu avoir lieu ici.
+
+### Ce qui a strictement changé par rapport au commit `df73664`
+**Rien sur le plan des données.** Cette section documente une tentative
+supplémentaire, sa vérification (absence de clé), et sa conclusion
+immédiate — elle n'invalide ni ne complète le diagnostic réseau détaillé
+ni les trois matchs de référence déjà documentés ci-dessous, qui restent
+la matière de référence pour le jour où un test réel sera possible.
+
+---
+
 ## 1. Date du test
-2026-09-13.
+2026-09-13 (diagnostic réseau détaillé initial, inchangé) ; 2026-09-13
+(tentative de test réel API, ci-dessus, non concluante faute de clé).
 
 ## 2. Environnement de test
 Session Claude Code (sandbox distant). Egress HTTPS soumis à un proxy
