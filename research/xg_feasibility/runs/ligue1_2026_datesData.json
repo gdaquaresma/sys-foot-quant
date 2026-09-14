@@ -978,5 +978,28 @@
       "d": "0.2601",
       "l": "0.2955"
     }
+  },
+  {
+    "id": "31975",
+    "isResult": true,
+    "datetime": "2026-09-13 18:45:00",
+    "h": {
+      "id": "241",
+      "title": "Brest",
+      "short_title": "BRE"
+    },
+    "a": {
+      "id": "161",
+      "title": "Paris Saint Germain",
+      "short_title": "PSG"
+    },
+    "goals": {
+      "h": "0",
+      "a": "1"
+    },
+    "xG": {
+      "h": "1.24238",
+      "a": "1.33411"
+    }
   }
 ]
