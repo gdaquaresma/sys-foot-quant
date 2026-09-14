@@ -49,6 +49,7 @@ validation/diff/fusion en aval INCHANGEES."""
 
 from __future__ import annotations
 
+import gzip
 import json
 import urllib.request
 from dataclasses import dataclass
@@ -128,6 +129,22 @@ def build_get_league_data_url(league_name: str, season: str) -> str:
     return GETLEAGUEDATA_URL_TEMPLATE.format(league=quote(league_name, safe=""), season=quote(season, safe=""))
 
 
+def _decode_http_body(raw_bytes: bytes, content_encoding: str) -> str:
+    """Decode un corps HTTP brut en texte UTF-8, en decompressant
+    d'abord un corps gzip. Constat empirique reel (validation externe,
+    Mac avec acces reseau reel) : Understat peut repondre avec un corps
+    gzip (magic bytes ``1f 8b``) meme sans que ce module ne l'ait
+    demande via ``Accept-Encoding`` - la seule inspection du header
+    ``Content-Encoding`` ne suffit donc pas a elle seule, on detecte
+    aussi les magic bytes en secours. FAIL-CLOSED : une decompression
+    gzip invalide (``gzip.BadGzipFile``, sous-classe ``OSError``) ou un
+    decodage UTF-8 invalide remontent tels quels, jamais de contenu
+    partiel/tronque accepte silencieusement."""
+    if content_encoding.strip().lower() == "gzip" or raw_bytes[:2] == b"\x1f\x8b":
+        raw_bytes = gzip.decompress(raw_bytes)
+    return raw_bytes.decode("utf-8")
+
+
 def _default_json_http_get(url: str, timeout: float = 15.0) -> str:
     """Seule fonction du module touchant reellement le reseau. Envoie les
     deux headers confirmes par capture navigateur reelle
@@ -138,7 +155,9 @@ def _default_json_http_get(url: str, timeout: float = 15.0) -> str:
     meme convention que le reste du module reseau du depot."""
     request = urllib.request.Request(url, headers=_JSON_HEADERS, method="GET")
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read().decode("utf-8")
+        raw_bytes = response.read()
+        content_encoding = response.headers.get("Content-Encoding", "") or ""
+        return _decode_http_body(raw_bytes, content_encoding)
 
 
 def fetch_league_data_payload(

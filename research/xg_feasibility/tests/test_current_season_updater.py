@@ -6,6 +6,7 @@ ou des pannes explicites (reseau, JSON invalide, structure inattendue)."""
 
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,7 @@ import pytest
 
 from research.xg_feasibility.current_season_updater import (
     _JSON_HEADERS,
+    _decode_http_body,
     _default_json_http_get,
     build_get_league_data_url,
     fetch_league_data_payload,
@@ -111,24 +113,39 @@ def test_json_headers_match_confirmed_browser_capture() -> None:
     assert _JSON_HEADERS["X-Requested-With"] == "XMLHttpRequest"
 
 
+class _FakeHeaders:
+    def __init__(self, content_encoding: str | None = None) -> None:
+        self._content_encoding = content_encoding
+
+    def get(self, name: str, default=None):
+        if name.lower() == "content-encoding":
+            return self._content_encoding if self._content_encoding is not None else default
+        return default
+
+
+class _FakeResponse:
+    def __init__(self, body: bytes, content_encoding: str | None = None) -> None:
+        self._body = body
+        self.headers = _FakeHeaders(content_encoding)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def read(self):
+        return self._body
+
+
 def test_default_json_http_get_sends_confirmed_headers(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict = {}
-
-    class _FakeResponse:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *exc_info):
-            return False
-
-        def read(self):
-            return b'{"teams": {}, "players": [], "dates": []}'
 
     def _fake_urlopen(request, timeout=None):
         captured["headers"] = dict(request.header_items())
         captured["url"] = request.full_url
         captured["method"] = request.get_method()
-        return _FakeResponse()
+        return _FakeResponse(b'{"teams": {}, "players": [], "dates": []}')
 
     import urllib.request as urllib_request
 
@@ -138,6 +155,72 @@ def test_default_json_http_get_sends_confirmed_headers(monkeypatch: pytest.Monke
     assert captured["method"] == "GET"
     assert captured["headers"]["Accept"] == "application/json, text/javascript, */*; q=0.01"
     assert captured["headers"]["X-requested-with"] == "XMLHttpRequest"
+
+
+# --- _decode_http_body / _default_json_http_get : reponse gzip reelle -------
+# Constat empirique (validation externe reelle, machine avec acces reseau) :
+# Understat peut repondre en gzip (magic bytes 1f 8b) - UnicodeDecodeError si
+# on tente de decoder le corps brut en UTF-8 sans decompresser d'abord.
+
+
+def test_decode_http_body_plain_uncompressed_response() -> None:
+    raw = '{"teams": {}, "players": [], "dates": []}'.encode("utf-8")
+    assert _decode_http_body(raw, "") == raw.decode("utf-8")
+
+
+def test_decode_http_body_gzip_with_content_encoding_header() -> None:
+    original = '{"teams": {"1": {"title": "Brest"}}, "players": [], "dates": []}'
+    compressed = gzip.compress(original.encode("utf-8"))
+    assert _decode_http_body(compressed, "gzip") == original
+
+
+def test_decode_http_body_gzip_content_encoding_header_case_insensitive() -> None:
+    original = '{"teams": {}, "players": [], "dates": []}'
+    compressed = gzip.compress(original.encode("utf-8"))
+    assert _decode_http_body(compressed, "GZIP") == original
+
+
+def test_decode_http_body_gzip_magic_bytes_without_header() -> None:
+    # Reproduit exactement le cas reel rencontre en validation externe :
+    # corps gzip (1f 8b) recu sans Content-Encoding fiable/present.
+    original = '{"teams": {}, "players": [], "dates": []}'
+    compressed = gzip.compress(original.encode("utf-8"))
+    assert compressed[:2] == b"\x1f\x8b"
+    assert _decode_http_body(compressed, "") == original
+
+
+def test_decode_http_body_invalid_gzip_fails_closed() -> None:
+    corrupted = b"\x1f\x8bnot actually valid gzip data"
+    with pytest.raises(OSError):
+        _decode_http_body(corrupted, "gzip")
+
+
+def test_default_json_http_get_decompresses_gzip_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload_text = '{"teams": {}, "players": [], "dates": [{"id": "1", "isResult": true}]}'
+    compressed = gzip.compress(payload_text.encode("utf-8"))
+
+    def _fake_urlopen(request, timeout=None):
+        return _FakeResponse(compressed, content_encoding="gzip")
+
+    import urllib.request as urllib_request
+
+    monkeypatch.setattr(urllib_request, "urlopen", _fake_urlopen)
+    body = _default_json_http_get("https://understat.com/getLeagueData/Ligue%201/2026")
+    assert body == payload_text
+    assert json.loads(body)["dates"][0]["id"] == "1"
+
+
+def test_default_json_http_get_plain_response_still_works(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload_text = '{"teams": {}, "players": [], "dates": []}'
+
+    def _fake_urlopen(request, timeout=None):
+        return _FakeResponse(payload_text.encode("utf-8"), content_encoding=None)
+
+    import urllib.request as urllib_request
+
+    monkeypatch.setattr(urllib_request, "urlopen", _fake_urlopen)
+    body = _default_json_http_get("https://understat.com/getLeagueData/Ligue%201/2026")
+    assert body == payload_text
 
 
 # --- fetch_league_data_payload : parsing fail-closed du payload JSON --------
