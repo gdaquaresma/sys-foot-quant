@@ -28,11 +28,24 @@ de l'appel - jamais une valeur fournie par l'utilisateur.
 
 Decoupage (competition, saison) -> fichier IDENTIQUE a
 ``scripts/run_stage8_diagnostic_total_goals_over_under.py`` (``_SEASONS``)
-- meme choix scientifique deja verrouille par E7/E8 : chaque saison est un
-flux walk-forward INDEPENDANT (jamais de melange entre saisons, voir
-``calibration_engine.calibration_dataset``, docstring). Duplication
-minimale et deliberee du mapping, meme convention que le reste du projet
-pour les scripts isoles - jamais une nouvelle source de donnees.
+pour ``2024_25``/``2025_26`` - meme choix scientifique deja verrouille par
+E7/E8 : chaque flux chronologique reste borne a UNE seule competition,
+jamais un tri global qui melangerait des competitions distinctes
+(``calibration_engine.calibration_dataset``, docstring - c'est la ou porte
+reellement la regle "jamais de melange", pas sur les saisons d'une meme
+competition). Duplication minimale et deliberee du mapping, meme
+convention que le reste du projet pour les scripts isoles - jamais une
+nouvelle source de donnees.
+
+Etape I-2 (saison courante) : ``2026_27`` est la SEULE entree qui agrege
+plusieurs fichiers - historique long terme (2024/25+2025/26) + saison
+courante deja jouee (2026/27), tous Ligue 1 (meme competition, flux
+chronologique unique, coherent avec la regle ci-dessus) - via
+``_CURRENT_SEASON_SOURCES``/``build_real_match_records_multi_season``
+(INCHANGEE, deja testee par ``multi_season_dataset``). ``2024_25``/
+``2025_26`` restent EXACTEMENT mono-fichier, comportement et structure de
+``_SEASONS`` inchanges (contrainte imperative de l'audit I-1B : ne jamais
+elargir automatiquement l'historique d'une saison deja close).
 
 Resolution d'equipe : accepte directement un nom Understat (recherche
 directe dans le corpus charge) ou, a defaut, un nom Football-Data (traduit
@@ -88,6 +101,9 @@ from sys_foot_quant.data_engine.market_odds.future_match_dataset import (  # noq
     build_understat_team_id_by_name,
 )
 from sys_foot_quant.data_engine.market_odds.matching import build_understat_keys  # noqa: E402
+from sys_foot_quant.data_engine.market_odds.multi_season_dataset import (  # noqa: E402
+    build_real_match_records_multi_season,
+)
 from sys_foot_quant.data_engine.market_odds.team_mapping import resolve_understat_name  # noqa: E402
 from sys_foot_quant.final_engine.orchestrator import DECISION_OFFSET_HOURS, run_match_decision  # noqa: E402
 from sys_foot_quant.final_engine.types import MatchDecisionOutput  # noqa: E402
@@ -121,8 +137,27 @@ _SEASONS: dict[str, dict[str, tuple[str, Path]]] = {
     },
 }
 
-COMPETITIONS: tuple[str, ...] = tuple(sorted({c for seasons in _SEASONS.values() for c in seasons}))
-SEASONS: tuple[str, ...] = tuple(sorted(_SEASONS))
+# Etape I-2 : saison courante, SEULE entree qui agrege plusieurs fichiers -
+# historique long terme + saison en cours deja jouee, dans l'ORDRE
+# CHRONOLOGIQUE (par construction ci-dessous ; build_real_match_records_multi_season
+# re-trie de toute facon par kickoff_utc, jamais un ordre suppose). Forme
+# DELIBEREMENT distincte de ``_SEASONS`` (liste de sources, pas un tuple
+# unique) : une saison courante n'est jamais un fichier isole. N'ajouter une
+# competition ici QUE quand un fichier de saison courante reel existe pour
+# elle (jamais une entree vide/anticipee).
+_CURRENT_SEASON: str = "2026_27"
+_CURRENT_SEASON_SOURCES: dict[str, list[tuple[str, Path]]] = {
+    "ligue1": [
+        ("Ligue_1", Path("research/xg_feasibility/runs/ligue1_2024_datesData.json")),
+        ("Ligue_1", Path("research/xg_feasibility/runs/ligue1_2025_datesData.json")),
+        ("Ligue_1", Path("research/xg_feasibility/runs/ligue1_2026_datesData.json")),
+    ],
+}
+
+COMPETITIONS: tuple[str, ...] = tuple(
+    sorted({c for seasons in _SEASONS.values() for c in seasons} | set(_CURRENT_SEASON_SOURCES))
+)
+SEASONS: tuple[str, ...] = tuple(sorted(set(_SEASONS) | {_CURRENT_SEASON}))
 
 
 class PredictMatchError(ValueError):
@@ -306,6 +341,30 @@ class PredictionInputs:
     calibration_df_by_model: dict[str, pd.DataFrame]
 
 
+def _load_current_season_raw_sources(competition: str) -> list[tuple[list[dict], str]]:
+    """Charge, DANS L'ORDRE, les fichiers bruts declares par
+    ``_CURRENT_SEASON_SOURCES[competition]`` (historique long terme + saison
+    courante) - retourne le format ``(raw_matches, league_id)`` attendu par
+    ``build_real_match_records_multi_season`` (INCHANGEE). Refuse
+    explicitement une competition ou un fichier absent, meme convention que
+    ``_load_understat_raw``."""
+    if competition not in _CURRENT_SEASON_SOURCES:
+        raise PredictMatchError(
+            f"Competition inconnue pour la saison courante {_CURRENT_SEASON!r} : {competition!r} "
+            f"(competitions disponibles pour la saison courante : {tuple(sorted(_CURRENT_SEASON_SOURCES))})."
+        )
+    sources: list[tuple[list[dict], str]] = []
+    for league_id, path in _CURRENT_SEASON_SOURCES[competition]:
+        if not path.exists():
+            raise PredictMatchError(
+                f"Fichier Understat introuvable : {path} (ce runner ne collecte jamais de nouvelle donnee)."
+            )
+        with open(path) as f:
+            raw = json.load(f)
+        sources.append((raw, league_id))
+    return sources
+
+
 def build_prediction_inputs(
     competition: str,
     season: str,
@@ -315,20 +374,46 @@ def build_prediction_inputs(
     decision_offset_hours: float = DECISION_OFFSET_HOURS,
 ) -> PredictionInputs:
     """Assemble R1 (``calibration_df_by_model``) + R2
-    (``goals_train_df``/``xg_train_df``) pour UN match, a partir du seul
-    corpus (``competition``, ``season``) deja charge - AUCUN filtrage
-    point-in-time reimplemente ici, entierement delegue a R1/R2."""
+    (``goals_train_df``/``xg_train_df``) pour UN match.
+
+    Pour ``season == _CURRENT_SEASON`` (``"2026_27"``), le corpus est
+    l'AGREGATION multi-fichiers de ``_CURRENT_SEASON_SOURCES`` (historique
+    long terme + saison courante deja jouee), construite EXCLUSIVEMENT via
+    ``multi_season_dataset.build_real_match_records_multi_season``
+    (INCHANGEE, deja testee - detection de collision de ``match_id``
+    comprise). Pour toute autre saison, comportement RIGOUREUSEMENT
+    INCHANGE : un seul fichier charge via ``_load_understat_raw``
+    (contrainte imperative de l'audit I-1B - jamais d'elargissement
+    automatique de l'historique d'une saison deja close).
+
+    AUCUN filtrage point-in-time reimplemente ici dans les deux cas,
+    entierement delegue a R1/R2."""
     if home_team == away_team:
         raise PredictMatchError(f"--home-team et --away-team doivent designer deux equipes distinctes ({home_team!r}).")
 
-    understat_raw, league_id = _load_understat_raw(competition, season)
-    records: list[RealMatchRecord] = build_real_match_records(understat_raw, league=league_id)
+    if season == _CURRENT_SEASON:
+        raw_sources = _load_current_season_raw_sources(competition)
+        records: list[RealMatchRecord] = build_real_match_records_multi_season(raw_sources)
+        understat_keys = [
+            key
+            for raw, _source_league_id in raw_sources
+            for key in build_understat_keys(raw, league=competition, season=season)
+        ]
+        # league_id "public" = celui de la saison courante elle-meme (le
+        # dernier fichier de la liste, par construction de
+        # _CURRENT_SEASON_SOURCES) - coherent avec le sens de ce champ pour
+        # les autres saisons (identifiant Understat de LA saison demandee).
+        league_id = _CURRENT_SEASON_SOURCES[competition][-1][0]
+    else:
+        understat_raw, league_id = _load_understat_raw(competition, season)
+        records = build_real_match_records(understat_raw, league=league_id)
 
-    # Resolution de nom -> team_id : reutilise integralement les cles deja
-    # extraites par matching.build_understat_keys (INCHANGE) et la table
-    # construite par future_match_dataset.build_understat_team_id_by_name
-    # (R2) - jamais une nouvelle extraction du schema brut Understat.
-    understat_keys = build_understat_keys(understat_raw, league=competition, season=season)
+        # Resolution de nom -> team_id : reutilise integralement les cles deja
+        # extraites par matching.build_understat_keys (INCHANGE) et la table
+        # construite par future_match_dataset.build_understat_team_id_by_name
+        # (R2) - jamais une nouvelle extraction du schema brut Understat.
+        understat_keys = build_understat_keys(understat_raw, league=competition, season=season)
+
     team_id_by_name = build_understat_team_id_by_name(understat_keys)
 
     home_team_id = resolve_team_id(home_team, team_id_by_name, competition)
