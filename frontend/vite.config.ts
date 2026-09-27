@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -9,6 +10,10 @@ import { defineConfig } from 'vite'
 // seule origine (le serveur Vite), qui relaie server-side vers 127.0.0.1:8000.
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+  },
   server: {
     host: '127.0.0.1',
     proxy: {

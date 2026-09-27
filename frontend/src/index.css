@@ -140,3 +140,82 @@ body {
   background: rgba(34, 197, 94, 0.15);
   color: var(--color-settled);
 }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filters label,
+.team-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.team-filter {
+  margin-bottom: 1rem;
+  max-width: 260px;
+}
+
+.filters input,
+.team-filter input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.filters button {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.filters button:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-nav {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .app-nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .app-content {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+  }
+}
