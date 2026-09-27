@@ -1,0 +1,99 @@
+import { useEffect, useState } from 'react'
+import { ApiError, getPerformance } from '../api/client'
+import type { PerformanceResponse } from '../api/types'
+import { ErrorState, LoadingState } from '../components/StateViews'
+
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; performance: PerformanceResponse }
+
+export function Performance() {
+  const [state, setState] = useState<LoadState>({ status: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+    getPerformance()
+      .then((performance) => {
+        if (!cancelled) setState({ status: 'ready', performance })
+      })
+      .catch((err) => {
+        if (!cancelled) setState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (state.status === 'loading') return <LoadingState label="Chargement de la performance..." />
+  if (state.status === 'error') return <ErrorState message={state.message} />
+
+  const { performance } = state
+
+  return (
+    <div className="page performance-page">
+      <h1>Performance</h1>
+
+      <section className="card">
+        <h2>Résumé</h2>
+        <p>Total : {performance.n_total}</p>
+        <p>En attente : {performance.n_pending}</p>
+        <p>Réglées : {performance.n_settled}</p>
+      </section>
+
+      <section className="card">
+        <h2>Répartition des décisions</h2>
+        {Object.keys(performance.decision_distribution).length === 0 ? (
+          <p>Aucune donnée.</p>
+        ) : (
+          <ul>
+            {Object.entries(performance.decision_distribution).map(([decision, count]) => (
+              <li key={decision}>
+                {decision} : {count}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Pari (Shadow Mode)</h2>
+        {performance.betting.n_bet === 0 ? (
+          <p>{performance.betting.message ?? 'Aucun pari réglé.'}</p>
+        ) : (
+          <ul>
+            <li>Nombre de paris : {performance.betting.n_bet}</li>
+            {performance.betting.win_rate !== undefined && <li>Taux de réussite : {performance.betting.win_rate}</li>}
+            {performance.betting.roi_theoretical !== undefined && (
+              <li>ROI théorique : {performance.betting.roi_theoretical}</li>
+            )}
+          </ul>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Modèles</h2>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Modèle</th>
+              <th>n</th>
+              <th>Brier</th>
+              <th>Log-loss</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(performance.models).map(([model, evalResult]) => (
+              <tr key={model}>
+                <td>{model}</td>
+                <td>{evalResult.n}</td>
+                <td>{evalResult.brier ?? '—'}</td>
+                <td>{evalResult.log_loss ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  )
+}
