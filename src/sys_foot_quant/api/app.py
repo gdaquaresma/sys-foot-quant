@@ -1,13 +1,15 @@
-"""Point d'entree de l'API HTTP sys-foot-quant (Phase UI-2-B, V1 lecture
-seule).
+"""Point d'entree de l'API HTTP sys-foot-quant (Phase UI-2-B + integration
+moteur de prediction).
 
-Perimetre STRICT de cette V1 : 5 routes GET uniquement
-(``routes_matches``/``routes_shadow``) - aucune route de prediction
-(``run_prediction``/``build_prediction_inputs`` ne sont importees nulle
-part dans ``sys_foot_quant.api``), aucune route d'ecriture Shadow Mode
+Perimetre : routes GET uniquement (``routes_matches``/``routes_shadow``/
+``routes_prediction``) - aucune route d'ecriture Shadow Mode
 (``record_prediction``/``settle_prediction`` non importees), aucun
-parametre exposant un seuil scientifique (``min_edge_threshold`` et
-equivalents restent internes a ``final_engine/``, jamais touches ici).
+parametre exposant un seuil scientifique (``min_edge_threshold``,
+``operational_thresholds``, ``decision_offset_hours`` restent internes a
+``final_engine/``/``scripts/predict_match.py``, jamais acceptes en entree
+de cette API). ``routes_prediction`` n'importe ``run_prediction`` que via
+``prediction_adapter`` (chargement du script existant, INCHANGE) - aucune
+logique scientifique n'est dupliquee ici.
 
 Lancement local (Mac de developpement) :
 
@@ -23,7 +25,8 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from sys_foot_quant.api import routes_matches, routes_shadow
+from sys_foot_quant.api import routes_matches, routes_prediction, routes_shadow
+from sys_foot_quant.api.prediction_adapter import PredictMatchError
 from sys_foot_quant.data_engine.market_odds.match_catalog import MatchCatalogError
 
 DEFAULT_HOST = "127.0.0.1"
@@ -46,5 +49,14 @@ async def handle_match_catalog_error(request: Request, exc: MatchCatalogError) -
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
+@app.exception_handler(PredictMatchError)
+async def handle_predict_match_error(request: Request, exc: PredictMatchError) -> JSONResponse:
+    """Meme traitement que ``MatchCatalogError`` - un refus explicite du
+    chemin de prediction (ex. cotes incoherentes) devient un HTTP 400
+    explicite, jamais un 500 generique ni un resultat par defaut."""
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
 app.include_router(routes_matches.router)
 app.include_router(routes_shadow.router)
+app.include_router(routes_prediction.router)
