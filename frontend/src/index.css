@@ -235,6 +235,28 @@ body {
   background: var(--color-accent);
 }
 
+.hint {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.reason-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.reason-list code {
+  background: var(--color-border);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
 .system-status {
   list-style: none;
   padding: 0;

@@ -104,6 +104,91 @@ export interface PerformanceResponse {
   calibration_min_observations: number
 }
 
+// --- GET /matches/{match_id}/prediction -------------------------------------
+//
+// Reflète EXACTEMENT dataclasses.asdict(MatchDecisionOutput)
+// (final_engine/types.py, INCHANGE) tel que sérialisé par
+// routes_prediction.py - vérifié sur une réponse réelle (match Brest–PSG,
+// id 31975). `observed_value`/`threshold` sur un gate n'ont pas de forme
+// fixe (nombre, chaîne, liste, objet ou null selon le gate) : `unknown`,
+// jamais une forme supposée. Les clés numériques (seuils de buts, ex.
+// "2.5") sont sérialisées en chaînes par le JSON - `Record<string, number>`.
+
+export interface ModelPrediction {
+  model: string
+  lam: number
+  mu: number
+  rho: number | null
+  n_train_matches: number
+}
+
+export interface CalibratedGoalDistribution {
+  model: string
+  scale_c: number | null
+  n_calibration_used: number
+  goal_distribution: number[] | null
+  probabilities: Record<string, number> | null
+}
+
+export interface PricingResult {
+  fair_price: Record<string, number>
+}
+
+export interface MarketComparisonResult {
+  market_odds: Record<string, number>
+  market_implied_probability_raw: Record<string, number>
+  market_implied_probability_normalized: Record<string, number>
+  market_overround: number
+  raw_edge: Record<string, number>
+  price_edge: Record<string, number>
+}
+
+export interface PredictionGateResult {
+  name: string
+  triggered: boolean
+  reason: string
+  metric: string
+  observed_value: unknown
+  threshold: unknown
+  failure_code: string | null
+}
+
+export interface QualificationResult {
+  calibration_status: Record<string, string>
+  discrimination_status: string
+  data_quality: string[]
+  scientific_gates: PredictionGateResult[]
+  operational_gates: PredictionGateResult[]
+}
+
+export interface PredictionDecisionResult {
+  /** "BET" n'est structurellement jamais produit par le moteur actuel
+   * (edge_threshold_gate toujours declenche) - reste une valeur legitime
+   * du type, jamais a exclure du typage. */
+  decision: 'BET' | 'NO_BET'
+  decision_reason: string[]
+}
+
+export interface MatchDecisionOutput {
+  /** Identifiant interne généré par le moteur (composite
+   * compétition/saison/équipes/coup d'envoi) - DIFFÉRENT du `match_id` de
+   * catalogue utilisé par l'URL et `GET /matches/{match_id}`. */
+  match_id: string
+  /** Chaine ISO SANS suffixe Z (naive), comme /shadow. */
+  timestamp_decision: string
+  competition: string
+  season: string
+  primary_model: string
+  models: Record<string, ModelPrediction | null>
+  calibration: Record<string, CalibratedGoalDistribution>
+  pricing: Record<string, PricingResult | null>
+  market: MarketComparisonResult | null
+  qualification: QualificationResult
+  decision: PredictionDecisionResult
+  engine_version: string
+  parameters_snapshot: Record<string, unknown>
+}
+
 // --- Erreurs -------------------------------------------------------------
 
 /** Forme d'erreur pour 400/404 (gestionnaire d'erreurs global de l'API). */

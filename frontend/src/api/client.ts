@@ -8,6 +8,7 @@
  */
 import type {
   ApiErrorDetail,
+  MatchDecisionOutput,
   MatchResponse,
   PerformanceResponse,
   ShadowObservation,
@@ -76,4 +77,26 @@ export function getShadowObservation(predictionId: string): Promise<ShadowObserv
 
 export function getPerformance(): Promise<PerformanceResponse> {
   return apiGet<PerformanceResponse>('/performance')
+}
+
+/**
+ * Appelle EXCLUSIVEMENT `GET /matches/{match_id}/prediction` - jamais de
+ * calcul de probabilité/edge/décision ici, uniquement le transport de la
+ * réponse telle que fournie par le moteur. `kickoff_utc` n'est jamais un
+ * paramètre : le backend le dérive toujours du catalogue réel.
+ * `marketOdds` est optionnel - fournir les deux cotes ou aucune (le
+ * backend refuse explicitement une cote isolée).
+ */
+export function getPrediction(
+  matchId: string,
+  competition: string,
+  season: string,
+  marketOdds?: { over_2_5: number; under_2_5: number },
+): Promise<MatchDecisionOutput> {
+  const params: Record<string, string> = { competition, season }
+  if (marketOdds) {
+    params.over_2_5 = String(marketOdds.over_2_5)
+    params.under_2_5 = String(marketOdds.under_2_5)
+  }
+  return apiGet<MatchDecisionOutput>(`/matches/${encodeURIComponent(matchId)}/prediction`, params)
 }
