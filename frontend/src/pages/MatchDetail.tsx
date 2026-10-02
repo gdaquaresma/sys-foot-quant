@@ -14,7 +14,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, getMatch, getPrediction } from '../api/client'
 import type { CalibratedGoalDistribution, MarketComparisonResult, MatchDecisionOutput, MatchResponse, ModelPrediction, PricingResult } from '../api/types'
-import { DecisionBadge, ErrorState, LoadingState } from '../components/StateViews'
+import { ErrorState, LoadingState } from '../components/StateViews'
 
 type LoadState =
   | { status: 'loading' }
@@ -73,18 +73,31 @@ function describeReason(code: string): string {
   return DECISION_REASON_LABELS[code] ?? 'Code de raison non documenté côté interface.'
 }
 
-function ModelsSummary({ models }: { models: Record<string, ModelPrediction | null> }) {
+/** Badge discret signalant le `primary_model` (donnée déjà fournie par
+ * l'API, jamais déduite ici) - distinction purement visuelle entre le
+ * modèle principal et les modèles de contrôle, aucune donnée modifiée. */
+function PrimaryModelBadge() {
+  return (
+    <span className="model-badge-primary" aria-label="Modèle principal">
+      Principal
+    </span>
+  )
+}
+
+function ModelsSummary({ models, primaryModel }: { models: Record<string, ModelPrediction | null>; primaryModel: string }) {
   return (
     <ul className="reason-list">
       {Object.entries(models).map(([key, model]) => (
         <li key={key}>
           {model === null ? (
             <>
-              <strong>{key}</strong> — indisponible (historique d'entraînement insuffisant).
+              <strong>{key}</strong>
+              {key === primaryModel && <PrimaryModelBadge />} — indisponible (historique d'entraînement insuffisant).
             </>
           ) : (
             <>
-              <strong>{key}</strong> — λ={model.lam.toFixed(3)}, μ={model.mu.toFixed(3)}
+              <strong>{key}</strong>
+              {key === primaryModel && <PrimaryModelBadge />} — λ={model.lam.toFixed(3)}, μ={model.mu.toFixed(3)}
               {model.rho !== null && <>, ρ={model.rho.toFixed(3)}</>}, entraîné sur {model.n_train_matches} matchs.
             </>
           )}
@@ -98,10 +111,12 @@ function ProbabilitiesTable({
   models,
   calibration,
   pricing,
+  primaryModel,
 }: {
   models: Record<string, ModelPrediction | null>
   calibration: Record<string, CalibratedGoalDistribution>
   pricing: Record<string, PricingResult | null>
+  primaryModel: string
 }) {
   return (
     <table className="table">
@@ -117,10 +132,16 @@ function ProbabilitiesTable({
         {Object.keys(models).map((key) => {
           const modelCalibration = calibration[key]
           const modelPricing = pricing[key]
+          const modelLabel = (
+            <>
+              <span>{key}</span>
+              {key === primaryModel && <PrimaryModelBadge />}
+            </>
+          )
           if (!modelCalibration?.probabilities) {
             return (
               <tr key={key}>
-                <td>{key}</td>
+                <td>{modelLabel}</td>
                 <td colSpan={3}>Probabilités indisponibles (historique de calibration insuffisant).</td>
               </tr>
             )
@@ -128,7 +149,7 @@ function ProbabilitiesTable({
           const thresholds = Object.keys(modelCalibration.probabilities)
           return thresholds.map((threshold, index) => (
             <tr key={`${key}-${threshold}`}>
-              {index === 0 && <td rowSpan={thresholds.length}>{key}</td>}
+              {index === 0 && <td rowSpan={thresholds.length}>{modelLabel}</td>}
               <td>{threshold}</td>
               <td>{formatProbability(modelCalibration.probabilities![threshold])}</td>
               <td>{modelPricing ? formatOdds(modelPricing.fair_price[threshold]) : '—'}</td>
@@ -171,17 +192,21 @@ function PredictionSection({ prediction }: { prediction: MatchDecisionOutput }) 
   const triggeredGates = [...prediction.qualification.scientific_gates, ...prediction.qualification.operational_gates].filter(
     (gate) => gate.triggered,
   )
+  const decision = prediction.decision.decision
 
   return (
     <>
-      <p>
-        Modèle principal : <strong>{prediction.primary_model}</strong> — moteur {prediction.engine_version} — décision
-        calculée le {formatKickoff(`${prediction.timestamp_decision}Z`)}
-      </p>
+      {/* --- Synthèse : ce qu'il faut comprendre immédiatement --------- */}
 
-      <p>
-        Décision : <DecisionBadge decision={prediction.decision.decision} />
-      </p>
+      <div className="decision-hero">
+        <span className={`decision-hero-pill decision-hero-pill-${decision.toLowerCase()}`}>{decision}</span>
+        <div className="decision-meta">
+          <p className="decision-meta-line">
+            Modèle principal : <strong>{prediction.primary_model}</strong> — moteur {prediction.engine_version}
+          </p>
+          <p className="decision-meta-line hint">Décision calculée le {formatKickoff(`${prediction.timestamp_decision}Z`)}</p>
+        </div>
+      </div>
 
       <h3>Raison(s) de la décision</h3>
       {prediction.decision.decision_reason.length === 0 ? (
@@ -197,49 +222,90 @@ function PredictionSection({ prediction }: { prediction: MatchDecisionOutput }) 
       )}
 
       <h3>Modèles utilisés</h3>
-      <ModelsSummary models={prediction.models} />
+      <ModelsSummary models={prediction.models} primaryModel={prediction.primary_model} />
 
       <h3>Probabilités</h3>
-      <ProbabilitiesTable models={prediction.models} calibration={prediction.calibration} pricing={prediction.pricing} />
+      <ProbabilitiesTable
+        models={prediction.models}
+        calibration={prediction.calibration}
+        pricing={prediction.pricing}
+        primaryModel={prediction.primary_model}
+      />
 
       <h3>Données de marché</h3>
       {prediction.market === null ? (
         <p className="state state-empty">Données de marché non fournies — aucun edge exploitable ne peut être affiché.</p>
       ) : (
-        <MarketSection market={prediction.market} />
+        <div className="fade-in">
+          <MarketSection market={prediction.market} />
+        </div>
       )}
 
-      <h3>Qualification / calibration</h3>
-      <p>Discrimination du modèle principal : {prediction.qualification.discrimination_status}</p>
-      <ul className="reason-list">
-        {Object.entries(prediction.qualification.calibration_status).map(([threshold, status]) => (
-          <li key={threshold}>
-            Seuil {threshold} : {status}
-          </li>
-        ))}
-      </ul>
-      {prediction.qualification.data_quality.length > 0 && (
-        <p>Qualité des données : {prediction.qualification.data_quality.join(', ')}</p>
-      )}
-      {triggeredGates.length > 0 && (
-        <>
-          <p>Contrôles déclenchés :</p>
-          <ul className="reason-list">
-            {triggeredGates.map((gate) => (
-              <li key={gate.name}>{gate.reason}</li>
-            ))}
-          </ul>
-        </>
-      )}
+      {/* --- Détails d'audit : repliés par défaut, jamais masqués ------ */}
 
-      <h3>Paramètres du moteur</h3>
-      <ul className="reason-list">
-        {Object.entries(prediction.parameters_snapshot).map(([key, value]) => (
-          <li key={key}>
-            <code>{key}</code> : {formatParamValue(value)}
-          </li>
-        ))}
-      </ul>
+      <div className="audit-section">
+        <h2>Détails d'audit</h2>
+
+        <details className="audit-accordion">
+          <summary>
+            <span className="chevron" aria-hidden="true">
+              ›
+            </span>
+            Contrôles déclenchés{triggeredGates.length > 0 ? ` (${triggeredGates.length})` : ''}
+          </summary>
+          <div className="audit-accordion-content">
+            {triggeredGates.length === 0 ? (
+              <p>Aucun contrôle déclenché.</p>
+            ) : (
+              <ul className="reason-list">
+                {triggeredGates.map((gate) => (
+                  <li key={gate.name}>{gate.reason}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </details>
+
+        <details className="audit-accordion">
+          <summary>
+            <span className="chevron" aria-hidden="true">
+              ›
+            </span>
+            Qualification / calibration
+          </summary>
+          <div className="audit-accordion-content">
+            <p>Discrimination du modèle principal : {prediction.qualification.discrimination_status}</p>
+            <ul className="reason-list">
+              {Object.entries(prediction.qualification.calibration_status).map(([threshold, status]) => (
+                <li key={threshold}>
+                  Seuil {threshold} : {status}
+                </li>
+              ))}
+            </ul>
+            {prediction.qualification.data_quality.length > 0 && (
+              <p>Qualité des données : {prediction.qualification.data_quality.join(', ')}</p>
+            )}
+          </div>
+        </details>
+
+        <details className="audit-accordion">
+          <summary>
+            <span className="chevron" aria-hidden="true">
+              ›
+            </span>
+            Paramètres du moteur
+          </summary>
+          <div className="audit-accordion-content">
+            <ul className="reason-list">
+              {Object.entries(prediction.parameters_snapshot).map(([key, value]) => (
+                <li key={key}>
+                  <code>{key}</code> : {formatParamValue(value)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      </div>
     </>
   )
 }
@@ -380,11 +446,15 @@ export function MatchDetail() {
             {oddsFormError && <ErrorState message={oddsFormError} />}
           </section>
 
-          <section className="card">
+          <section className="card card-elevated">
             <h2>Prédiction</h2>
             {predictionState.status === 'loading' && <LoadingState label="Calcul de la prédiction..." />}
             {predictionState.status === 'error' && <ErrorState message={predictionState.message} />}
-            {predictionState.status === 'ready' && <PredictionSection prediction={predictionState.prediction} />}
+            {predictionState.status === 'ready' && (
+              <div className="fade-in">
+                <PredictionSection prediction={predictionState.prediction} />
+              </div>
+            )}
           </section>
         </>
       )}

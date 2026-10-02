@@ -349,4 +349,46 @@ describe('MatchDetail', () => {
     expect(screen.getByText(/Erreur : Renseignez les deux cotes/)).toBeInTheDocument()
     expect(getPredictionMock).not.toHaveBeenCalled()
   })
+
+  // --- hiérarchie visuelle (phase finition UX) ----------------------------
+
+  it('distingue visuellement le modèle principal (badge) sans altérer les autres modèles', async () => {
+    getMatchMock.mockResolvedValue(FIXTURE_MATCH)
+    getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+    renderDetail('/matches/ligue1/2026_27/31975')
+
+    await waitFor(() => expect(screen.getAllByText('poisson_simple').length).toBeGreaterThan(0))
+    // Exactement 2 badges "Principal" attendus : un dans "Modèles utilisés",
+    // un dans la table des probabilités - jamais sur dixon_coles/xg_model.
+    expect(screen.getAllByLabelText('Modèle principal')).toHaveLength(2)
+  })
+
+  it('replie les détails d’audit par défaut sans supprimer l’information (accessible au clic)', async () => {
+    getMatchMock.mockResolvedValue(FIXTURE_MATCH)
+    getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+    renderDetail('/matches/ligue1/2026_27/31975')
+
+    await waitFor(() => expect(screen.getByText('Qualification / calibration')).toBeInTheDocument())
+
+    const qualificationDetails = screen.getByText('Qualification / calibration').closest('details')
+    expect(qualificationDetails).not.toBeNull()
+    expect(qualificationDetails).not.toHaveAttribute('open')
+
+    // Toujours présent dans le DOM (jamais supprimé), uniquement replié.
+    expect(screen.getByText(/Discrimination du modèle principal/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Qualification / calibration'))
+    expect(qualificationDetails).toHaveAttribute('open')
+  })
+
+  it('n’affecte pas la décision/les raisons, qui restent visibles sans ouvrir de détail', async () => {
+    getMatchMock.mockResolvedValue(FIXTURE_MATCH)
+    getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+    renderDetail('/matches/ligue1/2026_27/31975')
+
+    await waitFor(() => expect(screen.getByText('NO_BET')).toBeInTheDocument())
+    // La décision et ses raisons ne sont jamais dans un <details> replié.
+    expect(screen.getByText('NO_BET').closest('details')).toBeNull()
+    expect(screen.getByText('EDGE_BELOW_THRESHOLD').closest('details')).toBeNull()
+  })
 })

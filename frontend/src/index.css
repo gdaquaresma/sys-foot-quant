@@ -1,6 +1,7 @@
 :root {
   --color-bg: #0f172a;
   --color-surface: #1e293b;
+  --color-surface-elevated: #243247;
   --color-border: #334155;
   --color-text: #e2e8f0;
   --color-text-muted: #94a3b8;
@@ -10,6 +11,22 @@
   --color-pending: #f59e0b;
   --color-settled: #22c55e;
   --color-error: #ef4444;
+
+  /* Échelle d'espacement - utilisée pour un rythme vertical volontaire
+     (remplace la dépendance aux marges par défaut du navigateur). */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Micro-interactions - durées courtes, jamais de mouvement spectaculaire
+     (outil de décision quantitative, pas une interface ludique). */
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
 }
@@ -22,6 +39,128 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+/* --- Typographie : hiérarchie volontaire ------------------------------
+   h1 = titre de page ; h2 = titre de carte ; h3 = étiquette de section
+   (discrète, en capitales) utilisée pour démarquer les sous-sections
+   techniques du contenu principal sans leur donner un poids de titre. */
+
+h1 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+  font-weight: 700;
+  margin: 0 0 var(--space-5);
+}
+
+h2 {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  font-weight: 700;
+  margin: 0 0 var(--space-4);
+}
+
+h3 {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: var(--space-5) 0 var(--space-2);
+}
+
+.card > h3:first-child,
+.decision-hero + h3 {
+  margin-top: 0;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+  line-height: 1.5;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Micro-interactions globales --------------------------------------
+   Transitions courtes et uniformes sur tout élément interactif - jamais
+   `transition: all` (coût de peinture imprévisible), uniquement les
+   propriétés réellement animées. */
+
+a,
+button,
+input,
+.table tbody tr {
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.table tbody tr:hover,
+.table tbody tr:focus-within {
+  background-color: rgba(148, 163, 184, 0.08);
+}
+
+/* --- Animations d'apparition (sobres, jamais de rebond/ressort) -------- */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in var(--transition-base) ease-out;
+}
+
+/* Respect strict de la préférence système de réduction de mouvement :
+   désactive toute animation/transition, ne conserve que les changements
+   d'état instantanés (aucune information n'est perdue, uniquement le
+   mouvement). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .app-shell {
@@ -68,8 +207,18 @@ body {
 
 .app-content {
   flex: 1;
+  /* Sans ceci, un item flex ne rétrécit jamais sous la largeur minimale de
+     contenu de ses descendants (`min-width: auto` par défaut) - même si
+     une table interne a son propre `overflow-x: auto`, celui-ci ne change
+     pas la taille minimale de contenu remontée à cet ancêtre flex. C'est
+     la cause exacte du débordement horizontal de page constaté à 768px
+     (table large -> page entière poussée à 827px). */
+  min-width: 0;
   padding: 2rem;
-  max-width: 960px;
+  /* Légèrement élargi (960px -> 1080px) pour réduire la sensation de
+     colonne trop étroite sur les grands écrans, sans changer la mise en
+     page ni fabriquer de contenu pour combler l'espace. */
+  max-width: 1080px;
 }
 
 .card {
@@ -77,12 +226,31 @@ body {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.25rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--space-5);
+}
+
+/* Élévation légère, réservée aux éléments réellement prioritaires (la
+   décision du moteur) - utilisée avec parcimonie, jamais généralisée à
+   toutes les cartes pour ne pas diluer la hiérarchie qu'elle sert à
+   créer. */
+.card-elevated {
+  background: var(--color-surface-elevated);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  /* Toujours scrollable horizontalement DANS la table elle-même plutôt
+     que de laisser la page entière déborder - corrige le débordement
+     horizontal constaté à 768px (une table large pousse alors la page de
+     ~59px) tout en préservant le rendu identique sur les largeurs où le
+     contenu tient déjà (aucun changement visuel à 1440px). Remplace
+     l'ancienne règle scopée à `max-width: 640px` par un comportement
+     uniforme à toutes les largeurs. */
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .table th,
@@ -203,6 +371,22 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* Apparition discrète et en cascade au montage - priorité basse, reste
+     très subtile (4px de déplacement, pas de rebond). */
+  animation: fade-in-up var(--transition-base) ease-out both;
+}
+
+.stat-grid .stat-card:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stat-grid .stat-card:nth-child(2) {
+  animation-delay: 30ms;
+}
+.stat-grid .stat-card:nth-child(3) {
+  animation-delay: 60ms;
+}
+.stat-grid .stat-card:nth-child(4) {
+  animation-delay: 90ms;
 }
 
 .stat-value {
@@ -271,6 +455,122 @@ body {
   font-size: 0.85rem;
 }
 
+/* --- Décision (Match Detail) -------------------------------------------
+   Bloc à poids visuel fort pour le résultat du moteur - le badge est
+   nettement plus grand que le badge compact utilisé ailleurs (Shadow),
+   mais la palette reste identique (--color-bet / --color-no-bet) : même
+   sobriété, poids différent. NO_BET garde son ton neutre (gris), jamais
+   transformé en alerte. */
+.decision-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  animation: fade-in-scale var(--transition-base) ease-out;
+}
+
+.decision-hero-pill {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.decision-hero-pill-bet {
+  background: rgba(22, 163, 74, 0.15);
+  color: var(--color-bet);
+}
+
+.decision-hero-pill-no_bet {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--color-no-bet);
+}
+
+.decision-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.decision-meta-line {
+  margin: 0;
+}
+
+/* --- Modèle principal (badge discret) ----------------------------------- */
+
+.model-badge-primary {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+/* --- Détails d'audit (sections techniques repliables) -------------------
+   `<details>` natif - accessible par défaut (clavier, lecteur d'écran),
+   aucune dépendance supplémentaire. Fermé par défaut : la décision et ses
+   raisons restent visibles sans y toucher ; seul le détail d'audit
+   (contrôles, calibration, paramètres moteur) est replié. */
+
+.audit-section {
+  margin-top: var(--space-6);
+}
+
+.audit-accordion {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.audit-accordion summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.audit-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.audit-accordion .chevron {
+  display: inline-block;
+  transition: transform var(--transition-fast);
+}
+
+.audit-accordion[open] .chevron {
+  transform: rotate(90deg);
+}
+
+.audit-accordion-content {
+  margin-top: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decision-hero {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .app-shell {
     flex-direction: column;
@@ -295,10 +595,5 @@ body {
   .filters {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .table {
-    display: block;
-    overflow-x: auto;
   }
 }

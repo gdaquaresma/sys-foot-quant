@@ -34,11 +34,19 @@ export function Performance() {
     <div className="page performance-page">
       <h1>Performance</h1>
 
-      <section className="card">
-        <h2>Résumé</h2>
-        <p>Total : {performance.n_total}</p>
-        <p>En attente : {performance.n_pending}</p>
-        <p>Réglées : {performance.n_settled}</p>
+      <section className="stat-grid">
+        <div className="stat-card">
+          <span className="stat-value">{performance.n_total}</span>
+          <span className="stat-label">Total</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{performance.n_pending}</span>
+          <span className="stat-label">En attente</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{performance.n_settled}</span>
+          <span className="stat-label">Réglées</span>
+        </div>
       </section>
 
       <section className="card">
