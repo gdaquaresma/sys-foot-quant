@@ -60,6 +60,15 @@ class PoissonModel:
         self.raw_hfa_: dict[int, float] | None = None
         self.n_home_: dict[int, float] | None = None
 
+        # Reference STRICTE (pas une copie) vers les donnees d'entrainement
+        # reellement utilisees - permet a un appelant qui possede deja une
+        # instance entrainee (ex. DixonColesModel.fit(poisson_fit=...)) de
+        # verifier par egalite exacte (pd.DataFrame.equals) que les
+        # parametres qu'il reutilise proviennent bien du meme jeu de
+        # donnees, plutot que de supposer silencieusement une coherence non
+        # verifiee. N'est jamais utilise pour recalculer quoi que ce soit.
+        self._fit_input_df: pd.DataFrame | None = None
+
     def fit(self, matches_df: pd.DataFrame, weights: np.ndarray | None = None) -> "PoissonModel":
         if matches_df.empty:
             raise ValueError("Impossible d'entrainer sur un ensemble de matchs vide.")
@@ -138,6 +147,7 @@ class PoissonModel:
         self.raw_hfa_ = raw_hfa
         self.n_home_ = n_home
         self.hfa_team_ = hfa_team
+        self._fit_input_df = matches_df
         return self
 
     def predict_lambda_mu(self, home_team_id: int, away_team_id: int) -> tuple[float, float]:

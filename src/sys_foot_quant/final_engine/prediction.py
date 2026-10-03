@@ -68,7 +68,11 @@ def predict_match(
             model="poisson_simple", lam=lam, mu=mu, rho=None, n_train_matches=n_goals
         )
 
-        dixon_coles = DixonColesModel(use_team_hfa=False).fit(goals_train_df)
+        # Reutilise les parametres attaque/defense/HFA deja calcules par
+        # `poisson` ci-dessus (Phase P3, optimisation d'execution pure -
+        # demontre strictement identique en Phase P2) ; rho continue d'etre
+        # estime independamment, inchange (voir DixonColesModel.fit).
+        dixon_coles = DixonColesModel(use_team_hfa=False).fit(goals_train_df, poisson_fit=poisson)
         dc_lam, dc_mu = dixon_coles.predict_lambda_mu(home_team_id, away_team_id)
         predictions["dixon_coles"] = ModelPrediction(
             model="dixon_coles", lam=dc_lam, mu=dc_mu, rho=dixon_coles.rho_, n_train_matches=n_goals

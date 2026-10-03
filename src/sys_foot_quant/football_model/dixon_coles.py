@@ -106,10 +106,64 @@ class DixonColesModel(PoissonModel):
         self.max_goals = max_goals
         self.rho_: float | None = None
 
-    def fit(self, matches_df: pd.DataFrame, weights: np.ndarray | None = None) -> "DixonColesModel":
-        # Delegue integralement a PoissonModel.fit (attaque/defense/HFA) -
-        # comportement de PoissonModel non modifie, cf. docstring module.
-        super().fit(matches_df, weights=weights)
+    def fit(
+        self,
+        matches_df: pd.DataFrame,
+        weights: np.ndarray | None = None,
+        poisson_fit: "PoissonModel | None" = None,
+    ) -> "DixonColesModel":
+        """Optimisation d'execution (Phase P3, aucun changement scientifique) :
+        si ``poisson_fit`` est fourni, reutilise ses parametres
+        attaque/defense/HFA deja calcules plutot que de les recalculer via
+        ``super().fit()`` - demontre strictement identiques (Phase P2,
+        egalite exacte, jamais une approximation) des lors que
+        ``poisson_fit`` provient reellement du MEME ``matches_df`` et de la
+        MEME configuration (``use_team_hfa``/``hfa_shrinkage_k``). Verifie
+        explicitement les deux plutot que de les supposer silencieusement -
+        refuse (``ValueError``) en cas d'incoherence, jamais un resultat
+        approximatif.
+
+        Sans ``poisson_fit`` (valeur par defaut), comportement RIGOUREUSEMENT
+        INCHANGE : delegue integralement a ``PoissonModel.fit()`` comme
+        avant cette optimisation.
+
+        Dans les DEUX cas, ``_estimate_rho`` est appelee exactement de la
+        meme facon, sur le meme ``matches_df`` - l'estimation de rho n'est
+        en rien affectee par cette optimisation, qui ne porte que sur la
+        partie attaque/defense/HFA deja demontree redondante."""
+        if poisson_fit is not None:
+            if weights is not None:
+                raise ValueError(
+                    "poisson_fit et weights sont mutuellement exclusifs : le fit Poisson reutilise "
+                    "a deja sa propre ponderation, fournir les deux serait ambigu plutot que d'en "
+                    "ignorer un silencieusement."
+                )
+            if poisson_fit.use_team_hfa != self.use_team_hfa or poisson_fit.hfa_shrinkage_k != self.hfa_shrinkage_k:
+                raise ValueError(
+                    "poisson_fit incompatible : configuration differente "
+                    f"(use_team_hfa={poisson_fit.use_team_hfa!r} vs {self.use_team_hfa!r}, "
+                    f"hfa_shrinkage_k={poisson_fit.hfa_shrinkage_k!r} vs {self.hfa_shrinkage_k!r}) - "
+                    "jamais une reutilisation entre configurations distinctes."
+                )
+            if poisson_fit.attack_ is None or poisson_fit._fit_input_df is None:
+                raise ValueError("poisson_fit doit deja etre entraine (fit() appele) avant reutilisation.")
+            if not poisson_fit._fit_input_df.equals(matches_df):
+                raise ValueError(
+                    "poisson_fit a ete entraine sur un jeu de donnees different de matches_df - "
+                    "refus explicite plutot qu'une reutilisation non verifiee."
+                )
+            self.attack_ = poisson_fit.attack_
+            self.defense_ = poisson_fit.defense_
+            self.league_base_ = poisson_fit.league_base_
+            self.hfa_global_ = poisson_fit.hfa_global_
+            self.hfa_team_ = poisson_fit.hfa_team_
+            self.raw_hfa_ = poisson_fit.raw_hfa_
+            self.n_home_ = poisson_fit.n_home_
+            self._fit_input_df = poisson_fit._fit_input_df
+        else:
+            # Chemin INCHANGE (comportement d'avant la Phase P3) - delegue
+            # integralement a PoissonModel.fit (attaque/defense/HFA).
+            super().fit(matches_df, weights=weights)
         self.rho_ = self._estimate_rho(matches_df)
         return self
 

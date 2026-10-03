@@ -110,7 +110,11 @@ def build_calibration_dataframe(
             lam, mu = poisson.predict_lambda_mu(r.home_team_id, r.away_team_id)
             row["poisson_simple_lambda"], row["poisson_simple_mu"] = lam, mu
 
-            dc = DixonColesModel(use_team_hfa=False).fit(goals_df)
+            # Reutilise les parametres attaque/defense/HFA deja calcules par
+            # `poisson` ci-dessus (Phase P3, optimisation d'execution pure -
+            # demontre strictement identique en Phase P2) ; rho continue
+            # d'etre estime independamment, inchange (voir DixonColesModel.fit).
+            dc = DixonColesModel(use_team_hfa=False).fit(goals_df, poisson_fit=poisson)
             dc_lam, dc_mu = dc.predict_lambda_mu(r.home_team_id, r.away_team_id)
             row["dixon_coles_lambda"], row["dixon_coles_mu"], row["dixon_coles_rho"] = dc_lam, dc_mu, dc.rho_
         else:
