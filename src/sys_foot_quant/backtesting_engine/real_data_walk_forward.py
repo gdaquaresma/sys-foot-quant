@@ -101,26 +101,99 @@ def _outcome_index(home_goals: int, away_goals: int) -> int:
     return _AWAY
 
 
+@dataclass(frozen=True)
+class _TrainArrays:
+    """Colonnes de ``records`` pre-converties en tableaux NumPy deja
+    types, dans le MEME ordre que ``records`` - jamais un tri ni un
+    reordonnancement. Purement un cache d'execution (Phase P9) : ne
+    contient aucune donnee ni colonne qui n'existait pas deja dans
+    ``records``."""
+
+    match_id: np.ndarray
+    home_team_id: np.ndarray
+    away_team_id: np.ndarray
+    home_goals: np.ndarray
+    away_goals: np.ndarray
+    home_xg: np.ndarray
+    away_xg: np.ndarray
+    kickoff_time: np.ndarray
+    goals_knowledge_time: np.ndarray
+    xg_knowledge_time: np.ndarray
+
+
+def _build_train_arrays(records: list[RealMatchRecord]) -> _TrainArrays:
+    return _TrainArrays(
+        match_id=np.array([r.match_id for r in records], dtype=object),
+        home_team_id=np.array([r.home_team_id for r in records], dtype=np.int64),
+        away_team_id=np.array([r.away_team_id for r in records], dtype=np.int64),
+        home_goals=np.array([r.home_goals for r in records], dtype=np.int64),
+        away_goals=np.array([r.away_goals for r in records], dtype=np.int64),
+        home_xg=np.array([r.home_xg for r in records], dtype=np.float64),
+        away_xg=np.array([r.away_xg for r in records], dtype=np.float64),
+        kickoff_time=pd.to_datetime([r.kickoff_utc for r in records]).values,
+        goals_knowledge_time=pd.to_datetime([r.goals_knowledge_time for r in records]).values,
+        xg_knowledge_time=pd.to_datetime([r.xg_knowledge_time for r in records]).values,
+    )
+
+
+# Cache d'identite a UNE SEULE entree (Phase P9, optimisation d'execution
+# pure - aucune donnee nouvelle, aucun calcul scientifique). Le walk-forward
+# reel (``run_real_data_walk_forward``/``build_calibration_dataframe``)
+# appelle ``_goals_train_df``/``_xg_train_df`` des centaines de fois de
+# suite avec EXACTEMENT le meme objet ``records`` (seuls ``decision_time``/
+# ``exclude_match_id`` varient) - ce cache evite de reconvertir les memes
+# colonnes en tableaux a chaque appel. Invalidation par comparaison ``is``
+# (identite d'objet, jamais une simple egalite de contenu ni un ``id()``
+# nu) : la reference forte conservee dans ``_TRAIN_ARRAYS_CACHE`` empeche
+# qu'un ``id()`` reutilise par un objet different soit pris pour le meme
+# ``records`` pendant que l'entree est active. Une seule entree a la fois
+# (jamais de croissance illimitee sur un processus long, ex. serveur
+# FastAPI traitant des matchs/corpus differents au fil du temps).
+_TRAIN_ARRAYS_CACHE: tuple[list[RealMatchRecord], _TrainArrays] | None = None
+
+
+def _get_train_arrays(records: list[RealMatchRecord]) -> _TrainArrays:
+    global _TRAIN_ARRAYS_CACHE
+    if _TRAIN_ARRAYS_CACHE is not None and _TRAIN_ARRAYS_CACHE[0] is records:
+        return _TRAIN_ARRAYS_CACHE[1]
+    arrays = _build_train_arrays(records)
+    _TRAIN_ARRAYS_CACHE = (records, arrays)
+    return arrays
+
+
+_GOALS_COLUMNS = ["home_team_id", "away_team_id", "home_goals", "away_goals", "kickoff_time"]
+_XG_COLUMNS = ["home_team_id", "away_team_id", "home_xg", "away_xg", "kickoff_time"]
+
+
 def _goals_train_df(
     records: list[RealMatchRecord], decision_time: datetime, exclude_match_id: str
 ) -> pd.DataFrame:
     """Matchs dont le SCORE REEL est connu a ``decision_time`` - jamais le
     match evalue lui-meme (``exclude_match_id``), meme s'il etait par
     construction toujours strictement anterieur (garde-fou explicite,
-    pas une simple consequence indirecte du filtre temporel)."""
-    rows = [
-        {
-            "home_team_id": r.home_team_id,
-            "away_team_id": r.away_team_id,
-            "home_goals": r.home_goals,
-            "away_goals": r.away_goals,
-            "kickoff_time": r.kickoff_utc,
-        }
-        for r in records
-        if r.match_id != exclude_match_id and r.goals_knowledge_time <= decision_time
-    ]
+    pas une simple consequence indirecte du filtre temporel).
+
+    Optimisation d'execution (Phase P9, aucun changement de donnees ni de
+    semantique) : filtrage vectorise sur des tableaux NumPy pre-construits
+    (``_get_train_arrays``) au lieu de reconstruire une liste de
+    dictionnaires Python a chaque appel. Cas particulier explicitement
+    preserve (Phase P8/P9) : quand aucune ligne ne correspond, retourne
+    EXACTEMENT ``pd.DataFrame([], columns=...)`` (memes dtypes ``object``
+    historiques) plutot que de laisser les tableaux types imposer leurs
+    dtypes natifs a un DataFrame vide."""
+    arrays = _get_train_arrays(records)
+    mask = (arrays.match_id != exclude_match_id) & (arrays.goals_knowledge_time <= np.datetime64(decision_time))
+    if not mask.any():
+        return pd.DataFrame([], columns=_GOALS_COLUMNS)
     return pd.DataFrame(
-        rows, columns=["home_team_id", "away_team_id", "home_goals", "away_goals", "kickoff_time"]
+        {
+            "home_team_id": arrays.home_team_id[mask],
+            "away_team_id": arrays.away_team_id[mask],
+            "home_goals": arrays.home_goals[mask],
+            "away_goals": arrays.away_goals[mask],
+            "kickoff_time": arrays.kickoff_time[mask],
+        },
+        columns=_GOALS_COLUMNS,
     )
 
 
@@ -128,19 +201,25 @@ def _xg_train_df(
     records: list[RealMatchRecord], decision_time: datetime, exclude_match_id: str
 ) -> pd.DataFrame:
     """Matchs dont le xG est connu a ``decision_time`` - meme garde-fou
-    explicite que ``_goals_train_df`` pour le match evalue lui-meme."""
-    rows = [
+    explicite que ``_goals_train_df`` pour le match evalue lui-meme.
+
+    Meme optimisation d'execution que ``_goals_train_df`` (Phase P9) :
+    filtrage vectorise sur les tableaux pre-construits, meme reproduction
+    exacte du cas DataFrame vide (dtypes ``object`` historiques)."""
+    arrays = _get_train_arrays(records)
+    mask = (arrays.match_id != exclude_match_id) & (arrays.xg_knowledge_time <= np.datetime64(decision_time))
+    if not mask.any():
+        return pd.DataFrame([], columns=_XG_COLUMNS)
+    return pd.DataFrame(
         {
-            "home_team_id": r.home_team_id,
-            "away_team_id": r.away_team_id,
-            "home_xg": r.home_xg,
-            "away_xg": r.away_xg,
-            "kickoff_time": r.kickoff_utc,
-        }
-        for r in records
-        if r.match_id != exclude_match_id and r.xg_knowledge_time <= decision_time
-    ]
-    return pd.DataFrame(rows, columns=["home_team_id", "away_team_id", "home_xg", "away_xg", "kickoff_time"])
+            "home_team_id": arrays.home_team_id[mask],
+            "away_team_id": arrays.away_team_id[mask],
+            "home_xg": arrays.home_xg[mask],
+            "away_xg": arrays.away_xg[mask],
+            "kickoff_time": arrays.kickoff_time[mask],
+        },
+        columns=_XG_COLUMNS,
+    )
 
 
 class RealFittedPredictor(Protocol):
