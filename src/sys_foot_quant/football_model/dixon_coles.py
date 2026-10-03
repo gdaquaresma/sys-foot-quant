@@ -194,12 +194,42 @@ class DixonColesModel(PoissonModel):
             # intervalle vide.
             return 0.0
 
+        # Optimisation d'execution (Phase P6, aucun changement scientifique) :
+        # lambda/mu et l'appartenance de chaque match a l'une des quatre
+        # cellules bas-score de dixon_coles_tau() sont INVARIANTS pendant
+        # toute l'optimisation de rho (ne dependent que des donnees, jamais
+        # de rho) - precalcules ICI, une seule fois par appel a
+        # _estimate_rho, plutot qu'a chaque evaluation de neg_log_lik comme
+        # le ferait un appel repete a dixon_coles_tau(). dixon_coles_tau()
+        # elle-meme reste inchangee et continue d'etre utilisee telle
+        # quelle ailleurs (apply_dixon_coles_correction).
+        lam_arr = np.array([lm[0] for lm in lam_mu], dtype=float)
+        mu_arr = np.array([lm[1] for lm in lam_mu], dtype=float)
+        mask_00 = (home_goals == 0) & (away_goals == 0)
+        mask_10 = (home_goals == 1) & (away_goals == 0)
+        mask_01 = (home_goals == 0) & (away_goals == 1)
+        mask_11 = (home_goals == 1) & (away_goals == 1)
+
         def neg_log_lik(rho: float) -> float:
+            # Construction vectorisee de tau(x,y;rho) pour les n matchs -
+            # memes quatre formules et meme valeur 1.0 pour les autres
+            # scores que dixon_coles_tau(), appliquees via les masques
+            # invariants ci-dessus plutot que par branchement Python
+            # match par match. La SOMMATION reste une boucle Python
+            # sequentielle, dans le MEME ordre que la version precedente,
+            # pour preserver exactement le resultat flottant (Phase P6 :
+            # identite stricte verifiee sur donnees reelles, alors qu'une
+            # reduction np.sum() introduit un ecart de l'ordre de l'ULP du
+            # a un ordre de sommation different).
+            tau = np.ones(n, dtype=float)
+            tau[mask_00] = 1.0 - lam_arr[mask_00] * mu_arr[mask_00] * rho
+            tau[mask_10] = 1.0 + mu_arr[mask_10] * rho
+            tau[mask_01] = 1.0 + lam_arr[mask_01] * rho
+            tau[mask_11] = 1.0 - rho
+            log_terms = np.log(np.maximum(tau, _LOG_TAU_FLOOR))
             total = 0.0
             for i in range(n):
-                lam, mu = lam_mu[i]
-                tau = dixon_coles_tau(int(home_goals[i]), int(away_goals[i]), lam, mu, rho)
-                total += np.log(max(tau, _LOG_TAU_FLOOR))
+                total += log_terms[i]
             return -total
 
         result = minimize_scalar(neg_log_lik, bounds=(lo, hi), method="bounded")
