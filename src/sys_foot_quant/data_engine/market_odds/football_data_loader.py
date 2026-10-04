@@ -621,3 +621,42 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                 )
             )
     return records
+
+
+# ---------------------------------------------------------------------------
+# Localisation du fichier reel - AJOUT PUR, n'affecte en rien
+# ``load_football_data_csv``/``FootballDataMatchRecord`` ci-dessus.
+# L'appariement a un match Understat precis (pour alimenter
+# ``run_prediction(market_odds=...)``) reutilise ``matching.py`` (deja
+# valide sur le corpus reel, voir
+# ``matching.opening_over_under_2_5_by_match_id``) plutot que d'etre
+# redevelope ici - jamais une seconde logique d'appariement.
+# ---------------------------------------------------------------------------
+
+_FOOTBALL_DATA_ROOT = Path("research/market_odds/football_data/runs")
+
+# Code de division Football-Data.co.uk par competition - mapping minimal,
+# jamais invente (verifie directement contre les six fichiers reels sous
+# _FOOTBALL_DATA_ROOT). Aucune entree pour une competition/saison dont le
+# fichier n'existe pas reellement (ex. ligue1/2026_27 - voir
+# football_data_csv_path, qui retourne alors un chemin inexistant, jamais
+# une erreur a ce stade : a l'appelant de verifier ``path.exists()``).
+_LEAGUE_DIV_CODES: dict[str, str] = {
+    "premier_league": "E0",
+    "ligue1": "F1",
+    "liga": "SP1",
+}
+
+
+def football_data_csv_path(competition: str, season: str, root: Path = _FOOTBALL_DATA_ROOT) -> Path | None:
+    """Chemin attendu du fichier Football-Data reel pour (competition,
+    season), ou ``None`` si cette competition est inconnue du mapping de
+    division (jamais une erreur ici - seule ``load_football_data_csv``,
+    appelee separement par le code appelant, echoue si le fichier retourne
+    n'existe pas reellement). Ne verifie JAMAIS l'existence du fichier -
+    meme convention que ``load_football_data_csv``, qui attend un chemin
+    deja resolu par l'appelant."""
+    div = _LEAGUE_DIV_CODES.get(competition)
+    if div is None:
+        return None
+    return root / f"{div}_{season}.csv"

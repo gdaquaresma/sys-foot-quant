@@ -9,6 +9,7 @@ from sys_foot_quant.data_engine.market_odds.football_data_loader import (
     BOOKMAKERS_1X2,
     MARKET,
     SOURCE,
+    football_data_csv_path,
     load_football_data_csv,
 )
 
@@ -500,6 +501,18 @@ def test_wh_closing_column_present_and_read_when_in_file(tmp_path: Path) -> None
     assert r.has_complete_wh_close_odds is True
     assert r.lb_close_home is None
     assert r.closing_odds_1x2_by_bookmaker()["WH"] == {"H": pytest.approx(1.75), "D": pytest.approx(3.95), "A": pytest.approx(5.30)}
+
+
+def test_football_data_csv_path_known_competition() -> None:
+    path = football_data_csv_path("ligue1", "2025_26", root=Path("research/market_odds/football_data/runs"))
+    assert path == Path("research/market_odds/football_data/runs/F1_2025_26.csv")
+
+
+def test_football_data_csv_path_unknown_competition_is_none() -> None:
+    # Jamais une erreur ici - a l'appelant de verifier l'existence du
+    # chemin (ou son absence) separement, meme convention que
+    # load_football_data_csv.
+    assert football_data_csv_path("handball_nationale1", "2025_26") is None
 
 
 def test_lb_closing_column_present_and_read_when_in_file(tmp_path: Path) -> None:

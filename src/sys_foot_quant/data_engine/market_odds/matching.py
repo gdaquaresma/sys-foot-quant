@@ -144,3 +144,40 @@ def match_league_season(
         unmatched_football_data=tuple(unmatched_fd),
         matched=tuple(matched),
     )
+
+
+def opening_over_under_2_5_by_match_id(
+    report: MatchingReport, match_id: str, bookmaker: str = "B365"
+) -> dict[str, float] | None:
+    """Pont vers le moteur de prediction (``run_prediction(market_odds=...)``)
+    - AJOUT PUR, aucun nouveau calcul d'appariement : reutilise
+    exclusivement ``report.matched`` (deja produit par
+    ``match_league_season``, deja valide sur le corpus reel - voir
+    ``tests/leakage/test_football_data_point_in_time.py``). Retrouve le
+    ``match_id`` Understat demande et retourne sa cote Over/Under 2.5
+    D'OUVERTURE pour ``bookmaker`` (``"B365"`` par defaut, couverture 100%
+    constatee - voir docstring de ``football_data_loader``), directement
+    exploitable par ``run_prediction(market_odds=...)`` (meme forme
+    exacte, ``{"Over": .., "Under": ..}``).
+
+    N'extrait JAMAIS une cote de CLOTURE - seule
+    ``over_under_2_5_by_bookmaker()`` (ouverture) est lue, jamais
+    ``closing_over_under_2_5_by_bookmaker()``. Les cotes d'ouverture sont
+    par construction publiees largement avant ``decision_time``
+    (``kickoff_utc - DECISION_OFFSET_HOURS``, quelques heures seulement) -
+    aucun nouveau delai de connaissance n'est necessaire ni invente ici,
+    contrairement a ``goals_knowledge_time``/``xg_knowledge_time``
+    (``real_data_walk_forward.py``), qui portent sur des grandeurs connues
+    seulement APRES le coup d'envoi.
+
+    Retourne ``None`` (JAMAIS une cote inventee ou approximee) si :
+    - ``match_id`` n'apparait pas dans ``report.matched`` (match non
+      apparie - residu documente, voir
+      ``tests/leakage/test_football_data_point_in_time.py``, ou simplement
+      saison/competition sans fichier Football-Data reel) ;
+    - ``bookmaker`` n'a pas de cote Over/Under 2.5 complete sur ce match
+      precis (bookmaker absent/partiel sur ce match - jamais impute)."""
+    for m in report.matched:
+        if m.understat.match_id == match_id:
+            return m.football_data.over_under_2_5_by_bookmaker().get(bookmaker)
+    return None
