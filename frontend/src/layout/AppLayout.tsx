@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
+// Navigation réduite autour de l'intention principale (Phase UI-1) :
+// "Analyser un match" est l'entrée principale, en premier.
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/matches', label: 'Matchs' },
-  { to: '/shadow', label: 'Shadow Mode' },
+  { to: '/', label: 'Analyser un match', end: true },
+  { to: '/matches', label: 'Historique' },
   { to: '/performance', label: 'Performance' },
+  { to: '/shadow', label: 'Shadow Mode' },
 ]
 
 export function AppLayout() {

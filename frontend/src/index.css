@@ -332,6 +332,7 @@ summary:focus-visible {
 }
 
 .filters input,
+.filters select,
 .team-filter input {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -417,6 +418,102 @@ summary:focus-visible {
 
 .quick-link:hover {
   background: var(--color-accent);
+}
+
+/* --- Bouton d'action primaire (Analyser un match, Phase UI-1) ----------
+   Même palette que `.filters button` mais utilisable hors d'un `.filters`
+   (ex. bouton "Analyser le match", qui n'est pas dans un <form>). */
+.button-primary {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.25rem;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary:hover {
+  opacity: 0.9;
+}
+
+.button-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Analyser un match (Phase UI-1) -------------------------------------
+   Résumé de match (Niveau 1) et phrase de décision lisible (Niveau 2) -
+   voir `pages/AnalyzeMatch.tsx`. */
+
+.match-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.match-summary-teams {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.decision-phrase {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+}
+
+.decision-reasons-secondary {
+  margin-top: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Blocs Value Bet (Over/Under 2.5) - mobile-first : empilés par défaut,
+   côte à côte à partir de 640px (même seuil que le reste de l'application,
+   voir le bloc `@media (max-width: 640px)` plus bas). */
+.value-bet-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+@media (min-width: 640px) {
+  .value-bet-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.value-bet-card h3 {
+  margin-top: 0;
+}
+
+.value-bet-stats {
+  margin: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.value-bet-stats > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-1);
+}
+
+.value-bet-stats dt {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.value-bet-stats dd {
+  margin: 0;
+  font-weight: 600;
 }
 
 .hint {

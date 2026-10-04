@@ -28,7 +28,7 @@ type PredictionState =
   | { status: 'error'; message: string }
   | { status: 'ready'; prediction: MatchDecisionOutput }
 
-function formatKickoff(iso: string): string {
+export function formatKickoff(iso: string): string {
   try {
     return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(iso))
   } catch {
@@ -36,15 +36,15 @@ function formatKickoff(iso: string): string {
   }
 }
 
-function formatProbability(value: number): string {
+export function formatProbability(value: number): string {
   return `${(value * 100).toFixed(1)} %`
 }
 
-function formatOdds(value: number): string {
+export function formatOdds(value: number): string {
   return value.toFixed(2)
 }
 
-function formatParamValue(value: unknown): string {
+export function formatParamValue(value: unknown): string {
   if (value === null || value === undefined) return 'non fixé'
   if (typeof value === 'boolean') return value ? 'oui' : 'non'
   if (typeof value === 'number') return String(value)
@@ -56,7 +56,7 @@ function formatParamValue(value: unknown): string {
  * code connu, jamais une réinterprétation de sa portée scientifique. Un
  * code non répertorié reste affiché tel quel (son code brut), jamais
  * masqué. */
-const DECISION_REASON_LABELS: Record<string, string> = {
+export const DECISION_REASON_LABELS: Record<string, string> = {
   INSUFFICIENT_HISTORY: "Historique d'entraînement insuffisant pour ce match.",
   AMBIGUOUS_COLLECTION_DAY: 'Jour de collecte des données ambigu (lundi/mardi/vendredi exclu).',
   MARKET_DATA_UNAVAILABLE: 'Aucune cote de marché disponible pour ce match.',
@@ -69,14 +69,14 @@ const DECISION_REASON_LABELS: Record<string, string> = {
   OTHER_BLOCKING_CONDITION: 'Autre condition bloquante détectée par le moteur.',
 }
 
-function describeReason(code: string): string {
+export function describeReason(code: string): string {
   return DECISION_REASON_LABELS[code] ?? 'Code de raison non documenté côté interface.'
 }
 
 /** Badge discret signalant le `primary_model` (donnée déjà fournie par
  * l'API, jamais déduite ici) - distinction purement visuelle entre le
  * modèle principal et les modèles de contrôle, aucune donnée modifiée. */
-function PrimaryModelBadge() {
+export function PrimaryModelBadge() {
   return (
     <span className="model-badge-primary" aria-label="Modèle principal">
       Principal
@@ -84,7 +84,7 @@ function PrimaryModelBadge() {
   )
 }
 
-function ModelsSummary({ models, primaryModel }: { models: Record<string, ModelPrediction | null>; primaryModel: string }) {
+export function ModelsSummary({ models, primaryModel }: { models: Record<string, ModelPrediction | null>; primaryModel: string }) {
   return (
     <ul className="reason-list">
       {Object.entries(models).map(([key, model]) => (
@@ -107,7 +107,7 @@ function ModelsSummary({ models, primaryModel }: { models: Record<string, ModelP
   )
 }
 
-function ProbabilitiesTable({
+export function ProbabilitiesTable({
   models,
   calibration,
   pricing,
@@ -161,7 +161,7 @@ function ProbabilitiesTable({
   )
 }
 
-function MarketSection({ market }: { market: MarketComparisonResult }) {
+export function MarketSection({ market }: { market: MarketComparisonResult }) {
   return (
     <table className="table">
       <thead>
