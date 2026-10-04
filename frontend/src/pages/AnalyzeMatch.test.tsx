@@ -243,11 +243,21 @@ describe('AnalyzeMatch', () => {
     // suffit à vérifier l'affichage du bloc Value Bet.
     expect(screen.getAllByText('43.8 %').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('56.2 %')).toBeInTheDocument()
-    // Cote juste / "Value à partir de" partagent la même valeur (2.28 Over,
-    // 1.78 Under) - apparaît au moins 2 fois par côté (les deux lignes),
-    // potentiellement une 3e fois dans le tableau technique replié.
-    expect(screen.getAllByText('2.28').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('1.78').length).toBeGreaterThanOrEqual(2)
+    // Cote juste (Over 2.28, Under 1.78) - au moins 1 occurrence visible par
+    // côté (potentiellement une 2e fois pour Over dans le tableau technique
+    // replié, qui ne couvre jamais le côté Under).
+    expect(screen.getAllByText('2.28').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('1.78').length).toBeGreaterThanOrEqual(1)
+    // Seuil Value (Phase UI-2) : min_edge_threshold vaut null dans la
+    // fixture -> jamais de cote fabriquée, uniquement le texte honnête,
+    // une fois par bloc Over/Under.
+    expect(screen.getAllByText('Non défini par le moteur')).toHaveLength(2)
+    expect(
+      screen.getAllByText(
+        "Le moteur ne dispose pas encore d'un seuil d'edge minimal validé permettant de définir une cote minimale de Value.",
+      ),
+    ).toHaveLength(2)
+    expect(screen.queryByText('Value à partir de')).not.toBeInTheDocument()
     expect(screen.getAllByText('Entrez une cote de marché pour vérifier si une Value Bet est actuellement présente.')).toHaveLength(2)
     expect(screen.queryByText('VALUE')).not.toBeInTheDocument()
     expect(screen.queryByText('NO VALUE')).not.toBeInTheDocument()

@@ -17,6 +17,14 @@
  * utilisées en interne par le moteur (`final_engine/market.py` :
  * `1 - p_over` ; `final_engine/pricing.py::compute_fair_price` : `1 / p`),
  * jamais une nouvelle statistique ni un nouveau modèle.
+ *
+ * (Phase UI-2) « Seuil Value » : lit `parameters_snapshot.min_edge_threshold`
+ * tel quel (voir `extractMinEdgeThreshold`) - n'affiche une cote minimale de
+ * Value QUE si le moteur a réellement validé un seuil d'edge (actuellement
+ * toujours `None` - voir `final_engine/gates.py::OperationalThresholds`).
+ * Jamais de `1 / probabilité` ni de recalcul de `raw_edge` pour fabriquer un
+ * chiffre : `raw_edge` dépend de la probabilité implicite normalisée du
+ * marché (les deux côtés Over/Under conjointement), jamais recalculée ici.
  */
 import { type FormEvent, useMemo, useState } from 'react'
 import { ApiError, getMatches, getPrediction } from '../api/client'
@@ -82,6 +90,20 @@ function buildPrimaryModelMarketView(prediction: MatchDecisionOutput): { over: S
   }
 }
 
+/** Seuil d'edge minimal réellement validé par le moteur (`final_engine/
+ * gates.py::OperationalThresholds.min_edge_threshold`, INCHANGÉ) - lu tel
+ * quel dans `parameters_snapshot`, déjà transporté par l'API mais jusqu'ici
+ * jamais lu explicitement ici. Vaut `None` tant qu'aucune valeur d'edge
+ * minimal n'a été validée scientifiquement (E1-E16) - ce qui est le cas
+ * aujourd'hui, systématiquement (voir `gates.py::edge_threshold_gate`).
+ * Retourne `null` dans ce cas, JAMAIS une valeur fabriquée côté frontend :
+ * pas de `1 / probabilité`, pas de recalcul de `raw_edge`, pas d'hypothèse
+ * sur un seuil qui n'existe pas. */
+function extractMinEdgeThreshold(parametersSnapshot: Record<string, unknown>): number | null {
+  const value = parametersSnapshot['min_edge_threshold']
+  return typeof value === 'number' ? value : null
+}
+
 /** Phrase humaine de synthèse - recompose la décision/les raisons/l'edge
  * déjà produits par le moteur, n'invente aucune donnée. */
 function buildDecisionPhrase(prediction: MatchDecisionOutput): string {
@@ -107,11 +129,13 @@ function MarketBlock({
   side,
   marketOdds,
   priceEdge,
+  minEdgeThreshold,
 }: {
   label: string
   side: SideView
   marketOdds?: number
   priceEdge?: number
+  minEdgeThreshold: number | null
 }) {
   return (
     <div className="card value-bet-card">
@@ -132,10 +156,22 @@ function MarketBlock({
           </div>
         )}
         <div>
-          <dt>Value à partir de</dt>
-          <dd>{formatOdds(side.fairPrice)}</dd>
+          <dt>Seuil Value</dt>
+          {/* Jamais une cote fabriquée : `raw_edge` (la grandeur que le
+              moteur compare réellement à ce seuil) dépend de la probabilité
+              implicite NORMALISÉE du marché - donc des deux côtés Over/Under
+              conjointement - et n'est jamais recalculée ici. Tant que
+              `min_edge_threshold` vaut `None` côté moteur, aucune cote
+              minimale de Value ne peut être affichée honnêtement. */}
+          <dd>{minEdgeThreshold === null ? 'Non défini par le moteur' : `edge modèle ≥ ${formatProbability(minEdgeThreshold)}`}</dd>
         </div>
       </dl>
+      {minEdgeThreshold === null && (
+        <p className="hint">
+          Le moteur ne dispose pas encore d'un seuil d'edge minimal validé permettant de définir une cote minimale de
+          Value.
+        </p>
+      )}
       {priceEdge !== undefined ? (
         <ValueBadge priceEdge={priceEdge} />
       ) : (
@@ -517,12 +553,14 @@ export function AnalyzeMatch() {
                         side={marketView.over}
                         marketOdds={market?.market_odds['Over']}
                         priceEdge={market?.price_edge['Over']}
+                        minEdgeThreshold={extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot)}
                       />
                       <MarketBlock
                         label="Under 2.5"
                         side={marketView.under}
                         marketOdds={market?.market_odds['Under']}
                         priceEdge={market?.price_edge['Under']}
+                        minEdgeThreshold={extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot)}
                       />
                     </div>
                   </>
