@@ -148,6 +148,32 @@ def test_rho_zero_reproduces_poisson_model_exactly() -> None:
         assert dc.predict_lambda_mu(home, away) == pytest.approx(poisson.predict_lambda_mu(home, away))
 
 
+def test_poisson_fit_reuse_tolerates_none_raw_hfa_and_n_home() -> None:
+    # Phase P14 : avec use_team_hfa=False, PoissonModel.fit() laisse
+    # desormais raw_hfa_/n_home_ a None (seconde boucle evitee, voir
+    # tests/unit/test_poisson_model.py). Verifie que
+    # DixonColesModel.fit(poisson_fit=...) continue de fonctionner
+    # normalement malgre cela - il ne fait que copier la reference, jamais
+    # lire leur contenu.
+    rows = [
+        (h, a, hg, ag, _T0 + timedelta(days=i))
+        for i, (h, a, hg, ag) in enumerate(
+            [(0, 1, 2, 1), (1, 2, 0, 0), (2, 0, 3, 2), (0, 2, 1, 1), (1, 0, 2, 2), (2, 1, 0, 3)]
+        )
+    ]
+    df = _matches(rows)
+    poisson = PoissonModel(use_team_hfa=False).fit(df)
+    assert poisson.raw_hfa_ is None
+    assert poisson.n_home_ is None
+
+    dc = DixonColesModel(use_team_hfa=False).fit(df, poisson_fit=poisson)
+    assert dc.raw_hfa_ is None
+    assert dc.n_home_ is None
+    assert dc.rho_ is not None
+    assert np.isfinite(dc.rho_)
+    assert dc.hfa_team_ == poisson.hfa_team_
+
+
 def test_predict_outcome_probabilities_sum_to_one() -> None:
     rows = [
         (h, a, hg, ag, _T0 + timedelta(days=i))

@@ -121,32 +121,50 @@ class PoissonModel:
         self.league_base_ = league_base
         self.hfa_global_ = hfa_global
 
-        home_weight = {t: 0.0 for t in teams}
-        home_weighted_ratio_sum = {t: 0.0 for t in teams}
-        for i in range(n):
-            h, a, wi = home_ids[i], away_ids[i], w[i]
-            expected_neutral = league_base * attack[h] * defense[a]
-            ratio = home_goals[i] / expected_neutral
-            home_weight[h] += wi
-            home_weighted_ratio_sum[h] += wi * ratio
+        if self.use_team_hfa:
+            home_weight = {t: 0.0 for t in teams}
+            home_weighted_ratio_sum = {t: 0.0 for t in teams}
+            for i in range(n):
+                h, a, wi = home_ids[i], away_ids[i], w[i]
+                expected_neutral = league_base * attack[h] * defense[a]
+                ratio = home_goals[i] / expected_neutral
+                home_weight[h] += wi
+                home_weighted_ratio_sum[h] += wi * ratio
 
-        raw_hfa: dict[int, float] = {}
-        n_home: dict[int, float] = {}
-        hfa_team: dict[int, float] = {}
-        for t in teams:
-            n_home[t] = home_weight[t]
-            raw_hfa[t] = (
-                home_weighted_ratio_sum[t] / home_weight[t] if home_weight[t] > 0 else hfa_global
-            )
-            if self.use_team_hfa:
+            raw_hfa: dict[int, float] = {}
+            n_home: dict[int, float] = {}
+            hfa_team: dict[int, float] = {}
+            for t in teams:
+                n_home[t] = home_weight[t]
+                raw_hfa[t] = (
+                    home_weighted_ratio_sum[t] / home_weight[t] if home_weight[t] > 0 else hfa_global
+                )
                 k = self.hfa_shrinkage_k
                 hfa_team[t] = (n_home[t] * raw_hfa[t] + k * hfa_global) / (n_home[t] + k)
-            else:
-                hfa_team[t] = hfa_global
 
-        self.raw_hfa_ = raw_hfa
-        self.n_home_ = n_home
-        self.hfa_team_ = hfa_team
+            self.raw_hfa_ = raw_hfa
+            self.n_home_ = n_home
+            self.hfa_team_ = hfa_team
+        else:
+            # Optimisation d'execution (Phase P14, aucun changement
+            # scientifique) : quand use_team_hfa=False, hfa_team_ est
+            # demontre (Phase P13, teste avec deux hfa_shrinkage_k tres
+            # differents) STRICTEMENT INDEPENDANT de raw_hfa_/n_home_ - il
+            # vaut hfa_global_ pour chaque equipe, quoi que raw_hfa_/n_home_
+            # auraient valu. La boucle ci-dessus (home_weight/raw_hfa,
+            # O(n) sur l'historique d'entrainement) n'est donc PAS executee
+            # dans ce cas : son resultat ne serait jamais lu.
+            #
+            # raw_hfa_/n_home_ restent a None (jamais calcules dans cette
+            # configuration) plutot que des dictionnaires vides ou
+            # partiels - l'annotation de type (``dict[int, float] | None``)
+            # et l'etat initial avant tout ``fit()`` permettent deja cette
+            # valeur ; ne jamais presenter une statistique non calculee
+            # comme si elle l'etait.
+            self.raw_hfa_ = None
+            self.n_home_ = None
+            self.hfa_team_ = {t: hfa_global for t in teams}
+
         self._fit_input_df = matches_df
         return self
 

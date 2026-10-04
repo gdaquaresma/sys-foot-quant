@@ -118,6 +118,106 @@ def test_hfa_shrinkage_weight_grows_with_home_sample_size() -> None:
     assert dist_team0 < dist_team2
 
 
+def _old_unconditional_hfa_block(teams, home_ids, away_ids, w, home_goals, attack, defense,
+                                  league_base, hfa_global, use_team_hfa, hfa_shrinkage_k, n):
+    """Reproduction EXACTE (Phase P14, test de non-regression uniquement)
+    du bloc raw_hfa_/n_home_/hfa_team_ de PoissonModel.fit() tel qu'il
+    existait AVANT P14 - la seconde boucle etait alors executee
+    INCONDITIONNELLEMENT, quel que soit use_team_hfa. Sert de reference
+    figee pour demontrer que use_team_hfa=True reste bit-identique, et que
+    hfa_team_/predict_lambda_mu restent inchanges pour use_team_hfa=False
+    malgre la boucle desormais evitee dans ce cas."""
+    home_weight = {t: 0.0 for t in teams}
+    home_weighted_ratio_sum = {t: 0.0 for t in teams}
+    for i in range(n):
+        h, a, wi = home_ids[i], away_ids[i], w[i]
+        expected_neutral = league_base * attack[h] * defense[a]
+        ratio = home_goals[i] / expected_neutral
+        home_weight[h] += wi
+        home_weighted_ratio_sum[h] += wi * ratio
+    raw_hfa, n_home, hfa_team = {}, {}, {}
+    for t in teams:
+        n_home[t] = home_weight[t]
+        raw_hfa[t] = home_weighted_ratio_sum[t] / home_weight[t] if home_weight[t] > 0 else hfa_global
+        if use_team_hfa:
+            k = hfa_shrinkage_k
+            hfa_team[t] = (n_home[t] * raw_hfa[t] + k * hfa_global) / (n_home[t] + k)
+        else:
+            hfa_team[t] = hfa_global
+    return raw_hfa, n_home, hfa_team
+
+
+def test_use_team_hfa_true_matches_pre_p14_reference_exactly() -> None:
+    # Phase P14 : le chemin use_team_hfa=True est rigoureusement inchange
+    # (meme code, simplement deplace sous un if) - verifie par comparaison
+    # EXACTE (egalite de dict, pas une approximation) avec la reference
+    # figee de l'ancien comportement inconditionnel.
+    df = _round_robin_equal_strength(home_goals=3, away_goals=1)
+    model = PoissonModel(use_team_hfa=True, hfa_shrinkage_k=7.0).fit(df)
+
+    home_ids = df["home_team_id"].to_numpy()
+    away_ids = df["away_team_id"].to_numpy()
+    home_goals_arr = df["home_goals"].to_numpy(dtype=float)
+    n = len(df)
+    w = np.ones(n)
+    teams = sorted(set(home_ids.tolist()) | set(away_ids.tolist()))
+
+    raw_hfa_ref, n_home_ref, hfa_team_ref = _old_unconditional_hfa_block(
+        teams, home_ids, away_ids, w, home_goals_arr, model.attack_, model.defense_,
+        model.league_base_, model.hfa_global_, use_team_hfa=True, hfa_shrinkage_k=7.0, n=n,
+    )
+
+    assert model.raw_hfa_ == raw_hfa_ref
+    assert model.n_home_ == n_home_ref
+    assert model.hfa_team_ == hfa_team_ref
+
+
+def test_use_team_hfa_false_skips_second_loop_raw_hfa_and_n_home_are_none() -> None:
+    # Phase P14 : quand use_team_hfa=False, hfa_team_ est deja demontre
+    # (voir test ci-dessus / test_use_team_hfa_false_gives_every_team_the_global_hfa)
+    # independant de raw_hfa_/n_home_ - la seconde boucle n'est donc plus
+    # executee. Preuve comportementale : raw_hfa_/n_home_ valent None
+    # (jamais un dict, meme vide) - la seule facon d'obtenir None est le
+    # chemin qui evite entierement cette boucle.
+    df = _round_robin_equal_strength(home_goals=3, away_goals=1)
+    model = PoissonModel(use_team_hfa=False).fit(df)
+    assert model.raw_hfa_ is None
+    assert model.n_home_ is None
+    for t in range(4):
+        assert model.hfa_team_[t] == pytest.approx(model.hfa_global_, abs=1e-9)
+
+
+def test_use_team_hfa_false_predict_lambda_mu_unchanged_vs_pre_p14_reference() -> None:
+    # Phase P14 : malgre la boucle evitee, hfa_team_ (et donc lambda/mu)
+    # doit rester EXACTEMENT ce que l'ancien calcul inconditionnel aurait
+    # produit pour use_team_hfa=False.
+    df = _round_robin_equal_strength(home_goals=3, away_goals=1)
+    model = PoissonModel(use_team_hfa=False, hfa_shrinkage_k=10.0).fit(df)
+
+    home_ids = df["home_team_id"].to_numpy()
+    away_ids = df["away_team_id"].to_numpy()
+    home_goals_arr = df["home_goals"].to_numpy(dtype=float)
+    n = len(df)
+    w = np.ones(n)
+    teams = sorted(set(home_ids.tolist()) | set(away_ids.tolist()))
+
+    _, _, hfa_team_ref = _old_unconditional_hfa_block(
+        teams, home_ids, away_ids, w, home_goals_arr, model.attack_, model.defense_,
+        model.league_base_, model.hfa_global_, use_team_hfa=False, hfa_shrinkage_k=10.0, n=n,
+    )
+    assert model.hfa_team_ == hfa_team_ref
+
+    for h in range(4):
+        for a in range(4):
+            if h == a:
+                continue
+            lam, mu = model.predict_lambda_mu(h, a)
+            expected_lam = model.league_base_ * model.attack_[h] * model.defense_[a] * hfa_team_ref[h]
+            expected_mu = model.league_base_ * model.attack_[a] * model.defense_[h]
+            assert lam == pytest.approx(expected_lam, abs=1e-12)
+            assert mu == pytest.approx(expected_mu, abs=1e-12)
+
+
 def test_unknown_team_falls_back_to_neutral_parameters() -> None:
     df = _round_robin_equal_strength()
     model = PoissonModel().fit(df)
