@@ -8,6 +8,7 @@ from sys_foot_quant.data_engine.market_odds.football_data_loader import (
     BOOKMAKER,
     BOOKMAKERS_1X2,
     MARKET,
+    OVER_UNDER_25_BOOKMAKERS,
     SOURCE,
     football_data_csv_path,
     load_football_data_csv,
@@ -18,16 +19,17 @@ _HEADER = (
     "BWH,BWD,BWA,PSH,PSD,PSA,"
     "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,"
     "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,"
-    "BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
+    "BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA,Max>2.5,Max<2.5,Avg>2.5,Avg<2.5\n"
 )
 
 
 def _write_csv(path: Path, rows: list[str]) -> Path:
     # HST,AST (Phase F), BFEH,BFED,BFEA,BFE>2.5,BFE<2.5 (Phase G), puis
-    # AHh,B365AHH,B365AHA,PAHH,PAHA (Phase H) ajoutees en fin de _HEADER -
-    # valeurs arbitraires non pertinentes pour ces tests, ajoutees en fin
-    # de chaque ligne.
-    rows = [f"{r},4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92" for r in rows]
+    # AHh,B365AHH,B365AHA,PAHH,PAHA (Phase H), puis Max>2.5,Max<2.5,
+    # Avg>2.5,Avg<2.5 (Stage32) ajoutees en fin de _HEADER - valeurs
+    # arbitraires non pertinentes pour ces tests, ajoutees en fin de
+    # chaque ligne.
+    rows = [f"{r},4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92,1.92,1.98,1.87,1.90" for r in rows]
     path.write_text(_HEADER + "\n".join(rows) + "\n")
     return path
 
@@ -226,6 +228,53 @@ def test_bfe_missing_on_a_single_row_is_absent_not_invented(tmp_path: Path) -> N
     assert r.b365_home == pytest.approx(1.6)
 
 
+def test_max_avg_column_missing_raises(tmp_path: Path) -> None:
+    """``Max>2.5``/``Max<2.5``/``Avg>2.5``/``Avg<2.5`` font partie de
+    ``_ALLOWED_COLUMNS`` (Stage32, couverture 100% constatee) - un
+    fichier sans ces colonnes doit echouer explicitement, jamais
+    silencieusement produire ``None``."""
+    path = tmp_path / "bad.csv"
+    path.write_text(
+        "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,"
+        "B365CH,B365CD,B365CA,BWCH,BWCD,BWCA,PSCH,PSCD,PSCA,"
+        "B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST\n"
+        "E0,16/08/2024,20:00,A,B,1,0,H,1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87,4,3\n"
+    )
+    with pytest.raises(ValueError, match="colonnes attendues absentes"):
+        load_football_data_csv(path, league="premier_league", season="2024_25")
+
+
+def test_max_avg_values_read_correctly_and_isolated_from_bookmaker_layer() -> None:
+    """Valeurs Max/Avg lues correctement, exposees UNIQUEMENT via
+    ``max_avg_over_under_2_5()`` - jamais dans ``over_under_2_5_by_bookmaker()``
+    (couche geleE9/E13/Phase D)."""
+    import tempfile
+
+    rows = [
+        "E0,16/08/2024,20:00,Man United,Fulham,1,0,H,1.6,4.2,5.25,"
+        "1.65,4.1,5.3,1.63,4.15,5.2,"
+        "1.66,4.15,5.33,1.68,4.1,5.4,1.64,4.2,5.25,1.68,4.5,5.6,1.62,4.36,5.15,1.85,1.95,1.80,1.90,1.88,1.92,1.82,1.87",
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        path = _write_csv(Path(tmp) / "E0.csv", rows)
+        records = load_football_data_csv(path, league="premier_league", season="2024_25")
+    r = records[0]
+    assert r.max_over_2_5 == pytest.approx(1.92)
+    assert r.max_under_2_5 == pytest.approx(1.98)
+    assert r.avg_over_2_5 == pytest.approx(1.87)
+    assert r.avg_under_2_5 == pytest.approx(1.90)
+    assert r.has_complete_max_over_under_2_5_odds is True
+    assert r.has_complete_avg_over_under_2_5_odds is True
+    assert r.max_avg_over_under_2_5() == {
+        "Max": {"Over": pytest.approx(1.92), "Under": pytest.approx(1.98)},
+        "Avg": {"Over": pytest.approx(1.87), "Under": pytest.approx(1.90)},
+    }
+    # Jamais fusionne avec la couche B365/P deja gelee.
+    assert "Max" not in r.over_under_2_5_by_bookmaker()
+    assert "Avg" not in r.over_under_2_5_by_bookmaker()
+
+
 def test_shots_on_target_column_missing_raises(tmp_path: Path) -> None:
     """HST/AST font partie de ``_ALLOWED_COLUMNS`` (Phase F, couverture
     100% verifiee sur les six fichiers reels) - un fichier sans ces
@@ -361,14 +410,30 @@ def test_bfe_is_never_merged_into_the_frozen_e9_e13_bookmaker_layer() -> None:
     assert "BFE" not in BOOKMAKERS_1X2
 
 
-def test_allowed_columns_never_contain_max_or_avg_aggregates() -> None:
-    """Max*/Avg* sont des agregats de marche a composition opaque -
-    exclus par l'ADR 0006, decision non revisitee en E13/E16 (y compris
-    leurs variantes de cloture MaxC*/AvgC*)."""
+def test_allowed_columns_contain_exactly_the_documented_max_avg_over_under_columns() -> None:
+    """Decision ADR 0006 ("Max*/Avg* jamais lus") REVISITEE au Stage32
+    apres verification empirique dediee (couverture 100%, Max>=B365 sur
+    100% des lignes, mouvement reel vs cloture - voir docstring de
+    module) : exactement les 4 colonnes Max/Avg Over/Under 2.5
+    D'OUVERTURE, JAMAIS leur variante de cloture (`MaxC>2.5`/`AvgC>2.5`)
+    ni le marche 1X2 (`MaxH/D/A`/`AvgH/D/A`, hors perimetre de cette
+    extension)."""
     from sys_foot_quant.data_engine.market_odds.football_data_loader import _ALLOWED_COLUMNS, _OPTIONAL_COLUMNS
 
-    for col in list(_ALLOWED_COLUMNS) + list(_OPTIONAL_COLUMNS):
-        assert not col.startswith("Max") and not col.startswith("Avg")
+    max_avg_columns = {c for c in list(_ALLOWED_COLUMNS) + list(_OPTIONAL_COLUMNS) if c.startswith("Max") or c.startswith("Avg")}
+    assert max_avg_columns == {"Max>2.5", "Max<2.5", "Avg>2.5", "Avg<2.5"}
+
+
+def test_max_avg_is_never_merged_into_the_frozen_e9_e13_bookmaker_layer() -> None:
+    """Garde-fou de non-regression E9/E13/Phase D (Stage32) : Max/Avg ne
+    doit JAMAIS apparaitre dans ``OVER_UNDER_25_BOOKMAKERS`` ni dans la
+    sortie de ``over_under_2_5_by_bookmaker`` - ces methodes sont deja
+    utilisees par des scripts GELES (E9, E13, Phase D) et par
+    ``matching.opening_over_under_2_5_by_match_id`` (production) dont la
+    reproductibilite ne doit jamais etre alteree. Accessible uniquement
+    via ``max_avg_over_under_2_5()``."""
+    assert "Max" not in OVER_UNDER_25_BOOKMAKERS
+    assert "Avg" not in OVER_UNDER_25_BOOKMAKERS
 
 
 def test_optional_columns_absent_from_file_yield_none_not_error(tmp_path: Path) -> None:
@@ -406,8 +471,8 @@ _REQUIRED_ROW_PREFIX = (
     "1.6,4.2,5.25,1.65,4.1,5.3,1.63,4.15,5.2,"
     "1.58,4.30,5.40,1.60,4.20,5.35,1.61,4.25,5.15"
 )
-_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA"
-_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92"
+_OU_SUFFIX = ",B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA,Max>2.5,Max<2.5,Avg>2.5,Avg<2.5"
+_OU_ROW_SUFFIX = ",1.85,1.95,1.80,1.90,1.88,1.92,1.86,1.89,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92,1.92,1.98,1.87,1.90"
 
 
 def test_wh_column_present_and_read_when_in_file(tmp_path: Path) -> None:
@@ -472,10 +537,10 @@ def test_literal_zero_odds_value_is_treated_as_missing_not_as_a_real_price(tmp_p
     toujours > 1.0). Doit etre traite comme absent (None), jamais comme
     0.0 (ce qui casserait toute normalisation d'overround en aval) - la
     meme regle s'applique identiquement aux cotes de CLOTURE (E16)."""
-    header = f"{_REQUIRED_PREFIX},B365>2.5,B365<2.5,P>2.5,P<2.5,B365C>2.5,B365C<2.5,PC>2.5,PC<2.5,HST,AST,BFEH,BFED,BFEA,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,PAHH,PAHA\n"
+    header = f"{_REQUIRED_PREFIX}{_OU_SUFFIX}\n"
     row = _REQUIRED_ROW_PREFIX.format(date="19/04/2025", time="16:00", home="A", away="B", hg=2, ag=1, ftr="H")
     path = tmp_path / "E0.csv"
-    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92\n")
+    path.write_text(header + f"{row},1.25,4.0,0,0,1.30,3.9,0,0,4,3,1.90,3.80,4.20,1.85,1.95,-0.75,1.95,1.95,1.98,1.92,1.92,1.98,1.87,1.90\n")
     records = load_football_data_csv(path, league="ligue1", season="2024_25")
     r = records[0]
     assert r.p_over_2_5 is None

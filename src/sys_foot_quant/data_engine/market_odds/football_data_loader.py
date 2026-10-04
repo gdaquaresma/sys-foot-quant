@@ -144,6 +144,53 @@ perimetre ici), ``MaxAHH``/``AHA``/``AvgAHH``/``AHA`` (agregats, ADR
 0006), et toute colonne de cloture (``AHCh``, ``B365CAHH``/``AHA``,
 ``PCAHH``/``AHA`` - reserve critique identique a E16, jamais un feature
 de decision a l'ouverture).
+
+EXTENSION STAGE32 (consensus multi-bookmaker Max/Avg Over/Under 2.5,
+docs/multi_bookmaker_consensus_experiment_specification.md) : l'ADR 0006
+excluait ``Max*``/``Avg*`` globalement, sans experience dediee (simple
+exclusion initiale groupee avec les colonnes de cloture, jamais
+revisitee - voir section "Perimetre retenu" de l'ADR). Verification
+EMPIRIQUE prealable (jamais supposee) sur les six fichiers reels avant
+cette extension :
+- ``Max>2.5``/``Max<2.5``/``Avg>2.5``/``Avg<2.5`` sont COMPLETES A 100%
+  sur les six fichiers (2132/2132 lignes) - meme niveau que B365,
+  superieur a P (Pinnacle, 49.5-99.5% selon le fichier).
+- ``Max>2.5 >= B365>2.5`` et ``Max<2.5 >= B365<2.5`` sur 100% des 2132
+  lignes - confirme structurellement qu'il s'agit bien d'un agregat
+  "meilleur prix du panel" dominant au moins B365, jamais une colonne
+  sans rapport avec les cotes individuelles.
+- ``Max>=Avg`` sur 100% des lignes (coherent : meilleur prix >= moyenne).
+- Ouverture et cloture DIFFERENT reellement : ``|Avg>2.5 - AvgC>2.5|``
+  median = 0.06 (mouvement de marche reel, 4.5% de lignes identiques
+  seulement) - exclut l'hypothese d'une colonne dupliquee/statique.
+  Meme convention de suffixe ``C`` que toutes les colonnes deja lues
+  (B365/BW/PS/WH/LB/P) - aucune nouvelle regle de nommage inventee.
+- **Reserve methodologique propre a Max** (jamais rencontree pour un
+  bookmaker a marge fixe) : l'overround implicite de ``Max`` (somme des
+  probabilites implicites brutes) descend sous 1.0 sur 0.7% des lignes
+  (min 0.861) - signature attendue d'un "meilleur prix de chaque cote
+  pris independamment à travers un panel", jamais le prix simultane d'un
+  seul bookmaker. ``Avg`` reste dans la plage normale (1.037-1.077,
+  profil similaire a B365/BW/PS). Consequence : ``Avg`` est retenue
+  comme covariable PRINCIPALE (consensus interpretable), ``Max`` comme
+  variable SECONDAIRE/descriptive uniquement (jamais une probabilite de
+  marche au sens standard).
+- Panel exact de bookmakers composant ``Max``/``Avg`` : **non documente
+  par la source elle-meme** (Football-Data ne publie pas la liste), donc
+  jamais affirme ici au-dela de ce qui est demontrable depuis les
+  donnees (dominance sur B365, ci-dessus) - meme discipline de reserve
+  que le fuseau horaire/la regle de connaissance (ADR 0006 section 4),
+  jamais un fait verifie aupres de la source externe.
+Ajout de ``Max>2.5``/``Max<2.5``/``Avg>2.5``/``Avg<2.5`` (OUVERTURE
+uniquement) a ``_ALLOWED_COLUMNS``. **NON LUES** : ``MaxC>2.5``/``AvgC>2.5``
+(cloture, jamais un feature de decision a l'ouverture), ``MaxH/D/A``/
+``AvgH/D/A`` (1X2, hors perimetre de cette extension - seul l'Over/Under
+2.5 est concerne). Accessible UNIQUEMENT via ``max_avg_over_under_2_5()``,
+DELIBEREMENT ISOLE de ``over_under_2_5_by_bookmaker()``/
+``OVER_UNDER_25_BOOKMAKERS`` (deja geles, utilises par
+``matching.opening_over_under_2_5_by_match_id``/E9/E13/Phase D/
+production - jamais alteres), meme discipline d'isolation que
+``bfe_odds_1x2()`` (Phase G).
 """
 
 from __future__ import annotations
@@ -213,6 +260,13 @@ _ALLOWED_COLUMNS = (
     "B365AHA",
     "PAHH",
     "PAHA",
+    # Consensus multi-bookmaker Max/Avg Over/Under 2.5 (Stage32) -
+    # OUVERTURE uniquement, jamais MaxC/AvgC ni le 1X2, voir docstring de
+    # module.
+    "Max>2.5",
+    "Max<2.5",
+    "Avg>2.5",
+    "Avg<2.5",
 )
 
 OVER_UNDER_25_BOOKMAKERS = ("B365", "P")  # P = Pinnacle (colonne distincte de PS, meme bookmaker - voir docstring)
@@ -281,6 +335,14 @@ class FootballDataMatchRecord:
     b365_ah_away: float | None = None
     p_ah_home: float | None = None
     p_ah_away: float | None = None
+    # Consensus multi-bookmaker Max/Avg Over/Under 2.5 (Stage32) - OUVERTURE
+    # uniquement. DELIBEREMENT ISOLE de `over_under_2_5_by_bookmaker()`/
+    # `OVER_UNDER_25_BOOKMAKERS` (geles, E9/E13/Phase D/production) - voir
+    # `max_avg_over_under_2_5()`.
+    max_over_2_5: float | None = None
+    max_under_2_5: float | None = None
+    avg_over_2_5: float | None = None
+    avg_under_2_5: float | None = None
     bw_home: float | None = None
     bw_draw: float | None = None
     bw_away: float | None = None
@@ -408,6 +470,38 @@ class FootballDataMatchRecord:
             if self.has_complete_bfe_over_under_2_5_odds
             else None
         )
+
+    # ----------------------------------------------------------------
+    # Consensus multi-bookmaker Max/Avg Over/Under 2.5 (Stage32) -
+    # OUVERTURE uniquement. DELIBEREMENT ISOLE de
+    # `over_under_2_5_by_bookmaker()`/`OVER_UNDER_25_BOOKMAKERS` (geles,
+    # utilises par E9/E13/Phase D/production - jamais alteres en y
+    # ajoutant Max/Avg), meme discipline que l'isolation Betfair Exchange
+    # (Phase G) ci-dessus.
+    # ----------------------------------------------------------------
+
+    @property
+    def has_complete_max_over_under_2_5_odds(self) -> bool:
+        return self.max_over_2_5 is not None and self.max_under_2_5 is not None
+
+    @property
+    def has_complete_avg_over_under_2_5_odds(self) -> bool:
+        return self.avg_over_2_5 is not None and self.avg_under_2_5 is not None
+
+    def max_avg_over_under_2_5(self) -> dict[str, dict[str, float]]:
+        """{"Max": {"Over":.., "Under":..}, "Avg": {...}} pour chaque
+        agregat COMPLET sur ce match - un agregat absent n'apparait
+        simplement pas (jamais invente ni impute, meme convention que
+        `over_under_2_5_by_bookmaker`). Couverture constatee : 100% sur
+        les six fichiers reels (voir docstring de module) - cette
+        absence ne devrait donc jamais survenir en pratique sur le
+        corpus actuel, mais n'est jamais supposee impossible."""
+        out: dict[str, dict[str, float]] = {}
+        if self.has_complete_max_over_under_2_5_odds:
+            out["Max"] = {"Over": self.max_over_2_5, "Under": self.max_under_2_5}
+        if self.has_complete_avg_over_under_2_5_odds:
+            out["Avg"] = {"Over": self.avg_over_2_5, "Under": self.avg_under_2_5}
+        return out
 
     # ----------------------------------------------------------------
     # Handicap asiatique (Phase H) - OUVERTURE uniquement. `ah_line` est
@@ -587,6 +681,10 @@ def load_football_data_csv(path: Path, league: str, season: str) -> list[Footbal
                     b365_ah_away=_parse_optional_float(row["B365AHA"]),
                     p_ah_home=_parse_optional_float(row["PAHH"]),
                     p_ah_away=_parse_optional_float(row["PAHA"]),
+                    max_over_2_5=_parse_optional_float(row["Max>2.5"]),
+                    max_under_2_5=_parse_optional_float(row["Max<2.5"]),
+                    avg_over_2_5=_parse_optional_float(row["Avg>2.5"]),
+                    avg_under_2_5=_parse_optional_float(row["Avg<2.5"]),
                     bw_home=_parse_optional_float(row["BWH"]),
                     bw_draw=_parse_optional_float(row["BWD"]),
                     bw_away=_parse_optional_float(row["BWA"]),
