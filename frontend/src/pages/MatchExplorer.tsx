@@ -2,18 +2,20 @@
  * Explorateur de matchs (Phase UI-2-D) - consomme GET /matches via le
  * client API centralisé.
  *
- * LIMITE DE CONTRAT DOCUMENTÉE : l'API n'expose aucun endpoint
- * d'énumération des compétitions/saisons (seuls GET /matches et
- * GET /matches/{match_id} existent, tous deux exigeant ces valeurs en
- * entrée - voir match_catalog.list_competitions()/list_seasons(), qui
- * existent côté backend mais ne sont câblées à aucune route HTTP). La
- * sélection se fait donc par SAISIE LIBRE, jamais par une liste codée en
- * dur qui prétendrait provenir des données - la validité réelle est
+ * Compétition/saison sont sélectionnées via les MÊMES menus déroulants à
+ * libellés humains que `AnalyzeMatch.tsx` (`../api/catalog`, source
+ * unique partagée) - jamais une saisie libre d'identifiant technique brut
+ * type "ligue1"/"2024_25" (revue de cohérence produit : cette page, bien
+ * que plus technique dans son usage - recherche large, filtrage par nom
+ * d'équipe -, doit rester reconnaissable comme faisant partie du même
+ * produit que la page d'analyse principale). La validité réelle reste
  * déterminée par la vraie réponse de l'API (succès ou erreur 400
- * explicite), jamais supposée côté frontend.
+ * explicite), jamais supposée côté frontend : ces options sont un confort
+ * de présentation, pas une validation.
  */
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { COMPETITION_OPTIONS, SEASON_OPTIONS } from '../api/catalog'
 import { ApiError, getMatches } from '../api/client'
 import type { MatchResponse } from '../api/types'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -79,27 +81,30 @@ export function MatchExplorer() {
   return (
     <div className="page">
       <h1>Explorateur de matchs</h1>
+      <p className="hint">Recherchez tous les matchs d'une compétition et d'une saison, puis filtrez par équipe.</p>
 
       <form className="filters" onSubmit={handleSubmit}>
         <label>
           Compétition
-          <input
-            type="text"
-            value={competition}
-            onChange={(e) => setCompetition(e.target.value)}
-            placeholder="identifiant technique"
-            required
-          />
+          <select value={competition} onChange={(e) => setCompetition(e.target.value)} required>
+            <option value="">— Choisir —</option>
+            {COMPETITION_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Saison
-          <input
-            type="text"
-            value={season}
-            onChange={(e) => setSeason(e.target.value)}
-            placeholder="identifiant technique"
-            required
-          />
+          <select value={season} onChange={(e) => setSeason(e.target.value)} required>
+            <option value="">— Choisir —</option>
+            {SEASON_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
         </label>
         <button type="submit">Rechercher</button>
       </form>
@@ -111,9 +116,7 @@ export function MatchExplorer() {
         </label>
       )}
 
-      {state.status === 'idle' && (
-        <EmptyState message="Renseignez une compétition et une saison (identifiants techniques réels, ex. valeurs déjà utilisées côté backend) puis lancez la recherche." />
-      )}
+      {state.status === 'idle' && <EmptyState message="Choisissez une compétition et une saison puis lancez la recherche." />}
       {state.status === 'loading' && <LoadingState label="Chargement des matchs..." />}
       {state.status === 'error' && <ErrorState message={state.message} />}
       {state.status === 'ready' && visibleMatches.length === 0 && (

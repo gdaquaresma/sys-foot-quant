@@ -56,6 +56,10 @@ export function Dashboard() {
   return (
     <div className="page dashboard">
       <h1>Tableau de bord</h1>
+      <p className="hint">
+        Comptages descriptifs issus du journal Shadow Mode et de la performance déjà calculée par le moteur - rien n'est
+        recalculé ici.
+      </p>
 
       {/* Bloc 1 - Vue d'ensemble */}
       <section className="stat-grid">
@@ -77,10 +81,16 @@ export function Dashboard() {
         </div>
       </section>
 
-      {/* Bloc 2 - Accès rapide */}
+      {/* Bloc 2 - Accès rapide - "Analyser un match" EN PREMIER : c'est
+          désormais l'entrée principale du produit (page `/`, Phase UI-1),
+          ce tableau de bord ne doit pas donner l'impression d'un produit
+          différent qui l'ignorerait (revue de cohérence produit). */}
       <section className="card">
         <h2>Accès rapide</h2>
         <div className="quick-links">
+          <Link className="quick-link" to="/">
+            Analyser un match
+          </Link>
           <Link className="quick-link" to="/matches">
             Explorateur de matchs
           </Link>
@@ -103,11 +113,14 @@ export function Dashboard() {
         </p>
       </section>
 
-      {/* Bloc 4 - État du système */}
+      {/* Bloc 4 - État du système. Pas de ligne "API accessible" ici : cette
+          section ne se rend que si les deux appels ont déjà réussi (voir
+          `state.status === 'ready'` plus haut) - un indicateur "accessible"
+          systématiquement vrai dans ce cas n'informe de rien (revue de
+          cohérence produit, aucun bloc décoratif sans utilité réelle). */}
       <section className="card">
         <h2>État du système</h2>
         <ul className="system-status">
-          <li>API : accessible (dernière réponse reçue avec succès)</li>
           <li>{journal.length === 0 ? 'Aucune donnée Shadow Mode enregistrée' : `${journal.length} observation(s) Shadow Mode disponible(s)`}</li>
           <li>
             {performance.n_total === 0

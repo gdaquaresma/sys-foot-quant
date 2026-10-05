@@ -26,7 +26,8 @@
  * chiffre : `raw_edge` dépend de la probabilité implicite normalisée du
  * marché (les deux côtés Over/Under conjointement), jamais recalculée ici.
  */
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { COMPETITION_OPTIONS, SEASON_OPTIONS, competitionLabel, seasonLabel } from '../api/catalog'
 import { ApiError, getMatches, getPrediction } from '../api/client'
 import type { MatchDecisionOutput, MatchResponse } from '../api/types'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -105,7 +106,10 @@ function extractMinEdgeThreshold(parametersSnapshot: Record<string, unknown>): n
 }
 
 /** Phrase humaine de synthèse - recompose la décision/les raisons/l'edge
- * déjà produits par le moteur, n'invente aucune donnée. */
+ * déjà produits par le moteur, n'invente aucune donnée. Pour NO_BET, la
+ * raison PRINCIPALE est intégrée directement dans la phrase (plutôt que
+ * de forcer la lecture de la liste de raisons en dessous) - toujours le
+ * même texte déjà fourni par `describeReason`, jamais reformulé. */
 function buildDecisionPhrase(prediction: MatchDecisionOutput): string {
   if (prediction.decision.decision === 'BET') {
     if (prediction.market) {
@@ -116,11 +120,23 @@ function buildDecisionPhrase(prediction: MatchDecisionOutput): string {
     }
     return 'Value Bet détecté.'
   }
-  return 'Pas de Value Bet actuellement.'
+  const [firstReason] = prediction.decision.decision_reason
+  return firstReason ? `Pas de Value Bet actuellement. ${describeReason(firstReason)}` : 'Pas de Value Bet actuellement.'
 }
 
-function ValueBadge({ priceEdge }: { priceEdge: number }) {
-  const isValue = priceEdge > 0
+/** Badge Value/No Value - JAMAIS indépendant de la décision globale du
+ * moteur : le signe brut de `price_edge` seul ne suffit pas à afficher
+ * "VALUE" (c'est précisément le type de sur-confiance identifié par
+ * Phase D - edge apparent positif sans validation scientifique). Un badge
+ * "VALUE" n'est donc affiché QUE si le moteur a réellement décidé BET
+ * pour ce match - jamais une Value inventée côté présentation qui
+ * contredirait la décision globale déjà affichée au-dessus. */
+function isValueSide(decision: 'BET' | 'NO_BET', priceEdge: number): boolean {
+  return decision === 'BET' && priceEdge > 0
+}
+
+function ValueBadge({ decision, priceEdge }: { decision: 'BET' | 'NO_BET'; priceEdge: number }) {
+  const isValue = isValueSide(decision, priceEdge)
   return <span className={`badge ${isValue ? 'badge-bet' : 'badge-no_bet'}`}>{isValue ? 'VALUE' : 'NO VALUE'}</span>
 }
 
@@ -129,14 +145,29 @@ function MarketBlock({
   side,
   marketOdds,
   priceEdge,
-  minEdgeThreshold,
+  decision,
 }: {
   label: string
   side: SideView
   marketOdds?: number
   priceEdge?: number
-  minEdgeThreshold: number | null
+  decision: 'BET' | 'NO_BET'
 }) {
+  // "Pourquoi c'est intéressant" (section 6 de la demande) : UNIQUEMENT
+  // affiché pour le côté réellement en Value (jamais pour NO VALUE, qui n'a
+  // rien à expliquer) - une phrase factuelle qui ne fait que mettre en mots
+  // les deux chiffres DÉJÀ affichés juste au-dessus (cote renseignée, cote
+  // juste) - jamais un recalcul de `price_edge` lui-même. Le sens de la
+  // comparaison ("plus"/"moins généreuse") est dérivé DIRECTEMENT de ces
+  // deux mêmes chiffres (`marketOdds` vs `side.fairPrice`), jamais supposé
+  // fixe : pour une donnée réelle et cohérente, `price_edge > 0` implique
+  // mathématiquement `marketOdds > fairPrice` (même `model_prob` des deux
+  // côtés du calcul backend, `value_engine.edge.expected_value`), mais la
+  // phrase ne doit jamais AFFIRMER un sens qu'elle n'a pas elle-même vérifié
+  // sur les valeurs réellement à l'écran.
+  const showsValueExplanation = priceEdge !== undefined && isValueSide(decision, priceEdge) && marketOdds !== undefined
+  const isOddsMoreGenerousThanFair = showsValueExplanation && marketOdds! > side.fairPrice
+
   return (
     <div className="card value-bet-card">
       <h3>{label}</h3>
@@ -151,29 +182,27 @@ function MarketBlock({
         </div>
         {marketOdds !== undefined && (
           <div>
-            <dt>Cote actuelle</dt>
+            {/* "Renseignée" et non "actuelle" : cette valeur est TOUJOURS
+                celle saisie par l'utilisateur dans le formulaire ci-dessous
+                - l'API n'interroge jamais un bookmaker en direct et ne lit
+                jamais de cote historique ici. Jamais laisser penser à un
+                suivi de marché en temps réel. */}
+            <dt>Cote renseignée</dt>
             <dd>{formatOdds(marketOdds)}</dd>
           </div>
         )}
-        <div>
-          <dt>Seuil Value</dt>
-          {/* Jamais une cote fabriquée : `raw_edge` (la grandeur que le
-              moteur compare réellement à ce seuil) dépend de la probabilité
-              implicite NORMALISÉE du marché - donc des deux côtés Over/Under
-              conjointement - et n'est jamais recalculée ici. Tant que
-              `min_edge_threshold` vaut `None` côté moteur, aucune cote
-              minimale de Value ne peut être affichée honnêtement. */}
-          <dd>{minEdgeThreshold === null ? 'Non défini par le moteur' : `edge modèle ≥ ${formatProbability(minEdgeThreshold)}`}</dd>
-        </div>
       </dl>
-      {minEdgeThreshold === null && (
-        <p className="hint">
-          Le moteur ne dispose pas encore d'un seuil d'edge minimal validé permettant de définir une cote minimale de
-          Value.
-        </p>
-      )}
       {priceEdge !== undefined ? (
-        <ValueBadge priceEdge={priceEdge} />
+        <>
+          <ValueBadge decision={decision} priceEdge={priceEdge} />
+          {showsValueExplanation && (
+            <p className="hint value-explanation">
+              Cote renseignée ({formatOdds(marketOdds!)}){' '}
+              {isOddsMoreGenerousThanFair ? 'plus généreuse' : 'différente'} que la cote juste du modèle (
+              {formatOdds(side.fairPrice)}).
+            </p>
+          )}
+        </>
       ) : (
         <p className="hint">Entrez une cote de marché pour vérifier si une Value Bet est actuellement présente.</p>
       )}
@@ -183,17 +212,25 @@ function MarketBlock({
 
 function DecisionBlock({ prediction }: { prediction: MatchDecisionOutput }) {
   const decision = prediction.decision.decision
+  // La toute première raison est déjà intégrée dans la phrase ci-dessus
+  // (`buildDecisionPhrase`) - ne jamais la répéter ici. Les raisons
+  // SUIVANTES (s'il y en a) sont listées en phrases lisibles, SANS le code
+  // technique brut (ex. "AMBIGUOUS_COLLECTION_DAY") : ce niveau (NIVEAU 3 -
+  // explication) doit rester compréhensible par un utilisateur non
+  // technique. Le code brut n'est jamais supprimé de l'application - il
+  // reste visible, pour chaque raison déclenchée, dans « Contrôles / Gates »
+  // (NIVEAU 4 - détails techniques, voir AnalysisAccordions ci-dessous) où
+  // il a sa place légitime.
+  const [, ...otherReasons] = prediction.decision.decision_reason
   return (
     <div className="decision-hero">
       <span className={`decision-hero-pill decision-hero-pill-${decision.toLowerCase()}`}>{decision}</span>
       <div className="decision-meta">
         <p className="decision-phrase">{buildDecisionPhrase(prediction)}</p>
-        {prediction.decision.decision_reason.length > 0 && (
+        {otherReasons.length > 0 && (
           <ul className="reason-list decision-reasons-secondary">
-            {prediction.decision.decision_reason.map((code) => (
-              <li key={code}>
-                <code>{code}</code> — <span>{describeReason(code)}</span>
-              </li>
+            {otherReasons.map((code) => (
+              <li key={code}>{describeReason(code)}</li>
             ))}
           </ul>
         )}
@@ -296,7 +333,15 @@ function AnalysisAccordions({ prediction, matchId }: { prediction: MatchDecision
           ) : (
             <ul className="reason-list">
               {triggeredGates.map((gate) => (
-                <li key={gate.name}>{gate.reason}</li>
+                // Le code technique brut (ex. "EDGE_BELOW_THRESHOLD") est
+                // affiché ICI, au niveau détails techniques - jamais masqué
+                // (même principe que MatchDetail.tsx) - mais plus dans la
+                // phrase de décision ci-dessus, qui reste lisible par un
+                // utilisateur non technique (voir DecisionBlock).
+                <li key={gate.name}>
+                  {gate.failure_code && <code>{gate.failure_code}</code>} {gate.failure_code ? '— ' : ''}
+                  {gate.reason}
+                </li>
               ))}
             </ul>
           )}
@@ -346,22 +391,51 @@ export function AnalyzeMatch() {
   const [appliedOdds, setAppliedOdds] = useState<{ over_2_5: number; under_2_5: number } | undefined>(undefined)
   const [oddsFormError, setOddsFormError] = useState<string | null>(null)
 
-  async function handleSearchSubmit(event: FormEvent) {
-    event.preventDefault()
-    if (!competition.trim() || !season.trim()) return
-    setSearchState({ status: 'loading' })
+  // Garde-fou anti-course (identique en esprit au `cancelled` de
+  // MatchDetail.tsx, adapté à un appel impératif plutôt qu'un useEffect) :
+  // `runPrediction` est déclenché depuis plusieurs gestionnaires d'événement
+  // (analyse initiale, application/retrait de cote) - sans ce compteur, une
+  // réponse LENTE d'un match/cote déjà abandonné pourrait arriver APRÈS une
+  // réponse plus rapide d'une analyse plus récente et écraser silencieusement
+  // la décision affichée par celle, périmée, du match précédent. Seule la
+  // réponse dont l'identifiant correspond encore à la dernière requête émise
+  // est jamais appliquée à l'état affiché.
+  const predictionRequestIdRef = useRef(0)
+
+  // Chargement AUTOMATIQUE des matchs dès que compétition ET saison sont
+  // choisies - plus de bouton "Rechercher les matchs" à cliquer séparément :
+  // le parcours devient directement compétition → saison → match →
+  // analyser (audit parcours), sans étape intermédiaire qui ressemble à la
+  // soumission d'un formulaire technique. Garde-fou anti-course identique en
+  // esprit à `MatchDetail.tsx` (`cancelled`) : un changement rapide de
+  // compétition/saison avant la fin d'une requête précédente ne doit jamais
+  // appliquer une liste de matchs qui ne correspond plus à la sélection
+  // actuelle.
+  useEffect(() => {
     setHomeTeam('')
     setAwayTeam('')
     setSelectedMatchId('')
-    setActiveMatch(null)
-    setPredictionState(null)
-    try {
-      const matches = await getMatches(competition.trim(), season.trim())
-      setSearchState({ status: 'ready', matches })
-    } catch (err) {
-      setSearchState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+    resetActiveAnalysis()
+
+    if (!competition || !season) {
+      setSearchState({ status: 'idle' })
+      return
     }
-  }
+
+    let cancelled = false
+    setSearchState({ status: 'loading' })
+    getMatches(competition, season)
+      .then((matches) => {
+        if (!cancelled) setSearchState({ status: 'ready', matches })
+      })
+      .catch((err) => {
+        if (!cancelled) setSearchState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competition, season])
 
   const matches = searchState.status === 'ready' ? searchState.matches : []
   const homeTeams = useMemo(() => Array.from(new Set(matches.map((m) => m.home_team))).sort((a, b) => a.localeCompare(b)), [matches])
@@ -376,6 +450,10 @@ export function AnalyzeMatch() {
   const resolvedMatch = candidates.length === 1 ? candidates[0] : (candidates.find((m) => m.match_id === selectedMatchId) ?? null)
 
   function resetActiveAnalysis() {
+    // Invalide toute requête de prédiction encore en vol : si elle
+    // aboutit malgré tout, `runPrediction` la reconnaîtra comme périmée
+    // (voir `predictionRequestIdRef`) et l'ignorera.
+    predictionRequestIdRef.current += 1
     setActiveMatch(null)
     setPredictionState(null)
     setOverOdds('')
@@ -398,14 +476,25 @@ export function AnalyzeMatch() {
   }
 
   function runPrediction(match: MatchResponse, odds?: { over_2_5: number; under_2_5: number }) {
+    const requestId = ++predictionRequestIdRef.current
     setPredictionState({ status: 'loading' })
     getPrediction(match.match_id, match.competition, match.season, odds)
-      .then((prediction) => setPredictionState({ status: 'ready', prediction }))
-      .catch((err) => setPredictionState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) }))
+      .then((prediction) => {
+        if (predictionRequestIdRef.current === requestId) setPredictionState({ status: 'ready', prediction })
+      })
+      .catch((err) => {
+        if (predictionRequestIdRef.current === requestId) {
+          setPredictionState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+        }
+      })
   }
 
   function handleAnalyze() {
-    if (!resolvedMatch) return
+    // Garde explicite indépendante du rendu (le `disabled` du bouton suffit
+    // déjà en pratique, mais deux clics synchrones avant le prochain rendu -
+    // par ex. un double-clic très rapide - ne doivent jamais déclencher deux
+    // requêtes de prédiction concurrentes pour le même match).
+    if (!resolvedMatch || predictionState?.status === 'loading') return
     setActiveMatch(resolvedMatch)
     setAppliedOdds(undefined)
     setOverOdds('')
@@ -451,22 +540,33 @@ export function AnalyzeMatch() {
 
       <section className="card">
         <h2>1. Choisir le match</h2>
-        <form className="filters" onSubmit={handleSearchSubmit}>
+        <div className="filters">
           <label>
             Compétition
-            <input type="text" value={competition} onChange={(e) => setCompetition(e.target.value)} placeholder="identifiant technique" required />
+            <select value={competition} onChange={(e) => setCompetition(e.target.value)}>
+              <option value="">— Choisir —</option>
+              {COMPETITION_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Saison
-            <input type="text" value={season} onChange={(e) => setSeason(e.target.value)} placeholder="identifiant technique" required />
+            <select value={season} onChange={(e) => setSeason(e.target.value)}>
+              <option value="">— Choisir —</option>
+              {SEASON_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </label>
-          <button type="submit" className="button-primary">
-            Rechercher les matchs
-          </button>
-        </form>
+        </div>
 
         {searchState.status === 'idle' && (
-          <EmptyState message="Renseignez une compétition et une saison (identifiants techniques réels) pour charger les matchs disponibles." />
+          <EmptyState message="Choisissez une compétition et une saison pour voir les matchs disponibles." />
         )}
         {searchState.status === 'loading' && <LoadingState label="Chargement des matchs..." />}
         {searchState.status === 'error' && <ErrorState message={searchState.message} />}
@@ -516,8 +616,28 @@ export function AnalyzeMatch() {
             {homeTeam && awayTeam && candidates.length === 0 && (
               <EmptyState message="Aucun match trouvé dans le catalogue pour cette combinaison domicile/extérieur." />
             )}
-            <button type="button" className="button-primary" disabled={!resolvedMatch} onClick={handleAnalyze}>
-              Analyser le match
+            {/* Résumé humain du match choisi, affiché DÈS la résolution -
+                donc AVANT même de cliquer "Analyser" (bullet 7 de l'audit
+                parcours) : jamais d'identifiant technique, uniquement les
+                équipes et des libellés de compétition/saison déjà lisibles. */}
+            {resolvedMatch && (
+              <p className="match-preview">
+                <span className="match-summary-teams">
+                  {resolvedMatch.home_team} – {resolvedMatch.away_team}
+                </span>
+                <span className="hint">
+                  {competitionLabel(resolvedMatch.competition)} · {seasonLabel(resolvedMatch.season)} ·{' '}
+                  {formatKickoff(resolvedMatch.kickoff_utc)}
+                </span>
+              </p>
+            )}
+            <button
+              type="button"
+              className="button-primary"
+              disabled={!resolvedMatch || predictionState?.status === 'loading'}
+              onClick={handleAnalyze}
+            >
+              {predictionState?.status === 'loading' ? 'Analyse en cours…' : 'Analyser le match'}
             </button>
           </>
         )}
@@ -525,17 +645,13 @@ export function AnalyzeMatch() {
 
       {activeMatch && (
         <>
-          <section className="card match-summary">
-            <p className="match-summary-teams">
-              {activeMatch.home_team} – {activeMatch.away_team}
-            </p>
-            <p className="hint">
-              {activeMatch.competition} · {formatKickoff(activeMatch.kickoff_utc)}
-            </p>
-          </section>
-
           <section className="card card-elevated">
             <h2>2. Décision</h2>
+            {/* Le match reste identifiable sans avoir à remonter à l'étape 1,
+                même en faisant défiler la page jusqu'au résultat. */}
+            <p className="match-summary-teams decision-match-name">
+              {activeMatch.home_team} – {activeMatch.away_team}
+            </p>
             {predictionState?.status === 'loading' && <LoadingState label="Analyse en cours..." />}
             {predictionState?.status === 'error' && <ErrorState message={predictionState.message} />}
             {predictionState?.status === 'ready' && (
@@ -547,20 +663,35 @@ export function AnalyzeMatch() {
                 ) : (
                   <>
                     <h2>Value Bet</h2>
+                    {/* Reponse explicite a "sur quel marche ?" - le seul marche
+                        Over/Under pour lequel une cote reelle existe dans le
+                        corpus (voir MARKET_THRESHOLD en tete de fichier), jamais
+                        seulement implicite via les deux titres de carte en dessous. */}
+                    <p className="market-analyzed">
+                      Marché analysé : <strong>Over/Under 2.5 buts</strong>
+                    </p>
+                    {extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot) === null && (
+                      // Fait valable pour le match entier (pas un côté en particulier) :
+                      // affiché UNE SEULE FOIS ici, jamais dupliqué par carte Over/Under.
+                      <p className="hint">
+                        Le moteur ne dispose pas encore d'un seuil d'edge minimal validé scientifiquement : aucune cote
+                        minimale de Value ne peut donc être affichée (voir « Contrôles / Gates » ci-dessous).
+                      </p>
+                    )}
                     <div className="value-bet-grid">
                       <MarketBlock
                         label="Over 2.5"
                         side={marketView.over}
                         marketOdds={market?.market_odds['Over']}
                         priceEdge={market?.price_edge['Over']}
-                        minEdgeThreshold={extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot)}
+                        decision={predictionState.prediction.decision.decision}
                       />
                       <MarketBlock
                         label="Under 2.5"
                         side={marketView.under}
                         marketOdds={market?.market_odds['Under']}
                         priceEdge={market?.price_edge['Under']}
-                        minEdgeThreshold={extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot)}
+                        decision={predictionState.prediction.decision.decision}
                       />
                     </div>
                   </>

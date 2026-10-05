@@ -51,8 +51,26 @@ afterEach(() => {
 describe('MatchExplorer', () => {
   it('affiche un état initial sans appeler l’API', () => {
     renderExplorer()
-    expect(screen.getByText(/Renseignez une compétition et une saison/)).toBeInTheDocument()
+    expect(screen.getByText(/Choisissez une compétition et une saison/)).toBeInTheDocument()
     expect(getMatchesMock).not.toHaveBeenCalled()
+  })
+
+  it('propose des menus déroulants à libellés humains (cohérence avec Analyser un match), jamais un identifiant technique à taper', () => {
+    // Revue de cohérence produit : cette page utilisait auparavant deux
+    // champs texte libres avec le placeholder "identifiant technique" -
+    // incohérent avec AnalyzeMatch.tsx, qui n'expose jamais d'identifiant
+    // brut. Les deux pages partagent désormais la même source
+    // (`../api/catalog`).
+    renderExplorer()
+    const competitionSelect = screen.getByLabelText('Compétition') as HTMLSelectElement
+    const seasonSelect = screen.getByLabelText('Saison') as HTMLSelectElement
+    expect(competitionSelect.tagName).toBe('SELECT')
+    expect(seasonSelect.tagName).toBe('SELECT')
+    expect(screen.getByRole('option', { name: 'Ligue 1' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'La Liga' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Premier League' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '2026/27' })).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('identifiant technique')).not.toBeInTheDocument()
   })
 
   it('affiche un état de chargement puis les matchs après sélection et soumission', async () => {
@@ -83,14 +101,14 @@ describe('MatchExplorer', () => {
   })
 
   it('affiche le message d’erreur réel renvoyé par l’API', async () => {
-    getMatchesMock.mockRejectedValue(new ApiError(400, "Competition inconnue pour la saison '2024_25' : 'bundesliga'."))
+    getMatchesMock.mockRejectedValue(new ApiError(400, "Aucune donnee pour la saison '2024_25' de 'ligue1'."))
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'bundesliga' } })
+    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2024_25' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
 
-    await waitFor(() => expect(screen.getByText(/Competition inconnue pour la saison/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/Aucune donnee pour la saison/)).toBeInTheDocument())
   })
 
   it('génère un lien de navigation vers le détail avec les identifiants réels du match', async () => {

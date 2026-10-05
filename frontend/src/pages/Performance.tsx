@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ApiError, getPerformance } from '../api/client'
 import type { PerformanceResponse } from '../api/types'
-import { ErrorState, LoadingState } from '../components/StateViews'
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 
 type LoadState =
   | { status: 'loading' }
@@ -33,6 +33,10 @@ export function Performance() {
   return (
     <div className="page performance-page">
       <h1>Performance</h1>
+      <p className="hint">
+        Statistiques agrégées à partir des prédictions déjà journalisées en Shadow Mode - décisions, modèles et pari
+        théorique, jamais un recalcul côté frontend.
+      </p>
 
       <section className="stat-grid">
         <div className="stat-card">
@@ -52,7 +56,7 @@ export function Performance() {
       <section className="card">
         <h2>Répartition des décisions</h2>
         {Object.keys(performance.decision_distribution).length === 0 ? (
-          <p>Aucune donnée.</p>
+          <EmptyState message="Aucune décision enregistrée pour le moment." />
         ) : (
           <ul>
             {Object.entries(performance.decision_distribution).map(([decision, count]) => (
@@ -67,7 +71,7 @@ export function Performance() {
       <section className="card">
         <h2>Pari (Shadow Mode)</h2>
         {performance.betting.n_bet === 0 ? (
-          <p>{performance.betting.message ?? 'Aucun pari réglé.'}</p>
+          <EmptyState message={performance.betting.message ?? 'Aucun pari réglé.'} />
         ) : (
           <ul>
             <li>Nombre de paris : {performance.betting.n_bet}</li>

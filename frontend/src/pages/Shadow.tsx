@@ -31,6 +31,10 @@ export function Shadow() {
   return (
     <div className="page shadow-page">
       <h1>Shadow Mode</h1>
+      <p className="hint">
+        Journal d'observation du moteur sur des matchs réels, sans aucun pari engagé - chaque décision est enregistrée
+        avant le match puis comparée au résultat une fois connu.
+      </p>
       {state.observations.length === 0 ? (
         <EmptyState message="Aucune observation Shadow Mode enregistrée. Le journal est vide - aucune prédiction réelle n'a encore été journalisée." />
       ) : (

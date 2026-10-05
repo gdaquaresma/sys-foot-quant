@@ -120,7 +120,7 @@ describe('Dashboard', () => {
     await waitFor(() => expect(container.querySelector('.quick-links')).toBeInTheDocument())
     const quickLinks = container.querySelector('.quick-links')!
     const links = Array.from(quickLinks.querySelectorAll('a')).map((a) => a.getAttribute('href'))
-    expect(links).toEqual(['/matches', '/shadow', '/performance'])
+    expect(links).toEqual(['/', '/matches', '/shadow', '/performance'])
   })
 
   it('documente la limitation sur les matchs sans fabriquer de données', async () => {

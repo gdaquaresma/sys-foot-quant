@@ -265,8 +265,32 @@ summary:focus-visible {
   border-radius: 6px;
 }
 
+/* Indicateur de chargement visuel (pas seulement du texte) - sobre, une
+   seule rotation continue, jamais de rebond. Desactive automatiquement par
+   la regle globale `prefers-reduced-motion` deja en place plus haut dans ce
+   fichier (cible `*::before` sans exception a ajouter ici). */
 .state-loading {
   color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.state-loading::before {
+  content: '';
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .state-empty {
@@ -446,16 +470,29 @@ summary:focus-visible {
    Résumé de match (Niveau 1) et phrase de décision lisible (Niveau 2) -
    voir `pages/AnalyzeMatch.tsx`. */
 
-.match-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .match-summary-teams {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
+}
+
+/* Aperçu du match choisi (étape 1), affiché DÈS la résolution du couple
+   domicile/extérieur - donc avant même de cliquer "Analyser le match".
+   Les deux lignes (équipes, puis compétition/saison/horaire) s'empilent
+   verticalement, même mise en page que l'ancien résumé post-analyse
+   qu'il remplace (fusionné - un seul endroit affiche désormais le match,
+   dès qu'il est connu, plutôt que deux rendus quasi identiques). */
+.match-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-4) 0;
+}
+
+/* Variante utilisée DANS la carte "2. Décision" (le match reste
+   identifiable sans remonter à l'étape 1 en faisant défiler la page). */
+.decision-match-name {
+  margin-bottom: var(--space-4);
 }
 
 .decision-phrase {
@@ -471,8 +508,13 @@ summary:focus-visible {
 }
 
 /* Blocs Value Bet (Over/Under 2.5) - mobile-first : empilés par défaut,
-   côte à côte à partir de 640px (même seuil que le reste de l'application,
-   voir le bloc `@media (max-width: 640px)` plus bas). */
+   côte à côte seulement à partir de 900px. Seuil volontairement PLUS ÉLEVÉ
+   que le seuil mobile global (640px, voir le bloc `@media (max-width: 640px)`
+   plus bas) : trouvé lors d'un audit visuel à 820px (tablette portrait) où
+   deux colonnes, combinées à la largeur fixe de la nav latérale (220px),
+   ne laissaient plus assez de place pour "Probabilité modèle" sur une seule
+   ligne (retour à la ligne disgracieux). Au-delà de 900px, la nav latérale
+   ne mange plus une part assez grande de la largeur pour poser ce problème. */
 .value-bet-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -480,14 +522,30 @@ summary:focus-visible {
   margin-bottom: var(--space-5);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 900px) {
   .value-bet-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
 
+/* Reponse explicite a "sur quel marche ?" - volontairement plus visible
+   qu'un `.hint` (pas une note secondaire, c'est une information de premier
+   niveau de la hierarchie demandee), mais sans le poids d'un titre. */
+.market-analyzed {
+  margin: 0 0 var(--space-4);
+}
+
 .value-bet-card h3 {
   margin-top: 0;
+}
+
+/* Phrase "pourquoi c'est interessant" (cote renseignee vs cote juste) -
+   rattachee visuellement au badge VALUE qu'elle precise, jamais une entree
+   separee de `.value-bet-stats` (ce n'est pas un chiffre supplementaire,
+   c'est la mise en mots de deux chiffres deja affiches au-dessus). */
+.value-explanation {
+  margin-top: var(--space-2);
+  margin-bottom: 0;
 }
 
 .value-bet-stats {
