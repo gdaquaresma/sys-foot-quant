@@ -11,8 +11,23 @@ export interface MatchResponse {
   match_id: string
   competition: string
   season: string
-  /** ISO 8601 avec suffixe Z (UTC) - sérialisation Pydantic. */
-  kickoff_utc: string
+  /** Date du jour de match ("YYYY-MM-DD", sans heure) - TOUJOURS
+   * renseignée, même quand l'heure de coup d'envoi n'est pas encore
+   * publiée (voir `kickoff_local_naive`/`kickoff_utc` ci-dessous).
+   * EXTENSION fixtures futures 2026/27. */
+  fixture_date: string
+  /** Heure locale telle que publiée par la source (OpenFootball) -
+   * "YYYY-MM-DDTHH:mm:ss", SANS fuseau horaire confirmé. `null` si non
+   * encore publiée (fixture "C"). Ne JAMAIS afficher cette valeur comme
+   * une heure UTC - voir `../api/fixtureTiming.ts`. EXTENSION fixtures
+   * futures 2026/27. */
+  kickoff_local_naive: string | null
+  /** ISO 8601 avec suffixe Z (UTC) - sérialisation Pydantic. `null` tant
+   * que la conversion UTC n'est pas confirmée (fixtures futures "B"/"C") :
+   * dans ce cas, `GET /matches/{id}/prediction` refuse explicitement
+   * l'analyse (HTTP 409, voir `ApiError`/`fixtureTiming.ts`). Toujours
+   * renseigné pour un match déjà joué. */
+  kickoff_utc: string | null
   home_team: string
   away_team: string
   is_played: boolean

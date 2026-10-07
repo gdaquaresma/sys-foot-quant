@@ -25,6 +25,8 @@ const FIXTURE_MATCHES: MatchResponse[] = [
     match_id: '31940',
     competition: 'ligue1',
     season: '2026_27',
+    fixture_date: '2026-08-21',
+    kickoff_local_naive: null,
     kickoff_utc: '2026-08-21T18:45:00Z',
     home_team: 'Marseille',
     away_team: 'Strasbourg',
@@ -34,12 +36,42 @@ const FIXTURE_MATCHES: MatchResponse[] = [
     match_id: '31975',
     competition: 'ligue1',
     season: '2026_27',
+    fixture_date: '2026-09-13',
+    kickoff_local_naive: null,
     kickoff_utc: '2026-09-13T18:45:00Z',
     home_team: 'Brest',
     away_team: 'Paris Saint Germain',
     is_played: true,
   },
 ]
+
+// EXTENSION fixtures futures 2026/27 - formes réelles capturées sur l'API
+// (voir tests/integration/test_future_fixture_catalog_real_files.py côté
+// backend) : état B (heure locale publiée, kickoff_utc absent) et état C
+// (aucune heure publiée, kickoff_utc absent).
+const FIXTURE_MATCH_STATE_B: MatchResponse = {
+  match_id: 'ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00',
+  competition: 'ligue1',
+  season: '2026_27',
+  fixture_date: '2026-10-09',
+  kickoff_local_naive: '2026-10-09T20:45:00',
+  kickoff_utc: null,
+  home_team: 'Lens',
+  away_team: 'Lyon',
+  is_played: false,
+}
+
+const FIXTURE_MATCH_STATE_C: MatchResponse = {
+  match_id: 'ligue1:2026_27:Lens_vs_Le Havre:2026-12-05',
+  competition: 'ligue1',
+  season: '2026_27',
+  fixture_date: '2026-12-05',
+  kickoff_local_naive: null,
+  kickoff_utc: null,
+  home_team: 'Lens',
+  away_team: 'Le Havre',
+  is_played: false,
+}
 
 const FIXTURE_PREDICTION_NO_MARKET: MatchDecisionOutput = {
   match_id: 'ligue1:2026_27:Marseille_vs_Strasbourg:2026-08-21T18:45:00',
@@ -626,5 +658,65 @@ describe('AnalyzeMatch', () => {
 
     fireEvent.click(screen.getByText('Probabilités détaillées par modèle'))
     expect(details).toHaveAttribute('open')
+  })
+
+  // --- EXTENSION fixtures futures 2026/27 ---------------------------------
+
+  describe('fixtures futures (B/C) - analyse indisponible', () => {
+    it('désactive "Analyser le match" pour une fixture B (heure locale connue, kickoff_utc absent) et explique pourquoi', async () => {
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B])
+      renderPage()
+
+      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
+      fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
+      fireEvent.change(screen.getByLabelText("Équipe à l'extérieur"), { target: { value: 'Lyon' } })
+
+      expect(screen.getByText('Lens – Lyon')).toBeInTheDocument()
+      // Heure locale affichée explicitement comme telle, jamais comme UTC.
+      expect(screen.getByText(/9 octobre 2026 · 20:45 \(heure locale, UTC non confirmée\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Match à venir/)).toBeInTheDocument()
+      expect(
+        screen.getByText('Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Analyser le match' })).toBeDisabled()
+      expect(getPredictionMock).not.toHaveBeenCalled()
+    })
+
+    it('désactive "Analyser le match" pour une fixture C (aucune heure publiée) et explique pourquoi', async () => {
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_C])
+      renderPage()
+
+      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
+      fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
+      fireEvent.change(screen.getByLabelText("Équipe à l'extérieur"), { target: { value: 'Le Havre' } })
+
+      expect(screen.getByText('Lens – Le Havre')).toBeInTheDocument()
+      expect(screen.getByText(/5 décembre 2026 \(heure non publiée\)/)).toBeInTheDocument()
+      expect(
+        screen.getByText('Analyse indisponible : heure de coup d’envoi non publiée.'),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Analyser le match' })).toBeDisabled()
+      expect(getPredictionMock).not.toHaveBeenCalled()
+    })
+
+    it('ne laisse jamais entendre qu’une heure précise rendra le match analysable plus tard', async () => {
+      // Garde-fou explicite du cadrage : le texte ne doit jamais fabriquer
+      // une promesse d'heure/UTC future - uniquement un fait présent.
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B, FIXTURE_MATCH_STATE_C])
+      renderPage()
+
+      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
+      fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
+      fireEvent.change(screen.getByLabelText("Équipe à l'extérieur"), { target: { value: 'Le Havre' } })
+
+      const message = screen.getByText('Analyse indisponible : heure de coup d’envoi non publiée.')
+      expect(message.textContent).not.toMatch(/bientôt|prochainement|à \d{1,2}:\d{2}|sera analysable/i)
+    })
   })
 })

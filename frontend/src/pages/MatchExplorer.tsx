@@ -17,6 +17,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { COMPETITION_OPTIONS, SEASON_OPTIONS } from '../api/catalog'
 import { ApiError, getMatches } from '../api/client'
+import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { MatchResponse } from '../api/types'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 
@@ -32,6 +33,18 @@ function formatKickoff(iso: string): string {
   } catch {
     return iso
   }
+}
+
+/** Date/heure d'une fixture pour la colonne "Date" - EXTENSION fixtures
+ * futures 2026/27. Jamais une heure locale (kickoff_local_naive)
+ * présentée comme une heure UTC confirmée, ni une heure fabriquée pour
+ * une fixture sans heure publiée (voir ../api/fixtureTiming.ts). */
+function formatMatchDateTime(match: MatchResponse): string {
+  if (match.kickoff_utc !== null) return formatKickoff(match.kickoff_utc)
+  if (match.kickoff_local_naive !== null) {
+    return `${formatFixtureDate(match.fixture_date)} · ${formatLocalKickoffTime(match.kickoff_local_naive)} (heure locale)`
+  }
+  return `${formatFixtureDate(match.fixture_date)} (heure non publiée)`
 }
 
 export function MatchExplorer() {
@@ -135,13 +148,20 @@ export function MatchExplorer() {
           <tbody>
             {visibleMatches.map((m) => (
               <tr key={m.match_id}>
-                <td>{formatKickoff(m.kickoff_utc)}</td>
+                <td>{formatMatchDateTime(m)}</td>
                 <td>{m.home_team}</td>
                 <td>{m.away_team}</td>
                 <td>
                   <Link to={`/matches/${m.competition}/${m.season}/${m.match_id}`}>
                     {m.is_played ? 'Joué — voir détail' : 'À venir — voir détail'}
                   </Link>
+                  {/* EXTENSION fixtures futures 2026/27 : signale, SANS
+                      empêcher la navigation, qu'une fixture future n'est
+                      pas encore analysable (heure/UTC non confirmée) -
+                      jamais confondu avec un résultat déjà joué. */}
+                  {!m.is_played && !analysisAvailability(m).available && (
+                    <span className="hint"> (analyse indisponible)</span>
+                  )}
                 </td>
               </tr>
             ))}

@@ -201,3 +201,77 @@ def test_no_bet_is_returned_as_a_valid_200_response_not_an_error() -> None:
     body = response.json()
     assert body["decision"]["decision"] == "NO_BET"
     assert len(body["decision"]["decision_reason"]) > 0
+
+
+# --- 11. EXTENSION : fixtures futures B/C -> refus explicite 409 ------------
+#
+# match_id reels (voir tests/integration/test_future_fixture_catalog_real_files.py) :
+# Lens-Lyon (etat B, heure locale connue mais kickoff_utc absent) et
+# Lens-Le Havre (etat C, aucune heure publiee).
+
+_REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00"
+_REAL_STATE_C_MATCH_ID = "ligue1:2026_27:Lens_vs_Le Havre:2026-12-05"
+
+
+def test_state_b_future_fixture_refuses_analysis_with_409(monkeypatch) -> None:
+    """Heure locale connue mais kickoff_utc absent (etat B) : l'API doit
+    refuser proprement, jamais appeler le moteur sur une heure estimee."""
+    calls = _spy_on_run_prediction(monkeypatch)
+    response = client.get(
+        f"/matches/{_REAL_STATE_B_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"}
+    )
+    assert response.status_code == 409
+    assert "kickoff_utc" in response.json()["detail"]
+    assert len(calls) == 0
+
+
+def test_state_c_future_fixture_refuses_analysis_with_409(monkeypatch) -> None:
+    """Aucune heure publiee (etat C) : meme refus explicite, jamais une
+    estimation arbitraire de l'heure/du fuseau horaire."""
+    calls = _spy_on_run_prediction(monkeypatch)
+    response = client.get(
+        f"/matches/{_REAL_STATE_C_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"}
+    )
+    assert response.status_code == 409
+    assert "kickoff_utc" in response.json()["detail"]
+    assert len(calls) == 0
+
+
+def test_state_b_and_c_refusal_is_distinct_from_404_and_422() -> None:
+    """Garde-fou explicite demande par le cadrage : le frontend doit
+    pouvoir distinguer "fixture connue mais heure indisponible" (409) d'un
+    match inexistant (404) ou d'un parametre de requete manquant (422)."""
+    unavailable = client.get(
+        f"/matches/{_REAL_STATE_C_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"}
+    )
+    not_found = client.get("/matches/does-not-exist-anywhere/prediction", params={"competition": "ligue1", "season": "2026_27"})
+    missing_params = client.get(f"/matches/{_REAL_STATE_C_MATCH_ID}/prediction")
+    assert {unavailable.status_code, not_found.status_code, missing_params.status_code} == {409, 404, 422}
+
+
+def test_state_d_match_is_unaffected_by_the_new_kickoff_guard(monkeypatch) -> None:
+    """Non-regression explicite : un match D (deja analysable, kickoff_utc
+    toujours connu) continue de declencher normalement le moteur."""
+    calls = _spy_on_run_prediction(monkeypatch)
+    response = client.get(f"/matches/{_REAL_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"})
+    assert response.status_code == 200
+    assert len(calls) == 1
+
+
+# --- 12. EXTENSION : resolution partielle - une fixture non resolue ne doit
+#         JAMAIS atteindre run_prediction -------------------------------------
+
+
+def test_an_unresolved_team_fixture_returns_404_and_never_reaches_the_engine(monkeypatch) -> None:
+    """Hull City - Everton (Premier League, 11 octobre 2026) implique une
+    equipe non resolue (Hull City) - absente du catalogue fusionne (voir
+    routes_matches.py), donc introuvable ici. Garde-fou explicite demande :
+    aucune fixture non resolue ne doit jamais atteindre ``run_prediction``,
+    ni une estimation de kickoff_utc, ni l'inverse (une fausse 409 qui
+    laisserait croire que la fixture est connue et juste temporellement
+    incomplete)."""
+    calls = _spy_on_run_prediction(monkeypatch)
+    match_id = "premier_league:2026_27:Hull City AFC_vs_Everton:2026-10-11T14:00:00"
+    response = client.get(f"/matches/{match_id}/prediction", params={"competition": "premier_league", "season": "2026_27"})
+    assert response.status_code == 404
+    assert len(calls) == 0

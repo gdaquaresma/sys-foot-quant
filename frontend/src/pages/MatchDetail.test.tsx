@@ -23,6 +23,8 @@ const FIXTURE_MATCH: MatchResponse = {
   match_id: '31975',
   competition: 'ligue1',
   season: '2026_27',
+  fixture_date: '2026-09-13',
+  kickoff_local_naive: null,
   kickoff_utc: '2026-09-13T18:45:00Z',
   home_team: 'Brest',
   away_team: 'Paris Saint Germain',
@@ -390,5 +392,89 @@ describe('MatchDetail', () => {
     // La décision et ses raisons ne sont jamais dans un <details> replié.
     expect(screen.getByText('NO_BET').closest('details')).toBeNull()
     expect(screen.getByText('EDGE_BELOW_THRESHOLD').closest('details')).toBeNull()
+  })
+
+  // --- EXTENSION fixtures futures 2026/27 ---------------------------------
+
+  describe('fixtures futures (B/C) - analyse indisponible', () => {
+    const FIXTURE_MATCH_STATE_B: MatchResponse = {
+      match_id: 'ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00',
+      competition: 'ligue1',
+      season: '2026_27',
+      fixture_date: '2026-10-09',
+      kickoff_local_naive: '2026-10-09T20:45:00',
+      kickoff_utc: null,
+      home_team: 'Lens',
+      away_team: 'Lyon',
+      is_played: false,
+    }
+
+    const FIXTURE_MATCH_STATE_C: MatchResponse = {
+      match_id: 'ligue1:2026_27:Lens_vs_Le Havre:2026-12-05',
+      competition: 'ligue1',
+      season: '2026_27',
+      fixture_date: '2026-12-05',
+      kickoff_local_naive: null,
+      kickoff_utc: null,
+      home_team: 'Lens',
+      away_team: 'Le Havre',
+      is_played: false,
+    }
+
+    it('affiche l’heure locale explicitement comme telle (jamais comme UTC) pour une fixture B, sans jamais appeler getPrediction', async () => {
+      getMatchMock.mockResolvedValue(FIXTURE_MATCH_STATE_B)
+      renderDetail('/matches/ligue1/2026_27/ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00')
+
+      await waitFor(() => expect(screen.getByText('Lens – Lyon')).toBeInTheDocument())
+      expect(screen.getByText(/Coup d'envoi \(heure locale\) : 9 octobre 2026 · 20:45/)).toBeInTheDocument()
+      expect(screen.getByText('Heure locale publiée par la source - conversion UTC non encore confirmée.')).toBeInTheDocument()
+      expect(screen.getByText('Statut : Match à venir')).toBeInTheDocument()
+      // L'effet qui calcule la disponibilité de l'analyse se déclenche APRÈS
+      // le rendu "match prêt" - attendu explicitement plutôt que supposé
+      // synchrone avec celui-ci (évite une course dans la suite complète).
+      await waitFor(() =>
+        expect(
+          screen.getByText('Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.'),
+        ).toBeInTheDocument(),
+      )
+      expect(getPredictionMock).not.toHaveBeenCalled()
+      // Le formulaire de cotes n'a plus de raison d'être affiché : aucune
+      // prédiction ne sera jamais calculée pour cette fixture.
+      expect(screen.queryByText('Cotes de marché')).not.toBeInTheDocument()
+    })
+
+    it('affiche "heure non publiée" pour une fixture C, sans jamais appeler getPrediction', async () => {
+      getMatchMock.mockResolvedValue(FIXTURE_MATCH_STATE_C)
+      renderDetail('/matches/ligue1/2026_27/ligue1:2026_27:Lens_vs_Le Havre:2026-12-05')
+
+      await waitFor(() => expect(screen.getByText('Lens – Le Havre')).toBeInTheDocument())
+      expect(screen.getByText('Date : 5 décembre 2026')).toBeInTheDocument()
+      expect(screen.getByText('Heure non publiée.')).toBeInTheDocument()
+      await waitFor(() =>
+        expect(screen.getByText('Analyse indisponible : heure de coup d’envoi non publiée.')).toBeInTheDocument(),
+      )
+      expect(getPredictionMock).not.toHaveBeenCalled()
+    })
+
+    it('traite un HTTP 409 (KickoffUnavailableError) comme un cas propre et distinct, jamais comme une erreur serveur générique', async () => {
+      // Garde défensive : même si l'appel était malgré tout déclenché (ne
+      // devrait pas arriver, voir les deux tests ci-dessus), un 409 ne doit
+      // jamais être rendu via le composant d'erreur générique.
+      getMatchMock.mockResolvedValue(FIXTURE_MATCH)
+      getPredictionMock.mockRejectedValue(new ApiError(409, "Match non analysable : kickoff_utc indisponible."))
+      renderDetail('/matches/ligue1/2026_27/31975')
+
+      await waitFor(() => expect(screen.getByText(/kickoff_utc indisponible/)).toBeInTheDocument())
+      expect(screen.queryByText(/Erreur :/)).not.toBeInTheDocument()
+      expect(document.querySelector('.state-error')).toBeNull()
+    })
+
+    it('un 404 (match introuvable) reste distinct d’un 409 (fixture non analysable)', async () => {
+      getMatchMock.mockRejectedValue(new ApiError(404, "Match '999999' introuvable."))
+      renderDetail('/matches/ligue1/2026_27/999999')
+
+      await waitFor(() => expect(screen.getByText(/introuvable/)).toBeInTheDocument())
+      expect(getPredictionMock).not.toHaveBeenCalled()
+    })
   })
 })

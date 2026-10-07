@@ -20,6 +20,8 @@ const FIXTURE_MATCHES: MatchResponse[] = [
     match_id: '31975',
     competition: 'ligue1',
     season: '2026_27',
+    fixture_date: '2026-09-13',
+    kickoff_local_naive: null,
     kickoff_utc: '2026-09-13T18:45:00Z',
     home_team: 'Brest',
     away_team: 'Paris Saint Germain',
@@ -29,6 +31,8 @@ const FIXTURE_MATCHES: MatchResponse[] = [
     match_id: '31940',
     competition: 'ligue1',
     season: '2026_27',
+    fixture_date: '2026-08-21',
+    kickoff_local_naive: null,
     kickoff_utc: '2026-08-21T18:45:00Z',
     home_team: 'Marseille',
     away_team: 'Strasbourg',
@@ -148,5 +152,88 @@ describe('MatchExplorer', () => {
     expect(screen.queryByText('Brest')).not.toBeInTheDocument()
     expect(screen.getByText('Marseille')).toBeInTheDocument()
     expect(getMatchesMock).toHaveBeenCalledTimes(1)
+  })
+
+  // --- EXTENSION fixtures futures 2026/27 ---------------------------------
+
+  describe('fixtures futures (B/C)', () => {
+    const FIXTURE_MATCH_STATE_B: MatchResponse = {
+      match_id: 'ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00',
+      competition: 'ligue1',
+      season: '2026_27',
+      fixture_date: '2026-10-09',
+      kickoff_local_naive: '2026-10-09T20:45:00',
+      kickoff_utc: null,
+      home_team: 'Lens',
+      away_team: 'Lyon',
+      is_played: false,
+    }
+
+    const FIXTURE_MATCH_STATE_C: MatchResponse = {
+      match_id: 'ligue1:2026_27:Lens_vs_Le Havre:2026-12-05',
+      competition: 'ligue1',
+      season: '2026_27',
+      fixture_date: '2026-12-05',
+      kickoff_local_naive: null,
+      kickoff_utc: null,
+      home_team: 'Lens',
+      away_team: 'Le Havre',
+      is_played: false,
+    }
+
+    async function searchLigue1_2026_27() {
+      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
+    }
+
+    it('affiche les matchs joués ET les fixtures futures ensemble, jamais confondus (statut distinct)', async () => {
+      getMatchesMock.mockResolvedValue([...FIXTURE_MATCHES, FIXTURE_MATCH_STATE_B])
+      renderExplorer()
+      await searchLigue1_2026_27()
+
+      await waitFor(() => expect(screen.getByText('Brest')).toBeInTheDocument())
+      expect(screen.getByText('Lens')).toBeInTheDocument()
+      const playedRow = screen.getByText('Brest').closest('tr')!
+      const futureRow = screen.getByText('Lens').closest('tr')!
+      expect(playedRow.textContent).toContain('Joué — voir détail')
+      expect(futureRow.textContent).toContain('À venir — voir détail')
+      expect(playedRow.textContent).not.toContain('À venir')
+      expect(futureRow.textContent).not.toContain('Joué')
+    })
+
+    it('affiche l’heure locale d’une fixture B explicitement comme telle (jamais comme une heure UTC confirmée)', async () => {
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B])
+      renderExplorer()
+      await searchLigue1_2026_27()
+
+      await waitFor(() => expect(screen.getByText('Lens')).toBeInTheDocument())
+      expect(screen.getByText(/9 octobre 2026 · 20:45 \(heure locale\)/)).toBeInTheDocument()
+      expect(screen.getByText(/analyse indisponible/)).toBeInTheDocument()
+    })
+
+    it('affiche "heure non publiée" pour une fixture C, sans heure fabriquée', async () => {
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_C])
+      renderExplorer()
+      await searchLigue1_2026_27()
+
+      await waitFor(() => expect(screen.getByText('Le Havre')).toBeInTheDocument())
+      expect(screen.getByText(/5 décembre 2026 \(heure non publiée\)/)).toBeInTheDocument()
+      expect(screen.getByText(/analyse indisponible/)).toBeInTheDocument()
+    })
+
+    it('affiche les fixtures dans l’ordre renvoyé par l’API, sans re-trier localement (déterminisme garanti côté backend)', async () => {
+      getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_C, FIXTURE_MATCH_STATE_B, FIXTURE_MATCHES[0]])
+      renderExplorer()
+      await searchLigue1_2026_27()
+
+      await waitFor(() => expect(screen.getByText('Brest')).toBeInTheDocument())
+      const rows = screen.getAllByRole('row').slice(1) // écarte l'en-tête
+      expect(rows.map((r) => r.textContent?.includes('Le Havre') ? 'C' : r.textContent?.includes('Lyon') ? 'B' : 'D')).toEqual([
+        'C',
+        'B',
+        'D',
+      ])
+    })
   })
 })

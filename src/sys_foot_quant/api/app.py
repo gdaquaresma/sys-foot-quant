@@ -27,6 +27,8 @@ from fastapi.responses import JSONResponse
 
 from sys_foot_quant.api import routes_matches, routes_prediction, routes_shadow
 from sys_foot_quant.api.prediction_adapter import PredictMatchError
+from sys_foot_quant.api.routes_prediction import KickoffUnavailableError
+from sys_foot_quant.data_engine.market_odds.future_fixture_catalog import TeamResolutionError
 from sys_foot_quant.data_engine.market_odds.match_catalog import MatchCatalogError
 
 DEFAULT_HOST = "127.0.0.1"
@@ -55,6 +57,32 @@ async def handle_predict_match_error(request: Request, exc: PredictMatchError) -
     chemin de prediction (ex. cotes incoherentes) devient un HTTP 400
     explicite, jamais un 500 generique ni un resultat par defaut."""
     return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(TeamResolutionError)
+async def handle_team_resolution_error(request: Request, exc: TeamResolutionError) -> JSONResponse:
+    """Meme traitement que ``MatchCatalogError`` - garde defensive,
+    conservee pour tout appelant futur de la variante LEVANTE
+    ``future_fixture_catalog.resolve_openfootball_team``. DEPUIS
+    l'EXTENSION resolution partielle (``future_fixture_catalog.py``),
+    ``build_future_fixtures`` (utilisee par
+    ``routes_matches._list_catalog_entries``, donc par
+    ``GET /matches``/``GET /matches/{id}``/``GET /matches/{id}/prediction``)
+    ne leve plus cette exception pour une equipe non resolue - une telle
+    fixture est desormais filtree silencieusement (voir
+    ``routes_matches.py``), jamais remontee comme un refus HTTP."""
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(KickoffUnavailableError)
+async def handle_kickoff_unavailable_error(request: Request, exc: KickoffUnavailableError) -> JSONResponse:
+    """Fixture connue mais heure/UTC du coup d'envoi indisponible (etats
+    B/C, ``future_fixture_catalog.py``) - HTTP 409 (Conflict), DISTINCT de
+    400 (parametre/competition/saison/equipe invalide), 404 (fixture
+    inexistante) et 422 (validation FastAPI des parametres de requete) -
+    permet au frontend de distinguer precisement ce cas d'une veritable
+    erreur serveur ou d'un match inexistant."""
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 app.include_router(routes_matches.router)

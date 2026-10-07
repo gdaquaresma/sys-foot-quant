@@ -29,6 +29,7 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { COMPETITION_OPTIONS, SEASON_OPTIONS, competitionLabel, seasonLabel } from '../api/catalog'
 import { ApiError, getMatches, getPrediction } from '../api/client'
+import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { MatchDecisionOutput, MatchResponse } from '../api/types'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import {
@@ -41,6 +42,19 @@ import {
   formatParamValue,
   formatProbability,
 } from './MatchDetail'
+
+/** Résumé lisible de la date/heure d'une fixture, quelle que soit
+ * l'information temporelle réellement connue - EXTENSION fixtures
+ * futures 2026/27. Jamais une heure locale présentée comme une heure UTC
+ * (voir `../api/fixtureTiming.ts`), ni une heure fabriquée pour les
+ * fixtures sans heure publiée. */
+function describeMatchDateTime(match: MatchResponse): string {
+  if (match.kickoff_utc !== null) return formatKickoff(match.kickoff_utc)
+  if (match.kickoff_local_naive !== null) {
+    return `${formatFixtureDate(match.fixture_date)} · ${formatLocalKickoffTime(match.kickoff_local_naive)} (heure locale, UTC non confirmée)`
+  }
+  return `${formatFixtureDate(match.fixture_date)} (heure non publiée)`
+}
 
 /** Seul marché Over/Under pour lequel une cote réelle existe dans le corpus
  * (Football-Data ne publie une cote O/U que pour la ligne 2.5 - voir
@@ -58,6 +72,12 @@ type SearchState =
 type PredictionState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
+  // EXTENSION fixtures futures 2026/27 : fixture connue (B/C) mais
+  // kickoff_utc absent - jamais un HTTP 409 rendu comme une erreur
+  // serveur générique (voir handleAnalyze/runPrediction ci-dessous, qui
+  // évite déjà d'appeler l'API dans ce cas - garde défensive pour le
+  // `catch`).
+  | { status: 'unavailable'; message: string }
   | { status: 'ready'; prediction: MatchDecisionOutput }
 
 interface SideView {
@@ -448,6 +468,10 @@ export function AnalyzeMatch() {
   // match libre non vérifié (voir contrainte section 2 de la demande).
   const candidates = useMemo(() => matches.filter((m) => m.home_team === homeTeam && m.away_team === awayTeam), [matches, homeTeam, awayTeam])
   const resolvedMatch = candidates.length === 1 ? candidates[0] : (candidates.find((m) => m.match_id === selectedMatchId) ?? null)
+  // EXTENSION fixtures futures 2026/27 : règle produit UNIQUE (jamais
+  // dupliquée localement) - une fixture n'est analysable que si
+  // `kickoff_utc` est connu (voir ../api/fixtureTiming.ts).
+  const resolvedMatchAvailability = resolvedMatch ? analysisAvailability(resolvedMatch) : null
 
   function resetActiveAnalysis() {
     // Invalide toute requête de prédiction encore en vol : si elle
@@ -476,6 +500,17 @@ export function AnalyzeMatch() {
   }
 
   function runPrediction(match: MatchResponse, odds?: { over_2_5: number; under_2_5: number }) {
+    // EXTENSION fixtures futures 2026/27 : une fixture B/C (kickoff_utc
+    // absent) n'est jamais envoyée à `run_prediction` - le bouton
+    // "Analyser" est déjà désactivé pour ce cas (voir le rendu
+    // ci-dessous), garde redondante pour ne jamais dépendre uniquement du
+    // rendu désactivé.
+    const availability = analysisAvailability(match)
+    if (!availability.available) {
+      predictionRequestIdRef.current += 1
+      setPredictionState({ status: 'unavailable', message: availability.reason })
+      return
+    }
     const requestId = ++predictionRequestIdRef.current
     setPredictionState({ status: 'loading' })
     getPrediction(match.match_id, match.competition, match.season, odds)
@@ -483,7 +518,13 @@ export function AnalyzeMatch() {
         if (predictionRequestIdRef.current === requestId) setPredictionState({ status: 'ready', prediction })
       })
       .catch((err) => {
-        if (predictionRequestIdRef.current === requestId) {
+        if (predictionRequestIdRef.current !== requestId) return
+        // Garde défensive (ne devrait pas se produire, voir ci-dessus) :
+        // un HTTP 409 reste traité comme un cas "indisponible" propre,
+        // jamais comme une erreur serveur générique.
+        if (err instanceof ApiError && err.status === 409) {
+          setPredictionState({ status: 'unavailable', message: err.detail })
+        } else {
           setPredictionState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
         }
       })
@@ -606,7 +647,7 @@ export function AnalyzeMatch() {
                     <option value="">— Choisir —</option>
                     {candidates.map((m) => (
                       <option key={m.match_id} value={m.match_id}>
-                        {formatKickoff(m.kickoff_utc)}
+                        {describeMatchDateTime(m)}
                       </option>
                     ))}
                   </select>
@@ -619,22 +660,32 @@ export function AnalyzeMatch() {
             {/* Résumé humain du match choisi, affiché DÈS la résolution -
                 donc AVANT même de cliquer "Analyser" (bullet 7 de l'audit
                 parcours) : jamais d'identifiant technique, uniquement les
-                équipes et des libellés de compétition/saison déjà lisibles. */}
+                équipes et des libellés de compétition/saison déjà lisibles.
+                EXTENSION fixtures futures 2026/27 : "Match à venir" pour une
+                fixture non jouée, jamais confondu avec un résultat déjà
+                connu - et un rappel explicite quand l'analyse n'est pas
+                encore possible (heure/UTC non confirmée). */}
             {resolvedMatch && (
-              <p className="match-preview">
-                <span className="match-summary-teams">
-                  {resolvedMatch.home_team} – {resolvedMatch.away_team}
-                </span>
-                <span className="hint">
-                  {competitionLabel(resolvedMatch.competition)} · {seasonLabel(resolvedMatch.season)} ·{' '}
-                  {formatKickoff(resolvedMatch.kickoff_utc)}
-                </span>
-              </p>
+              <>
+                <p className="match-preview">
+                  <span className="match-summary-teams">
+                    {resolvedMatch.home_team} – {resolvedMatch.away_team}
+                  </span>
+                  <span className="hint">
+                    {competitionLabel(resolvedMatch.competition)} · {seasonLabel(resolvedMatch.season)} ·{' '}
+                    {describeMatchDateTime(resolvedMatch)}
+                    {!resolvedMatch.is_played && ' · Match à venir'}
+                  </span>
+                </p>
+                {resolvedMatchAvailability && !resolvedMatchAvailability.available && (
+                  <EmptyState message={resolvedMatchAvailability.reason} />
+                )}
+              </>
             )}
             <button
               type="button"
               className="button-primary"
-              disabled={!resolvedMatch || predictionState?.status === 'loading'}
+              disabled={!resolvedMatch || !resolvedMatchAvailability?.available || predictionState?.status === 'loading'}
               onClick={handleAnalyze}
             >
               {predictionState?.status === 'loading' ? 'Analyse en cours…' : 'Analyser le match'}
@@ -654,6 +705,7 @@ export function AnalyzeMatch() {
             </p>
             {predictionState?.status === 'loading' && <LoadingState label="Analyse en cours..." />}
             {predictionState?.status === 'error' && <ErrorState message={predictionState.message} />}
+            {predictionState?.status === 'unavailable' && <EmptyState message={predictionState.message} />}
             {predictionState?.status === 'ready' && (
               <div className="fade-in">
                 <DecisionBlock prediction={predictionState.prediction} />

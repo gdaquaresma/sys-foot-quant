@@ -13,8 +13,9 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, getMatch, getPrediction } from '../api/client'
+import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { CalibratedGoalDistribution, MarketComparisonResult, MatchDecisionOutput, MatchResponse, ModelPrediction, PricingResult } from '../api/types'
-import { ErrorState, LoadingState } from '../components/StateViews'
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 
 type LoadState =
   | { status: 'loading' }
@@ -26,6 +27,11 @@ type LoadState =
 type PredictionState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
+  // EXTENSION fixtures futures 2026/27 : fixture connue (B/C) mais
+  // kickoff_utc absent - distinct d'une erreur serveur générique (jamais
+  // un HTTP 409 rendu via ErrorState, voir ce même statut dans le `catch`
+  // ci-dessous et dans l'effet qui évite même d'appeler l'API dans ce cas).
+  | { status: 'unavailable'; message: string }
   | { status: 'ready'; prediction: MatchDecisionOutput }
 
 export function formatKickoff(iso: string): string {
@@ -345,6 +351,18 @@ export function MatchDetail() {
 
   useEffect(() => {
     if (state.status !== 'ready' || !competition || !season || !matchId) return
+
+    // EXTENSION fixtures futures 2026/27 : une fixture B/C (kickoff_utc
+    // absent) n'est jamais envoyée à `run_prediction` - ni ici, ni côté
+    // API (voir `routes_prediction.py::KickoffUnavailableError`). Évite
+    // même l'appel HTTP plutôt que de le déclencher pour recevoir un 409
+    // attendu - le message affiché est identique dans les deux cas.
+    const availability = analysisAvailability(state.match)
+    if (!availability.available) {
+      setPredictionState({ status: 'unavailable', message: availability.reason })
+      return
+    }
+
     let cancelled = false
     setPredictionState({ status: 'loading' })
     getPrediction(matchId, competition, season, appliedOdds)
@@ -352,7 +370,15 @@ export function MatchDetail() {
         if (!cancelled) setPredictionState({ status: 'ready', prediction })
       })
       .catch((err) => {
-        if (!cancelled) setPredictionState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+        if (cancelled) return
+        // Garde défensive (ne devrait pas se produire, l'effet ci-dessus
+        // évite déjà l'appel) : un HTTP 409 reste traité comme un cas
+        // "indisponible" propre, jamais comme une erreur serveur générique.
+        if (err instanceof ApiError && err.status === 409) {
+          setPredictionState({ status: 'unavailable', message: err.detail })
+        } else {
+          setPredictionState({ status: 'error', message: err instanceof ApiError ? err.detail : String(err) })
+        }
       })
     return () => {
       cancelled = true
@@ -402,54 +428,76 @@ export function MatchDetail() {
             </h2>
             <p>Compétition : {state.match.competition}</p>
             <p>Saison : {state.match.season}</p>
-            <p>Coup d'envoi : {formatKickoff(state.match.kickoff_utc)}</p>
-            <p>Statut : {state.match.is_played ? 'Joué' : 'À venir'}</p>
+            {/* EXTENSION fixtures futures 2026/27 : trois présentations
+                distinctes selon l'information temporelle réellement connue
+                - jamais une heure locale (kickoff_local_naive) présentée
+                comme une heure UTC, ni l'inverse (voir fixtureTiming.ts). */}
+            {state.match.kickoff_utc !== null ? (
+              <p>Coup d'envoi : {formatKickoff(state.match.kickoff_utc)}</p>
+            ) : state.match.kickoff_local_naive !== null ? (
+              <>
+                <p>
+                  Coup d'envoi (heure locale) : {formatFixtureDate(state.match.fixture_date)} ·{' '}
+                  {formatLocalKickoffTime(state.match.kickoff_local_naive)}
+                </p>
+                <p className="hint">Heure locale publiée par la source - conversion UTC non encore confirmée.</p>
+              </>
+            ) : (
+              <>
+                <p>Date : {formatFixtureDate(state.match.fixture_date)}</p>
+                <p className="hint">Heure non publiée.</p>
+              </>
+            )}
+            <p>Statut : {state.match.is_played ? 'Joué' : 'Match à venir'}</p>
             <p>Identifiant : {state.match.match_id}</p>
           </section>
 
-          <section className="card">
-            <h2>Cotes de marché</h2>
-            <p className="hint">
-              L'API n'invente jamais de cote : par défaut la prédiction est calculée sans marché. Renseignez les deux
-              cotes réelles (Over 2.5 / Under 2.5) ci-dessous pour recalculer la prédiction avec ce marché.
-            </p>
-            <form className="filters" onSubmit={handleOddsSubmit}>
-              <label>
-                Cote Over 2.5
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1.01"
-                  value={overOdds}
-                  onChange={(e) => setOverOdds(e.target.value)}
-                  placeholder="ex. 1.90"
-                />
-              </label>
-              <label>
-                Cote Under 2.5
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1.01"
-                  value={underOdds}
-                  onChange={(e) => setUnderOdds(e.target.value)}
-                  placeholder="ex. 1.90"
-                />
-              </label>
-              <button type="submit">Appliquer les cotes</button>
-              {appliedOdds && (
-                <button type="button" onClick={handleClearOdds}>
-                  Retirer les cotes
-                </button>
-              )}
-            </form>
-            {oddsFormError && <ErrorState message={oddsFormError} />}
-          </section>
+          {predictionState.status !== 'unavailable' && (
+            <section className="card">
+              <h2>Cotes de marché</h2>
+              <p className="hint">
+                L'API n'invente jamais de cote : par défaut la prédiction est calculée sans marché. Renseignez les deux
+                cotes réelles (Over 2.5 / Under 2.5) ci-dessous pour recalculer la prédiction avec ce marché.
+              </p>
+              <form className="filters" onSubmit={handleOddsSubmit}>
+                <label>
+                  Cote Over 2.5
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1.01"
+                    value={overOdds}
+                    onChange={(e) => setOverOdds(e.target.value)}
+                    placeholder="ex. 1.90"
+                  />
+                </label>
+                <label>
+                  Cote Under 2.5
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1.01"
+                    value={underOdds}
+                    onChange={(e) => setUnderOdds(e.target.value)}
+                    placeholder="ex. 1.90"
+                  />
+                </label>
+                <button type="submit">Appliquer les cotes</button>
+                {appliedOdds && (
+                  <button type="button" onClick={handleClearOdds}>
+                    Retirer les cotes
+                  </button>
+                )}
+              </form>
+              {oddsFormError && <ErrorState message={oddsFormError} />}
+            </section>
+          )}
 
           <section className="card card-elevated">
             <h2>Prédiction</h2>
             {predictionState.status === 'loading' && <LoadingState label="Calcul de la prédiction..." />}
             {predictionState.status === 'error' && <ErrorState message={predictionState.message} />}
+            {predictionState.status === 'unavailable' && <EmptyState message={predictionState.message} />}
             {predictionState.status === 'ready' && (
               <div className="fade-in">
                 <PredictionSection prediction={predictionState.prediction} />
