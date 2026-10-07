@@ -221,3 +221,45 @@ def test_congestion_dataset_for_season_covers_every_match_deterministically() ->
     # garanti).
     dataset_again = congestion_dataset_for_season(_COMPETITION, (m1, m2))
     assert dataset == dataset_again
+
+
+# --- 8. Invariance a l'ordre des matchs en entree (audit, gap identifie) ----
+
+
+def test_rest_days_is_invariant_to_the_order_of_matches_in_the_input_tuple() -> None:
+    """``rest_days_before_match`` appelle ``max(prior, key=(kickoff_utc,
+    match_id))`` sur les matchs eligibles (voir ``_team_matches_strictly_
+    before``) - le choix du dernier match anterieur ne doit donc jamais
+    dependre de la position de ce match dans le tuple ``matches`` fourni
+    en entree, uniquement de son ``kickoff_utc``. Scenario volontairement
+    construit pour que le dernier match pertinent de Marseille (``m3``)
+    ne soit NI en premiere NI en derniere position dans l'ordre
+    "original" - un bug d'implementation qui lirait silencieusement le
+    premier/dernier element d'un iterable au lieu de calculer un vrai
+    maximum passerait a cote de ce piege precis."""
+    m1 = _match("m1", datetime(2025, 8, 9, 20, 0), "Marseille", "Lyon")
+    m2 = _match("m2", datetime(2025, 8, 16, 17, 0), "Nice", "Marseille")
+    m3 = _match("m3", datetime(2025, 8, 23, 15, 0), "Marseille", "Brest")  # dernier match anterieur pertinent
+    other = _match("other", datetime(2025, 8, 12, 10, 0), "Lyon", "Nice")  # bruit : ne concerne pas Marseille
+    target = _match("target", datetime(2025, 8, 30, 20, 0), "Marseille", "Monaco")
+
+    original_order = (m1, other, m2, m3, target)  # m3 (la bonne reponse) ni premier ni dernier
+    result_original = rest_days_before_match(original_order, target, "Marseille")
+
+    # Deux melanges distincts de la MEME entree (tuple -> liste -> inversee,
+    # et un second ordre arbitraire different) - jamais la meme permutation
+    # que l'original, pour eviter qu'un test "trie" accidentellement.
+    reversed_order = tuple(reversed(original_order))
+    shuffled_order = (target, m2, other, m3, m1)
+
+    result_reversed = rest_days_before_match(reversed_order, target, "Marseille")
+    result_shuffled = rest_days_before_match(shuffled_order, target, "Marseille")
+
+    # Le resultat attendu est connu independamment de l'ordre : le dernier
+    # match anterieur reel de Marseille avant `target` est m3 (23 aout),
+    # pas m1/m2 (plus anciens) ni `other`/`target` (hors scope/futur).
+    assert result_original.previous_match_id == "m3"
+    assert result_original.rest_days == pytest.approx(7.0 + 5 / 24)
+
+    assert result_reversed == result_original
+    assert result_shuffled == result_original
