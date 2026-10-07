@@ -660,6 +660,72 @@ describe('AnalyzeMatch', () => {
     expect(details).toHaveAttribute('open')
   })
 
+  // --- EXTENSION UI - seuil explicite de Value Bet ------------------------
+  //
+  // Rend explicite ce que le moteur calcule DÉJÀ (fair_price = 1/p_model,
+  // final_engine/pricing.py, INCHANGÉ) - AUCUN nouveau calcul côté
+  // frontend. Over 2.5 : p=0.438 -> fair=2.28 ; Under 2.5 (complément) :
+  // p=0.562 -> fair=1.78 (mêmes valeurs déjà utilisées par les tests
+  // existants ci-dessus, jamais recalculées différemment ici).
+
+  describe('seuil explicite de Value Bet (fair_price)', () => {
+    it('affiche la formulation "Value Bet mathématique" avec la cote juste correcte, pour Over ET Under, même sans cote renseignée', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText('Over 2.5')).toBeInTheDocument())
+      expect(screen.getByText('Value Bet mathématique si la cote proposée dépasse 2.28. La décision du moteur reste indépendante de ce seul critère.')).toBeInTheDocument()
+      expect(screen.getByText('Value Bet mathématique si la cote proposée dépasse 1.78. La décision du moteur reste indépendante de ce seul critère.')).toBeInTheDocument()
+    })
+
+    it('ne modifie ni n’affecte la décision NO_BET déjà affichée (le moteur, pas ce texte, reste seul décideur)', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText('NO_BET')).toBeInTheDocument())
+      expect(screen.getByText(/Value Bet mathématique si la cote proposée dépasse 2\.28/)).toBeInTheDocument()
+      // La décision reste NO_BET - jamais basculée en BET par la seule
+      // présence du texte de seuil mathématique.
+      expect(screen.queryByText('BET')).not.toBeInTheDocument()
+    })
+
+    it('n’affirme jamais qu’une cote dépassant le seuil déclenche automatiquement un pari (BET)', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_WITH_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      // FIXTURE_PREDICTION_WITH_MARKET : decision=NO_BET (EDGE_BELOW_THRESHOLD)
+      // malgré un price_edge positif sur Under - cas réel où la cote
+      // renseignée dépasse déjà la cote juste, sans que cela ne déclenche BET.
+      await waitFor(() => expect(screen.getAllByText('Cote renseignée').length).toBe(2))
+      expect(screen.getByText('NO_BET')).toBeInTheDocument()
+      expect(screen.queryByText('BET')).not.toBeInTheDocument()
+      const thresholdTexts = screen.getAllByText(/Value Bet mathématique si la cote proposée dépasse/)
+      for (const node of thresholdTexts) {
+        expect(node.textContent).not.toMatch(/recommand|automatiquement|déclenche (un |le )?(pari|bet)/i)
+      }
+    })
+
+    it('reste absent quand les probabilités/fair_price sont indisponibles (historique insuffisant) - aucune régression', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_INSUFFICIENT_DATA)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText(/Probabilités indisponibles pour ce match/)).toBeInTheDocument())
+      expect(screen.queryByText(/Value Bet mathématique si la cote proposée dépasse/)).not.toBeInTheDocument()
+    })
+  })
+
   // --- EXTENSION fixtures futures 2026/27 ---------------------------------
 
   describe('fixtures futures (B/C) - analyse indisponible', () => {

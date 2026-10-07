@@ -212,6 +212,23 @@ function MarketBlock({
           </div>
         )}
       </dl>
+      {/* Seuil MATHÉMATIQUE de Value Bet - rend explicite ce que le moteur
+          calcule DÉJÀ (Niveau C, `fair_price = 1 / p_model`, AUCUN nouveau
+          calcul ici) : `expected_value = p * odds - 1 > 0 ⟺ odds >
+          fair_price` (`value_engine.edge.expected_value`, INCHANGÉ).
+          Affiché INCONDITIONNELLEMENT (même avant toute saisie de cote) -
+          c'est une propriété du seul `fair_price`, indépendante de
+          `marketOdds`/`priceEdge`. Distingue EXPLICITEMENT ce seuil
+          mathématique de la décision finale du moteur (Niveau F) : la
+          phrase ne doit jamais laisser entendre que dépasser ce seuil
+          déclenche un BET - `min_edge_threshold` reste `None` et
+          `edge_threshold_gate` reste déclenché systématiquement, la
+          décision affichée (NO_BET aujourd'hui) n'est jamais modifiée par
+          ce texte, uniquement expliquée. */}
+      <p className="hint value-threshold">
+        Value Bet mathématique si la cote proposée dépasse {formatOdds(side.fairPrice)}. La décision du moteur reste
+        indépendante de ce seul critère.
+      </p>
       {priceEdge !== undefined ? (
         <>
           <ValueBadge decision={decision} priceEdge={priceEdge} />
