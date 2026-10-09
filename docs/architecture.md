@@ -419,6 +419,21 @@ mise sur un flux de paris hypothetique), pas une evaluation sur le
 dataset synthetique des etapes 1-3 - voir rapport d'etape 4 (message de
 livraison) pour le detail.
 
+## NOTE DE MISE A JOUR (finalisation) — sections 3 a 6 ci-dessous = historique "Etape 1"
+
+Les sections 3-6 qui suivent decrivent l'etat du projet au tout debut
+(infrastructure point-in-time seule, avant tout modele). Elles sont
+**conservees sans modification comme trace historique**, conformement a
+la discipline du projet de ne jamais supprimer un constat deja acte.
+**Elles sont aujourd'hui largement depassees** : la section 2 ci-dessus
+(et notamment 2.0 "Moteur final") documente l'etat reel et actuel -
+moteur final complet (Poisson/Dixon-Coles/xG, calibration E7/E8,
+pricing, gates, decision), valide pret pour le paper trading/shadow mode
+par `docs/final_preproduction_audit.md` (verdict A, 1547 tests). La
+section 6 ("Prochaine etape : Etape 2 Poisson+CalibrationEngine") est en
+particulier deja realisee depuis longtemps - ne pas la lire comme une
+tache restante.
+
 ## 3. Ce qui est implemente a l'etape 1
 
 - **Schemas de donnees** (`data_engine/schemas/entities.py`) : `Team`,

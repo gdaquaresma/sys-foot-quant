@@ -8,13 +8,22 @@ le prix du marche - avec une gestion rigoureuse du risque et une
 discipline stricte contre le look-ahead bias, le data snooping et
 l'overfitting.
 
-## Etat actuel : Etape 1 (infrastructure uniquement)
+## Etat actuel : moteur final valide pour le shadow mode (BET structurellement desactive)
 
-Seule l'infrastructure de donnees point-in-time et le backtester
-chronologique minimal sont implementes. **Aucun modele de prediction,
-aucune calibration, aucun moteur de marche/valeur/risque n'existe
-encore** - voir `docs/architecture.md` pour le plan complet et
-`src/sys_foot_quant/*/​__init__.py` pour l'etat de chaque module.
+L'infrastructure point-in-time, les trois modeles (Poisson, Dixon-Coles,
+xG), la calibration walk-forward (E7/E8), le pricing, la comparaison au
+marche et les gates de qualification/decision sont implementes et
+valides - voir `docs/final_preproduction_audit.md` (verdict : pret pour
+le paper trading / shadow mode, 1547 tests, 0 echec) et
+`docs/architecture.md` section 2 pour le detail complet.
+
+`BET` reste structurellement inatteignable (`min_edge_threshold=None`) :
+aucun seuil d'edge minimal n'a ete valide par la campagne scientifique
+E1-E16/Phases D-K (voir `docs/research_synthesis_e1_e16.md`) -
+`NO_BET` est la sortie normale et attendue du systeme, pas un defaut a
+corriger. Les sections 3-6 de `docs/architecture.md` ("Etape 1") sont
+conservees comme trace historique du tout debut du projet et sont
+aujourd'hui largement depassees par sa section 2.
 
 ## Quickstart
 
