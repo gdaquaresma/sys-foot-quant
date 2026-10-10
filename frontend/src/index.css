@@ -401,6 +401,65 @@ summary:focus-visible {
   color: var(--color-text);
 }
 
+/* Visuellement masqué, accessible aux lecteurs d'écran - pour un <label>
+   dont l'intitulé visible est déjà porté par l'en-tête de colonne du
+   tableau (ex. "Mes paris", StarredMatches.tsx). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Étoile "Mes paris" (StarToggle.tsx) -------------------------------- */
+
+.star-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  color: var(--color-text-muted);
+}
+
+.star-toggle:hover {
+  color: var(--color-favored);
+}
+
+.star-toggle-active {
+  color: var(--color-favored);
+}
+
+/* Résultat déclaré par l'utilisateur pour son propre pari (Mes paris,
+   StarredMatches.tsx) - distinct des couleurs BET/NO_BET du moteur (ce
+   n'est jamais une sortie du moteur). */
+.result-won {
+  color: var(--color-settled);
+  border-color: var(--color-settled);
+}
+
+.result-lost {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.nav-count-badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--color-favored);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 /* --- Carte "pronostic du modèle" (Value Bet, AnalyzeMatch.tsx) --------- */
 
 .favored-side-summary {

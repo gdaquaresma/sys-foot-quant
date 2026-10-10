@@ -20,7 +20,9 @@ import { SEASON_OPTIONS } from '../api/catalog'
 import { ApiError, getMatches } from '../api/client'
 import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { MatchResponse } from '../api/types'
+import { useStarredMatches } from '../api/useStarredMatches'
 import { CompetitionTabs } from '../components/CompetitionTabs'
+import { StarToggle } from '../components/StarToggle'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 
 type LoadState =
@@ -55,6 +57,7 @@ export function MatchExplorer() {
   const [season, setSeason] = useState(searchParams.get('season') ?? '')
   const [teamFilter, setTeamFilter] = useState('')
   const [state, setState] = useState<LoadState>({ status: 'idle' })
+  const { isStarred, toggleStar } = useStarredMatches()
 
   async function runSearch(comp: string, seas: string) {
     if (!comp.trim() || !seas.trim()) return
@@ -131,6 +134,7 @@ export function MatchExplorer() {
         <table className="table">
           <thead>
             <tr>
+              <th aria-label="Mes paris"></th>
               <th>Date</th>
               <th>Domicile</th>
               <th>Extérieur</th>
@@ -140,6 +144,15 @@ export function MatchExplorer() {
           <tbody>
             {visibleMatches.map((m) => (
               <tr key={m.match_id}>
+                <td>
+                  <StarToggle
+                    starred={isStarred(m.match_id)}
+                    label={`${m.home_team} – ${m.away_team}`}
+                    onToggle={() =>
+                      toggleStar({ match_id: m.match_id, competition: m.competition, season: m.season, home_team: m.home_team, away_team: m.away_team })
+                    }
+                  />
+                </td>
                 <td>{formatMatchDateTime(m)}</td>
                 <td>{m.home_team}</td>
                 <td>{m.away_team}</td>

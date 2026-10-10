@@ -6,6 +6,7 @@ import { MatchDetail } from './pages/MatchDetail'
 import { MatchExplorer } from './pages/MatchExplorer'
 import { Performance } from './pages/Performance'
 import { Shadow } from './pages/Shadow'
+import { StarredMatches } from './pages/StarredMatches'
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
         <Route path="matches/:competition/:season/:matchId" element={<MatchDetail />} />
         <Route path="shadow" element={<Shadow />} />
         <Route path="performance" element={<Performance />} />
+        <Route path="mes-paris" element={<StarredMatches />} />
       </Route>
     </Routes>
   )

@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/client'
+import { listStarredMatches } from '../api/starredMatches'
 import type { MatchResponse } from '../api/types'
 import { MatchExplorer } from './MatchExplorer'
 
@@ -47,6 +48,10 @@ function renderExplorer(initialEntries = ['/matches']) {
     </MemoryRouter>,
   )
 }
+
+beforeEach(() => {
+  window.localStorage.clear()
+})
 
 afterEach(() => {
   getMatchesMock.mockReset()
@@ -236,6 +241,41 @@ describe('MatchExplorer', () => {
         'B',
         'D',
       ])
+    })
+  })
+
+  describe('étoile "Mes paris"', () => {
+    it('ajoute un match à la liste personnelle au clic, et le retire au second clic', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      renderExplorer()
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
+
+      await waitFor(() => expect(screen.getByText('Brest')).toBeInTheDocument())
+      const star = screen.getByRole('button', { name: 'Ajouter Brest – Paris Saint Germain à mes paris' })
+
+      fireEvent.click(star)
+      expect(listStarredMatches()).toHaveLength(1)
+      expect(listStarredMatches()[0].match_id).toBe('31975')
+      expect(screen.getByRole('button', { name: 'Retirer Brest – Paris Saint Germain de mes paris' })).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retirer Brest – Paris Saint Germain de mes paris' }))
+      expect(listStarredMatches()).toHaveLength(0)
+    })
+
+    it('le clic sur l’étoile ne navigue jamais vers le détail du match', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      renderExplorer()
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
+      fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
+
+      await waitFor(() => expect(screen.getByText('Brest')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Ajouter Brest – Paris Saint Germain à mes paris' }))
+      // Toujours sur l'explorateur, pas redirigé vers /matches/...
+      expect(screen.getByText('Brest')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Rechercher' })).toBeInTheDocument()
     })
   })
 })
