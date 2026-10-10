@@ -27,10 +27,11 @@
  * marché (les deux côtés Over/Under conjointement), jamais recalculée ici.
  */
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { COMPETITION_OPTIONS, SEASON_OPTIONS, competitionLabel, seasonLabel } from '../api/catalog'
+import { SEASON_OPTIONS, competitionLabel, seasonLabel } from '../api/catalog'
 import { ApiError, getMatches, getPrediction } from '../api/client'
 import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { MatchDecisionOutput, MatchResponse } from '../api/types'
+import { CompetitionTabs } from '../components/CompetitionTabs'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import {
   MarketSection,
@@ -160,18 +161,31 @@ function ValueBadge({ decision, priceEdge }: { decision: 'BET' | 'NO_BET'; price
   return <span className={`badge ${isValue ? 'badge-bet' : 'badge-no_bet'}`}>{isValue ? 'VALUE' : 'NO VALUE'}</span>
 }
 
+/** Côté (Over/Under 2.5) que le modèle juge le plus probable pour CE match
+ * - dérivé directement de `marketView.over.probability`/`under.probability`
+ * (les deux sommant à 1 par construction, voir `buildPrimaryModelMarketView`),
+ * jamais une nouvelle statistique. C'est une lecture de la probabilité déjà
+ * affichée, PAS une recommandation de pari : la décision BET/NO_BET du
+ * moteur reste strictement indépendante de ce seul critère (même principe
+ * que le seuil mathématique de Value Bet déjà affiché par carte). */
+function favoredSide(marketView: { over: SideView; under: SideView }): 'Over' | 'Under' {
+  return marketView.over.probability >= marketView.under.probability ? 'Over' : 'Under'
+}
+
 function MarketBlock({
   label,
   side,
   marketOdds,
   priceEdge,
   decision,
+  favored,
 }: {
   label: string
   side: SideView
   marketOdds?: number
   priceEdge?: number
   decision: 'BET' | 'NO_BET'
+  favored: boolean
 }) {
   // "Pourquoi c'est intéressant" (section 6 de la demande) : UNIQUEMENT
   // affiché pour le côté réellement en Value (jamais pour NO VALUE, qui n'a
@@ -189,8 +203,11 @@ function MarketBlock({
   const isOddsMoreGenerousThanFair = showsValueExplanation && marketOdds! > side.fairPrice
 
   return (
-    <div className="card value-bet-card">
-      <h3>{label}</h3>
+    <div className={`card value-bet-card${favored ? ' value-bet-card-favored' : ''}`}>
+      <h3>
+        {label}
+        {favored && <span className="favored-badge">Favori du modèle</span>}
+      </h3>
       <dl className="value-bet-stats">
         <div>
           <dt>Probabilité modèle</dt>
@@ -598,18 +615,8 @@ export function AnalyzeMatch() {
 
       <section className="card">
         <h2>1. Choisir le match</h2>
+        <CompetitionTabs value={competition} onChange={setCompetition} />
         <div className="filters">
-          <label>
-            Compétition
-            <select value={competition} onChange={(e) => setCompetition(e.target.value)}>
-              <option value="">— Choisir —</option>
-              {COMPETITION_OPTIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
           <label>
             Saison
             <select value={season} onChange={(e) => setSeason(e.target.value)}>
@@ -697,6 +704,12 @@ export function AnalyzeMatch() {
                 {resolvedMatchAvailability && !resolvedMatchAvailability.available && (
                   <EmptyState message={resolvedMatchAvailability.reason} />
                 )}
+                {resolvedMatchAvailability?.available && resolvedMatchAvailability.estimated && (
+                  <p className="hint kickoff-estimated-hint">
+                    Heure de coup d'envoi estimée (conversion CET/CEST depuis l'heure locale publiée) - non confirmée
+                    par une seconde source indépendante.
+                  </p>
+                )}
               </>
             )}
             <button
@@ -725,6 +738,12 @@ export function AnalyzeMatch() {
             {predictionState?.status === 'unavailable' && <EmptyState message={predictionState.message} />}
             {predictionState?.status === 'ready' && (
               <div className="fade-in">
+                {predictionState.prediction.kickoff_utc_estimated && (
+                  <p className="hint kickoff-estimated-hint">
+                    Analyse basée sur une heure de coup d'envoi estimée (conversion CET/CEST depuis l'heure locale
+                    publiée) - non confirmée par une seconde source indépendante.
+                  </p>
+                )}
                 <DecisionBlock prediction={predictionState.prediction} />
 
                 {marketView === null ? (
@@ -738,6 +757,21 @@ export function AnalyzeMatch() {
                         seulement implicite via les deux titres de carte en dessous. */}
                     <p className="market-analyzed">
                       Marché analysé : <strong>Over/Under 2.5 buts</strong>
+                    </p>
+                    {/* Synthèse immédiate : quel côté le modèle favorise pour
+                        CE match - simple lecture de la probabilité déjà
+                        affichée par carte ci-dessous (over.probability vs
+                        under.probability, qui somment à 1), jamais une
+                        nouvelle statistique ni une recommandation de pari -
+                        la décision BET/NO_BET au-dessus reste la seule
+                        décision du moteur. */}
+                    <p className="favored-side-summary">
+                      Pronostic du modèle :{' '}
+                      <strong>
+                        {favoredSide(marketView) === 'Over' ? 'OVER' : 'UNDER'} 2.5 (
+                        {formatProbability(favoredSide(marketView) === 'Over' ? marketView.over.probability : marketView.under.probability)}
+                        )
+                      </strong>
                     </p>
                     {extractMinEdgeThreshold(predictionState.prediction.parameters_snapshot) === null && (
                       // Fait valable pour le match entier (pas un côté en particulier) :
@@ -754,6 +788,7 @@ export function AnalyzeMatch() {
                         marketOdds={market?.market_odds['Over']}
                         priceEdge={market?.price_edge['Over']}
                         decision={predictionState.prediction.decision.decision}
+                        favored={favoredSide(marketView) === 'Over'}
                       />
                       <MarketBlock
                         label="Under 2.5"
@@ -761,6 +796,7 @@ export function AnalyzeMatch() {
                         marketOdds={market?.market_odds['Under']}
                         priceEdge={market?.price_edge['Under']}
                         decision={predictionState.prediction.decision.decision}
+                        favored={favoredSide(marketView) === 'Under'}
                       />
                     </div>
                   </>

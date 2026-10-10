@@ -55,29 +55,40 @@ describe('fixtureTimingState', () => {
 })
 
 describe('analysisAvailability', () => {
-  it('disponible UNIQUEMENT quand kickoff_utc est connu (match D/A)', () => {
+  it('disponible, heure CONFIRMÉE, quand kickoff_utc est connu (match D/A)', () => {
     const result = analysisAvailability(match({ kickoff_utc: '2026-08-21T18:45:00Z', is_played: true }))
     expect(result.available).toBe(true)
+    expect(result.available && result.estimated).toBe(false)
   })
 
-  it('indisponible pour un match B (heure locale connue, kickoff_utc absent) avec un message distinct', () => {
-    const result = analysisAvailability(match({ kickoff_local_naive: '2026-10-09T20:45:00', kickoff_utc: null }))
+  // Demande produit explicite (LOT retravail UI) : une fixture Ligue 1 à
+  // heure locale connue n'est plus bloquée - l'API estime l'UTC par
+  // conversion CET/CEST (routes_prediction.py, INCHANGÉ ici) - signalé par
+  // `estimated: true`, jamais masqué.
+  it('disponible, heure ESTIMÉE, pour un match Ligue 1 B (heure locale connue, kickoff_utc absent)', () => {
+    const result = analysisAvailability(match({ competition: 'ligue1', kickoff_local_naive: '2026-10-09T20:45:00', kickoff_utc: null }))
+    expect(result.available).toBe(true)
+    expect(result.available && result.estimated).toBe(true)
+  })
+
+  it('indisponible pour un match B hors Ligue 1 (heure locale connue mais estimation UTC non prise en charge pour cette compétition)', () => {
+    const result = analysisAvailability(match({ competition: 'liga', kickoff_local_naive: '2026-10-09T20:45:00', kickoff_utc: null }))
     expect(result.available).toBe(false)
     expect(!result.available && result.reason).toBe(
-      'Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.',
+      'Analyse indisponible : heure connue localement, mais estimation UTC non prise en charge pour cette compétition.',
     )
   })
 
-  it('indisponible pour un match C (aucune heure publiée) avec un message distinct', () => {
+  it('indisponible pour un match C (aucune heure publiée), quelle que soit la compétition', () => {
     const result = analysisAvailability(match({ kickoff_local_naive: null, kickoff_utc: null }))
     expect(result.available).toBe(false)
     expect(!result.available && result.reason).toBe('Analyse indisponible : heure de coup d’envoi non publiée.')
   })
 
-  it('ne fabrique jamais de promesse sur une heure future précise dans le message B/C', () => {
-    const b = analysisAvailability(match({ kickoff_local_naive: '2026-10-09T20:45:00', kickoff_utc: null }))
+  it('ne fabrique jamais de promesse sur une heure future précise dans le message d’indisponibilité (B hors Ligue 1, ou C)', () => {
+    const bHorsLigue1 = analysisAvailability(match({ competition: 'liga', kickoff_local_naive: '2026-10-09T20:45:00', kickoff_utc: null }))
     const c = analysisAvailability(match({ kickoff_local_naive: null, kickoff_utc: null }))
-    for (const result of [b, c]) {
+    for (const result of [bHorsLigue1, c]) {
       expect(!result.available && result.reason).not.toMatch(/bientôt|prochainement|sera analysable|à \d{1,2}:\d{2}/i)
     }
   })

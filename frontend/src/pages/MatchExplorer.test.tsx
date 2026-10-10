@@ -59,20 +59,18 @@ describe('MatchExplorer', () => {
     expect(getMatchesMock).not.toHaveBeenCalled()
   })
 
-  it('propose des menus déroulants à libellés humains (cohérence avec Analyser un match), jamais un identifiant technique à taper', () => {
+  it('propose des onglets de compétition et un menu de saison à libellés humains (cohérence avec Analyser un match), jamais un identifiant technique à taper', () => {
     // Revue de cohérence produit : cette page utilisait auparavant deux
     // champs texte libres avec le placeholder "identifiant technique" -
-    // incohérent avec AnalyzeMatch.tsx, qui n'expose jamais d'identifiant
-    // brut. Les deux pages partagent désormais la même source
-    // (`../api/catalog`).
+    // incohérent avec AnalyzeMatch.tsx. Les deux pages partagent désormais
+    // la même source (`../api/catalog`) et le même composant d'onglets
+    // (`../components/CompetitionTabs`).
     renderExplorer()
-    const competitionSelect = screen.getByLabelText('Compétition') as HTMLSelectElement
     const seasonSelect = screen.getByLabelText('Saison') as HTMLSelectElement
-    expect(competitionSelect.tagName).toBe('SELECT')
     expect(seasonSelect.tagName).toBe('SELECT')
-    expect(screen.getByRole('option', { name: 'Ligue 1' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'La Liga' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Premier League' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Ligue 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'La Liga' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Premier League' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '2026/27' })).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('identifiant technique')).not.toBeInTheDocument()
   })
@@ -81,7 +79,7 @@ describe('MatchExplorer', () => {
     getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
 
@@ -97,7 +95,7 @@ describe('MatchExplorer', () => {
     getMatchesMock.mockResolvedValue([])
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
 
@@ -108,7 +106,7 @@ describe('MatchExplorer', () => {
     getMatchesMock.mockRejectedValue(new ApiError(400, "Aucune donnee pour la saison '2024_25' de 'ligue1'."))
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2024_25' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
 
@@ -119,7 +117,7 @@ describe('MatchExplorer', () => {
     getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
 
@@ -142,7 +140,7 @@ describe('MatchExplorer', () => {
     getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
     renderExplorer()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
     await waitFor(() => expect(screen.getByText('Brest')).toBeInTheDocument())
@@ -182,7 +180,7 @@ describe('MatchExplorer', () => {
     }
 
     async function searchLigue1_2026_27() {
-      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
       fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
       fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }))
     }
@@ -202,14 +200,18 @@ describe('MatchExplorer', () => {
       expect(futureRow.textContent).not.toContain('Joué')
     })
 
-    it('affiche l’heure locale d’une fixture B explicitement comme telle (jamais comme une heure UTC confirmée)', async () => {
+    it('affiche l’heure locale d’une fixture B explicitement comme telle (jamais comme une heure UTC confirmée), et la signale analysable par heure estimée (Ligue 1)', async () => {
       getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B])
       renderExplorer()
       await searchLigue1_2026_27()
 
       await waitFor(() => expect(screen.getByText('Lens')).toBeInTheDocument())
       expect(screen.getByText(/9 octobre 2026 · 20:45 \(heure locale\)/)).toBeInTheDocument()
-      expect(screen.getByText(/analyse indisponible/)).toBeInTheDocument()
+      // Demande produit explicite : une fixture Ligue 1 à heure locale
+      // connue n'est plus bloquée - l'API estime l'UTC (conversion
+      // CET/CEST) - jamais "analyse indisponible" pour ce cas.
+      expect(screen.queryByText(/analyse indisponible/)).not.toBeInTheDocument()
+      expect(screen.getByText(/heure estimée/)).toBeInTheDocument()
     })
 
     it('affiche "heure non publiée" pour une fixture C, sans heure fabriquée', async () => {

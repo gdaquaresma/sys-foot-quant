@@ -203,37 +203,60 @@ def test_no_bet_is_returned_as_a_valid_200_response_not_an_error() -> None:
     assert len(body["decision"]["decision_reason"]) > 0
 
 
-# --- 11. EXTENSION : fixtures futures B/C -> refus explicite 409 ------------
+# --- 11. EXTENSION : fixtures futures B/C -----------------------------------
 #
 # match_id reels (voir tests/integration/test_future_fixture_catalog_real_files.py) :
 # Lens-Lyon (etat B, heure locale connue mais kickoff_utc absent) et
 # Lens-Le Havre (etat C, aucune heure publiee).
+#
+# Demande produit explicite (LOT retravail UI) : une fixture Ligue 1 a
+# l'heure locale connue (etat B) n'est PLUS refusee - l'API estime l'UTC
+# par conversion CET/CEST (ligue1_kickoff_cet_conversion.py, INCHANGE) et
+# le signale via kickoff_utc_estimated=True, jamais silencieusement.
+# Seul l'etat C (aucune heure publiee du tout) reste un refus 409 - rien a
+# convertir.
 
 _REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00"
 _REAL_STATE_C_MATCH_ID = "ligue1:2026_27:Lens_vs_Le Havre:2026-12-05"
 
 
-def test_state_b_future_fixture_refuses_analysis_with_409(monkeypatch) -> None:
-    """Heure locale connue mais kickoff_utc absent (etat B) : l'API doit
-    refuser proprement, jamais appeler le moteur sur une heure estimee."""
+def test_state_b_future_fixture_ligue1_uses_estimated_kickoff_and_returns_200(monkeypatch) -> None:
+    """Heure locale connue mais kickoff_utc absent (etat B), Ligue 1 :
+    l'API derive une heure UTC ESTIMEE (conversion CET/CEST deterministe,
+    deja validee pour PHASE SHADOW) et lance normalement le moteur avec -
+    jamais un refus, jamais une estimation masquee (kickoff_utc_estimated)."""
     calls = _spy_on_run_prediction(monkeypatch)
     response = client.get(
         f"/matches/{_REAL_STATE_B_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"}
     )
-    assert response.status_code == 409
-    assert "kickoff_utc" in response.json()["detail"]
-    assert len(calls) == 0
+    assert response.status_code == 200
+    assert len(calls) == 1
+    # 2026-10-09 est en periode CEST (UTC+2) - 20:45 locale -> 18:45 UTC,
+    # meme regle deterministe que ligue1_kickoff_cet_conversion.py.
+    assert calls[0]["kickoff_utc"] == datetime(2026, 10, 9, 18, 45, 0)
+    assert response.json()["kickoff_utc_estimated"] is True
+
+
+def test_state_d_match_has_kickoff_utc_estimated_false(monkeypatch) -> None:
+    """Non-regression : un match D (kickoff_utc deja confirme par le
+    catalogue) ne doit jamais etre signale comme estime."""
+    calls = _spy_on_run_prediction(monkeypatch)
+    response = client.get(f"/matches/{_REAL_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"})
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert response.json()["kickoff_utc_estimated"] is False
 
 
 def test_state_c_future_fixture_refuses_analysis_with_409(monkeypatch) -> None:
-    """Aucune heure publiee (etat C) : meme refus explicite, jamais une
-    estimation arbitraire de l'heure/du fuseau horaire."""
+    """Aucune heure publiee du tout (etat C) : refus explicite - rien a
+    convertir, jamais une estimation arbitraire de l'heure/du fuseau
+    horaire."""
     calls = _spy_on_run_prediction(monkeypatch)
     response = client.get(
         f"/matches/{_REAL_STATE_C_MATCH_ID}/prediction", params={"competition": "ligue1", "season": "2026_27"}
     )
     assert response.status_code == 409
-    assert "kickoff_utc" in response.json()["detail"]
+    assert "aucune heure utc confirmee ni estimable" in response.json()["detail"].lower()
     assert len(calls) == 0
 
 

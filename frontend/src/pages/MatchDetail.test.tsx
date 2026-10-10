@@ -119,6 +119,7 @@ const FIXTURE_PREDICTION_NO_MARKET: MatchDecisionOutput = {
     min_edge_threshold: null,
     decision_offset_hours: 2.0,
   },
+  kickoff_utc_estimated: false,
 }
 
 const FIXTURE_PREDICTION_WITH_MARKET: MatchDecisionOutput = {
@@ -396,7 +397,7 @@ describe('MatchDetail', () => {
 
   // --- EXTENSION fixtures futures 2026/27 ---------------------------------
 
-  describe('fixtures futures (B/C) - analyse indisponible', () => {
+  describe('fixtures futures (B/C) - heure estimée (B, Ligue 1) ou analyse indisponible (C)', () => {
     const FIXTURE_MATCH_STATE_B: MatchResponse = {
       match_id: 'ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00',
       competition: 'ligue1',
@@ -421,26 +422,27 @@ describe('MatchDetail', () => {
       is_played: false,
     }
 
-    it('affiche l’heure locale explicitement comme telle (jamais comme UTC) pour une fixture B, sans jamais appeler getPrediction', async () => {
+    it('affiche l’heure locale explicitement comme telle (jamais comme UTC) pour une fixture B Ligue 1, ET lance l’analyse avec une heure UTC estimée (demande produit explicite : l’heure ne doit jamais bloquer)', async () => {
       getMatchMock.mockResolvedValue(FIXTURE_MATCH_STATE_B)
+      getPredictionMock.mockResolvedValue({ ...FIXTURE_PREDICTION_NO_MARKET, kickoff_utc_estimated: true })
       renderDetail('/matches/ligue1/2026_27/ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00')
 
       await waitFor(() => expect(screen.getByText('Lens – Lyon')).toBeInTheDocument())
       expect(screen.getByText(/Coup d'envoi \(heure locale\) : 9 octobre 2026 · 20:45/)).toBeInTheDocument()
       expect(screen.getByText('Heure locale publiée par la source - conversion UTC non encore confirmée.')).toBeInTheDocument()
       expect(screen.getByText('Statut : Match à venir')).toBeInTheDocument()
-      // L'effet qui calcule la disponibilité de l'analyse se déclenche APRÈS
-      // le rendu "match prêt" - attendu explicitement plutôt que supposé
-      // synchrone avec celui-ci (évite une course dans la suite complète).
-      await waitFor(() =>
-        expect(
-          screen.getByText('Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.'),
-        ).toBeInTheDocument(),
-      )
-      expect(getPredictionMock).not.toHaveBeenCalled()
-      // Le formulaire de cotes n'a plus de raison d'être affiché : aucune
-      // prédiction ne sera jamais calculée pour cette fixture.
-      expect(screen.queryByText('Cotes de marché')).not.toBeInTheDocument()
+      // L'analyse n'est plus bloquée pour une fixture Ligue 1 à heure locale
+      // connue : l'API estime l'UTC (conversion CET/CEST) et la prédiction
+      // s'affiche normalement, avec un rappel explicite que l'heure est
+      // estimée - jamais masqué silencieusement.
+      await waitFor(() => expect(getPredictionMock).toHaveBeenCalled())
+      expect(
+        screen.getByText(
+          "Prédiction basée sur une heure de coup d'envoi estimée (conversion CET/CEST depuis l'heure locale publiée) - non confirmée par une seconde source indépendante.",
+        ),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.')).not.toBeInTheDocument()
+      expect(screen.getByText('Cotes de marché')).toBeInTheDocument()
     })
 
     it('affiche "heure non publiée" pour une fixture C, sans jamais appeler getPrediction', async () => {

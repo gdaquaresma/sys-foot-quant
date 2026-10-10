@@ -2,9 +2,10 @@
  * Explorateur de matchs (Phase UI-2-D) - consomme GET /matches via le
  * client API centralisé.
  *
- * Compétition/saison sont sélectionnées via les MÊMES menus déroulants à
- * libellés humains que `AnalyzeMatch.tsx` (`../api/catalog`, source
- * unique partagée) - jamais une saisie libre d'identifiant technique brut
+ * Compétition (onglets, `../components/CompetitionTabs`) et saison (menu
+ * déroulant) sont sélectionnées via les MÊMES composants à libellés
+ * humains que `AnalyzeMatch.tsx` (`../api/catalog`, source unique
+ * partagée) - jamais une saisie libre d'identifiant technique brut
  * type "ligue1"/"2024_25" (revue de cohérence produit : cette page, bien
  * que plus technique dans son usage - recherche large, filtrage par nom
  * d'équipe -, doit rester reconnaissable comme faisant partie du même
@@ -15,10 +16,11 @@
  */
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { COMPETITION_OPTIONS, SEASON_OPTIONS } from '../api/catalog'
+import { SEASON_OPTIONS } from '../api/catalog'
 import { ApiError, getMatches } from '../api/client'
 import { analysisAvailability, formatFixtureDate, formatLocalKickoffTime } from '../api/fixtureTiming'
 import type { MatchResponse } from '../api/types'
+import { CompetitionTabs } from '../components/CompetitionTabs'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 
 type LoadState =
@@ -96,18 +98,8 @@ export function MatchExplorer() {
       <h1>Explorateur de matchs</h1>
       <p className="hint">Recherchez tous les matchs d'une compétition et d'une saison, puis filtrez par équipe.</p>
 
+      <CompetitionTabs value={competition} onChange={setCompetition} />
       <form className="filters" onSubmit={handleSubmit}>
-        <label>
-          Compétition
-          <select value={competition} onChange={(e) => setCompetition(e.target.value)} required>
-            <option value="">— Choisir —</option>
-            {COMPETITION_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           Saison
           <select value={season} onChange={(e) => setSeason(e.target.value)} required>
@@ -157,11 +149,20 @@ export function MatchExplorer() {
                   </Link>
                   {/* EXTENSION fixtures futures 2026/27 : signale, SANS
                       empêcher la navigation, qu'une fixture future n'est
-                      pas encore analysable (heure/UTC non confirmée) -
-                      jamais confondu avec un résultat déjà joué. */}
-                  {!m.is_played && !analysisAvailability(m).available && (
-                    <span className="hint"> (analyse indisponible)</span>
-                  )}
+                      pas encore analysable (aucune heure publiée, ou
+                      compétition hors du périmètre de l'estimation
+                      CET/CEST) - jamais confondu avec un résultat déjà
+                      joué. Pour une fixture Ligue 1 analysable par heure
+                      ESTIMÉE (voir fixtureTiming.ts), un rappel distinct
+                      le signale plutôt que de la faire passer pour une
+                      heure confirmée. */}
+                  {!m.is_played &&
+                    (() => {
+                      const availability = analysisAvailability(m)
+                      if (!availability.available) return <span className="hint"> (analyse indisponible)</span>
+                      if (availability.estimated) return <span className="hint"> (heure estimée)</span>
+                      return null
+                    })()}
                 </td>
               </tr>
             ))}

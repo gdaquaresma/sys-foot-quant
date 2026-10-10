@@ -24,11 +24,29 @@ resolution de ``match_id`` passe desormais par
 ``routes_matches._list_catalog_entries`` (catalogue fusionne
 Understat + OpenFootball/2026_27, INCHANGE cote logique de fusion) au
 lieu de ``match_catalog.list_matches`` seul - une fixture future B/C
-(``kickoff_utc`` absent) est donc desormais TROUVEE par cette route,
-mais ``KickoffUnavailableError`` (ci-dessous) refuse explicitement de
-lancer le moteur dessus plutot que d'inventer une heure. AUCUN autre
-changement de comportement pour un match D (``kickoff_utc`` toujours
-connu)."""
+(``kickoff_utc`` absent) est donc desormais TROUVEE par cette route.
+Pour l'etat C (aucune heure publiee du tout, ``kickoff_local_naive``
+absent) : ``KickoffUnavailableError`` (ci-dessous) refuse toujours
+explicitement de lancer le moteur, aucune donnee a convertir. AUCUN
+autre changement de comportement pour un match D (``kickoff_utc``
+toujours connu).
+
+EXTENSION (demande produit explicite - ne jamais laisser une fixture
+Ligue 1 a l'heure locale connue bloquer l'analyse) : pour l'etat B
+(``kickoff_local_naive`` connu, ``kickoff_utc`` absent) d'une fixture
+``ligue1``, cette route derive desormais une heure UTC ESTIMEE via
+``ligue1_kickoff_cet_conversion.convert_ligue1_local_kickoff_to_utc``
+(INCHANGE, deja construit et teste pour PHASE SHADOW - meme regle
+CET/CEST deterministe fixee par le droit de l'UE, jamais une nouvelle
+regle de conversion). Cette estimation N'EST PAS un recoupement
+independant (``build_cross_checked_kickoff`` reste la seule fonction
+qui produit un horaire ``verified``) - elle est explicitement signalee
+comme telle via le champ ``kickoff_utc_estimated`` ajoute a la reponse
+(jamais un champ silencieux : le frontend doit l'afficher). Hors Ligue 1
+(``premier_league``/``liga``, qui n'ont de toute facon pas de fichier
+Understat saison courante 2026/27 - voir docs/next_brique_decision.md)
+ou si la conversion elle-meme est refusee (jour de changement d'heure,
+annee hors table) : ``KickoffUnavailableError`` inchangee."""
 
 from __future__ import annotations
 
@@ -38,22 +56,33 @@ from fastapi import APIRouter, HTTPException, Query
 
 from sys_foot_quant.api.prediction_adapter import run_prediction, validate_market_odds
 from sys_foot_quant.api.routes_matches import _list_catalog_entries
+from sys_foot_quant.data_engine.market_odds.ligue1_kickoff_cet_conversion import (
+    AmbiguousOrInvalidKickoffError,
+    convert_ligue1_local_kickoff_to_utc,
+)
 
 router = APIRouter(tags=["prediction"])
+
+# Seule competition pour laquelle une estimation UTC derivee de l'heure
+# locale est tentee (meme perimetre que ligue1_kickoff_cet_conversion.py,
+# jamais elargi silencieusement ici).
+_ESTIMATABLE_COMPETITIONS = frozenset({"ligue1"})
 
 
 class KickoffUnavailableError(ValueError):
     """Refus explicite : la fixture est connue du catalogue fusionne
-    (``routes_matches._list_catalog_entries``) mais son ``kickoff_utc``
-    n'est pas disponible (etats B/C du modele temporel - voir
-    ``future_fixture_catalog.py``) - AUCUNE estimation arbitraire de
-    l'heure/du fuseau horaire n'est jamais tentee ici, et
+    (``routes_matches._list_catalog_entries``) mais aucune heure UTC
+    (confirmee ou estimee) n'a pu etre obtenue - soit aucune heure
+    publiee du tout (etat C), soit une competition hors du perimetre de
+    l'estimation CET/CEST (etat B hors Ligue 1), soit une conversion
+    refusee explicitement (jour de changement d'heure, annee non
+    couverte - voir ``ligue1_kickoff_cet_conversion.py``).
     ``run_prediction``/``final_engine`` ne sont JAMAIS appeles dans ce
-    cas (``decision_time = kickoff_utc - 2h`` ne peut pas etre calcule
-    sans risque de donnee inventee). Distincte de ``MatchCatalogError``
-    (parametre invalide, HTTP 400), d'un 404 (fixture inexistante) et du
-    422 de validation FastAPI (parametre de requete manquant) - traduite
-    en HTTP 409 par le gestionnaire global de ``app.py``, pour que le
+    cas (``decision_time`` ne peut pas etre calcule sans risque de
+    donnee inventee). Distincte de ``MatchCatalogError`` (parametre
+    invalide, HTTP 400), d'un 404 (fixture inexistante) et du 422 de
+    validation FastAPI (parametre de requete manquant) - traduite en
+    HTTP 409 par le gestionnaire global de ``app.py``, pour que le
     frontend puisse distinguer precisement ce cas d'une veritable erreur
     serveur ou d'un match inexistant."""
 
@@ -80,12 +109,8 @@ def get_match_prediction(
             status_code=404,
             detail=f"Match {match_id!r} introuvable pour competition={competition!r}, season={season!r}.",
         )
-    if match.kickoff_utc is None:
-        raise KickoffUnavailableError(
-            f"Match {match_id!r} ({competition!r}, {season!r}) : heure/UTC du coup d'envoi non "
-            "disponible (fixture future sans conversion UTC fiable) - analyse impossible tant que "
-            "kickoff_utc n'est pas connu. Aucune estimation arbitraire n'est tentee."
-        )
+
+    kickoff_utc, kickoff_utc_estimated = _resolve_kickoff_utc(match_id, competition, season, match)
 
     market_odds = validate_market_odds(over_2_5, under_2_5)
 
@@ -94,20 +119,44 @@ def get_match_prediction(
         season=season,
         home_team=match.home_team,
         away_team=match.away_team,
-        # Toujours le kickoff REEL du catalogue, jamais une valeur client -
-        # convention naive-UTC deja etablie par predict_match.py (simple
-        # adaptation de representation, aucun recalcul de la valeur).
-        kickoff_utc=match.kickoff_utc.replace(tzinfo=None),
+        kickoff_utc=kickoff_utc,
         market_odds=market_odds,
     )
-    return _serialize_match_decision_output(output)
+    return _serialize_match_decision_output(output, kickoff_utc_estimated=kickoff_utc_estimated)
 
 
-def _serialize_match_decision_output(output: object) -> dict:
+def _resolve_kickoff_utc(match_id: str, competition: str, season: str, match) -> tuple:
+    """Resout l'heure UTC a utiliser pour ``run_prediction`` - CONFIRMEE
+    (``match.kickoff_utc``, etat D/A) en priorite, jamais recalculee dans
+    ce cas ; sinon ESTIMEE (etat B, Ligue 1 uniquement) via la conversion
+    CET/CEST deja validee ; sinon refus explicite (``KickoffUnavailableError``).
+    Retourne ``(kickoff_utc_naif, estimee: bool)``."""
+    if match.kickoff_utc is not None:
+        return match.kickoff_utc.replace(tzinfo=None), False
+
+    if match.kickoff_local_naive is not None and competition in _ESTIMATABLE_COMPETITIONS:
+        try:
+            estimated = convert_ligue1_local_kickoff_to_utc(match.fixture_date, match.kickoff_local_naive)
+        except AmbiguousOrInvalidKickoffError as exc:
+            raise KickoffUnavailableError(
+                f"Match {match_id!r} ({competition!r}, {season!r}) : heure locale connue mais conversion UTC "
+                f"refusee ({exc}) - analyse impossible."
+            ) from None
+        return estimated.replace(tzinfo=None), True
+
+    raise KickoffUnavailableError(
+        f"Match {match_id!r} ({competition!r}, {season!r}) : aucune heure UTC confirmee ni estimable "
+        "(heure locale non publiee, ou competition hors du perimetre de l'estimation CET/CEST) - "
+        "analyse impossible. Aucune estimation arbitraire n'est tentee."
+    )
+
+
+def _serialize_match_decision_output(output: object, *, kickoff_utc_estimated: bool) -> dict:
     """Serialisation directe et fidele de ``MatchDecisionOutput`` (dataclass
     imbriquee, ``final_engine.types``, INCHANGEE) - aucune transformation,
-    aucun champ ajoute/supprime/recalcule. Les ``datetime`` restants sont
-    convertis par l'encodeur JSON de FastAPI (deja utilise ailleurs dans
-    cette API pour ``MatchResponse``), jamais une conversion manuelle
-    supplementaire."""
-    return dataclasses.asdict(output)
+    aucun champ du moteur ajoute/supprime/recalcule. ``kickoff_utc_estimated``
+    est le SEUL champ ajoute ici (hors moteur) - signale explicitement au
+    frontend que l'heure utilisee est une estimation CET/CEST depuis l'heure
+    locale publiee, jamais un recoupement independant confirme (voir
+    ``_resolve_kickoff_utc``) - ne doit jamais etre masque silencieusement."""
+    return {**dataclasses.asdict(output), "kickoff_utc_estimated": kickoff_utc_estimated}

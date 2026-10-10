@@ -202,6 +202,12 @@ export interface MatchDecisionOutput {
   decision: PredictionDecisionResult
   engine_version: string
   parameters_snapshot: Record<string, unknown>
+  /** `true` si `kickoff_utc` n'était pas confirmé par le catalogue et a été
+   * ESTIMÉ par l'API (conversion CET/CEST depuis l'heure locale publiée,
+   * Ligue 1 uniquement - voir `routes_prediction.py::_resolve_kickoff_utc`),
+   * `false` si l'heure utilisée était déjà confirmée. Doit toujours être
+   * affiché quand `true` - jamais masqué comme une heure confirmée. */
+  kickoff_utc_estimated: boolean
 }
 
 // --- Erreurs -------------------------------------------------------------

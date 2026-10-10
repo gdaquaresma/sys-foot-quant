@@ -2,13 +2,17 @@
  * Aide d'affichage PURE pour les informations temporelles d'une fixture
  * (`fixture_date`/`kickoff_local_naive`/`kickoff_utc`, voir `./types`) -
  * intégration frontend des fixtures futures 2026/27. Centralise la règle
- * produit UNIQUE (cadrage "intégration frontend", section 4) : une
- * fixture n'est analysable QUE si `kickoff_utc` est connu - jamais une
- * estimation d'heure/de fuseau horaire fabriquée ici ou ailleurs côté
- * frontend. `AnalyzeMatch.tsx`/`MatchDetail.tsx`/`MatchExplorer.tsx`
- * importent ces fonctions plutôt que de ré-implémenter cette règle
- * localement, pour qu'elle ne puisse jamais diverger d'une page à
- * l'autre.
+ * produit UNIQUE (demande explicite : l'heure ne doit jamais bloquer
+ * l'analyse d'une fixture Ligue 1 dont l'heure locale est publiée) :
+ * une fixture est analysable si `kickoff_utc` est connu (confirmé) OU si
+ * `kickoff_local_naive` est connu pour une compétition Ligue 1 (l'API
+ * estime alors l'UTC par conversion CET/CEST - voir
+ * `routes_prediction.py::_resolve_kickoff_utc`, INCHANGÉ ici, jamais
+ * recalculé côté frontend). Seul un match SANS AUCUNE heure publiée
+ * (état C) reste bloqué - aucune heure n'existe alors à convertir.
+ * `AnalyzeMatch.tsx`/`MatchDetail.tsx`/`MatchExplorer.tsx` importent ces
+ * fonctions plutôt que de ré-implémenter cette règle localement, pour
+ * qu'elle ne puisse jamais diverger d'une page à l'autre.
  */
 import type { MatchResponse } from './types'
 
@@ -54,19 +58,23 @@ export function fixtureTimingState(match: MatchResponse): FixtureTimingState {
   return 'unpublished'
 }
 
-export type AnalysisAvailability = { available: true } | { available: false; reason: string }
+export type AnalysisAvailability = { available: true; estimated: boolean } | { available: false; reason: string }
 
-/** Règle produit UNIQUE (cadrage, section 4) : analysable SEULEMENT si
- * `kickoff_utc` est connu. `reason` est le message utilisateur affiché
- * quand l'analyse est indisponible - ne laisse JAMAIS entendre que le
- * match sera analysable plus tard à une heure précise, uniquement un
- * fait présent (heure/UTC pas encore confirmée). */
+/** Règle produit UNIQUE (voir docstring du module) : analysable si
+ * `kickoff_utc` est connu (confirmé, `estimated: false`), OU si l'heure
+ * locale est connue pour une fixture Ligue 1 (l'API estimera l'UTC par
+ * conversion CET/CEST, `estimated: true` - le composant appelant doit
+ * alors afficher cette estimation, jamais la masquer). Hors Ligue 1 avec
+ * heure locale seule, ou aucune heure publiée du tout (état C) : analyse
+ * indisponible, `reason` ne laisse JAMAIS entendre que le match sera
+ * analysable plus tard à une heure précise, uniquement un fait présent. */
 export function analysisAvailability(match: MatchResponse): AnalysisAvailability {
-  if (match.kickoff_utc !== null) return { available: true }
+  if (match.kickoff_utc !== null) return { available: true, estimated: false }
   if (match.kickoff_local_naive !== null) {
+    if (match.competition === 'ligue1') return { available: true, estimated: true }
     return {
       available: false,
-      reason: 'Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.',
+      reason: 'Analyse indisponible : heure connue localement, mais estimation UTC non prise en charge pour cette compétition.',
     }
   }
   return {

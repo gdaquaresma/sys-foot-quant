@@ -500,6 +500,12 @@ export function MatchDetail() {
             {predictionState.status === 'unavailable' && <EmptyState message={predictionState.message} />}
             {predictionState.status === 'ready' && (
               <div className="fade-in">
+                {predictionState.prediction.kickoff_utc_estimated && (
+                  <p className="hint kickoff-estimated-hint">
+                    Prédiction basée sur une heure de coup d'envoi estimée (conversion CET/CEST depuis l'heure locale
+                    publiée) - non confirmée par une seconde source indépendante.
+                  </p>
+                )}
                 <PredictionSection prediction={predictionState.prediction} />
               </div>
             )}

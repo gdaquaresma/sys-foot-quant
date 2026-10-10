@@ -12,6 +12,16 @@
   --color-settled: #22c55e;
   --color-error: #ef4444;
 
+  /* Palette "un peu de couleur" (demande explicite) - un ton par
+     championnat (purement cosmétique, jamais un jugement de fiabilité),
+     et un ton "pronostic" distinct des couleurs sémantiques existantes
+     (BET/NO_BET/pending/settled/error) pour ne jamais les confondre avec
+     une décision du moteur. */
+  --color-ligue1: #3b82f6;
+  --color-liga: #f97316;
+  --color-premier-league: #a855f7;
+  --color-favored: #fbbf24;
+
   /* Échelle d'espacement - utilisée pour un rythme vertical volontaire
      (remplace la dépendance aux marges par défaut du navigateur). */
   --space-1: 0.25rem;
@@ -180,6 +190,13 @@ summary:focus-visible {
   font-weight: 700;
   margin-bottom: 1.5rem;
   font-size: 1.1rem;
+  /* Touche de couleur discrète (demande explicite "un peu de couleur") -
+     dégradé entre les trois teintes de compétition, jamais une animation
+     ni un effet ludique. */
+  background: linear-gradient(90deg, var(--color-ligue1), var(--color-liga) 60%, var(--color-premier-league));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .app-nav ul {
@@ -331,6 +348,88 @@ summary:focus-visible {
 .badge-settled {
   background: rgba(34, 197, 94, 0.15);
   color: var(--color-settled);
+}
+
+/* --- Onglets de compétition (CompetitionTabs.tsx) -----------------------
+   Un onglet par championnat disponible, teinte distincte par compétition
+   (purement cosmétique) - même esprit sobre que le reste de l'interface,
+   pas de ludification. */
+.competition-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.competition-tab {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.competition-tab:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.competition-tab.tab-ligue1.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--color-ligue1);
+  color: var(--color-ligue1);
+}
+
+.competition-tab.tab-liga.active {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: var(--color-liga);
+  color: var(--color-liga);
+}
+
+.competition-tab.tab-premier_league.active {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: var(--color-premier-league);
+  color: var(--color-premier-league);
+}
+
+.competition-tab.tab-all.active {
+  background: var(--color-border);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+/* --- Carte "pronostic du modèle" (Value Bet, AnalyzeMatch.tsx) --------- */
+
+.favored-side-summary {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-4);
+}
+
+.favored-side-summary strong {
+  color: var(--color-favored);
+}
+
+.value-bet-card-favored {
+  border-color: var(--color-favored);
+  box-shadow: 0 0 0 1px var(--color-favored);
+}
+
+.favored-badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--color-favored);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
 }
 
 .filters {
@@ -578,6 +677,13 @@ summary:focus-visible {
   color: var(--color-text-muted);
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
+}
+
+/* Rappel "heure estimée" (AnalyzeMatch.tsx/MatchDetail.tsx) - plus visible
+   qu'un `.hint` neutre, jamais masqué (voir types.ts::kickoff_utc_estimated). */
+.kickoff-estimated-hint {
+  border-left: 3px solid var(--color-pending);
+  padding-left: var(--space-3);
 }
 
 .reason-list {

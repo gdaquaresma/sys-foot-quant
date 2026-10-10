@@ -133,6 +133,7 @@ const FIXTURE_PREDICTION_NO_MARKET: MatchDecisionOutput = {
   decision: { decision: 'NO_BET', decision_reason: ['MARKET_DATA_UNAVAILABLE'] },
   engine_version: 'final-engine-mvp-0.1.0',
   parameters_snapshot: { require_calibration_ok: true, min_edge_threshold: null, decision_offset_hours: 2.0 },
+  kickoff_utc_estimated: false,
 }
 
 const FIXTURE_PREDICTION_WITH_MARKET: MatchDecisionOutput = {
@@ -228,7 +229,7 @@ async function searchAndSelectMatch() {
   // Le chargement des matchs est désormais automatique dès que compétition
   // ET saison sont choisies - plus de bouton "Rechercher" intermédiaire à
   // cliquer (voir le `useEffect` dédié dans AnalyzeMatch.tsx).
-  fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+  fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
   fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
   await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
   fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Marseille' } })
@@ -241,19 +242,18 @@ afterEach(() => {
 })
 
 describe('AnalyzeMatch', () => {
-  it('propose des libellés lisibles pour la compétition et la saison, jamais un identifiant technique à taper', async () => {
+  it('propose des libellés lisibles pour la compétition (onglets) et la saison (menu), jamais un identifiant technique à taper', async () => {
     // Audit UX : l'utilisateur ne doit pas avoir à connaître/saisir
-    // "ligue1"/"2024_25" - des menus déroulants avec des libellés humains
-    // remplacent les anciens champs texte libres.
+    // "ligue1"/"2024_25" - des onglets de compétition (un par championnat
+    // disponible) et un menu déroulant de saison, avec des libellés
+    // humains, remplacent les anciens champs texte libres.
     renderPage()
 
-    const competitionSelect = screen.getByLabelText('Compétition') as HTMLSelectElement
     const seasonSelect = screen.getByLabelText('Saison') as HTMLSelectElement
-    expect(competitionSelect.tagName).toBe('SELECT')
     expect(seasonSelect.tagName).toBe('SELECT')
-    expect(screen.getByRole('option', { name: 'Ligue 1' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'La Liga' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Premier League' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Ligue 1' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'La Liga' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Premier League' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '2024/25' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '2026/27' })).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('identifiant technique')).not.toBeInTheDocument()
@@ -263,7 +263,7 @@ describe('AnalyzeMatch', () => {
     getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
     renderPage()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
 
     await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
@@ -278,7 +278,7 @@ describe('AnalyzeMatch', () => {
     expect(screen.queryByRole('button', { name: 'Rechercher les matchs' })).not.toBeInTheDocument()
     expect(getMatchesMock).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
     expect(getMatchesMock).not.toHaveBeenCalled() // saison manquante
 
     fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
@@ -726,14 +726,50 @@ describe('AnalyzeMatch', () => {
     })
   })
 
+  describe('pronostic du modèle (Over/Under favori)', () => {
+    it('désigne le côté dont la probabilité est la plus haute, avec sa probabilité exacte, et le signale visuellement sur sa carte', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      // FIXTURE_PREDICTION_NO_MARKET : P(Over 2.5)=0.438 -> P(Under 2.5)=0.562,
+      // Under est donc le côté favori.
+      await waitFor(() => expect(screen.getByText('UNDER 2.5 (56.2 %)')).toBeInTheDocument())
+      const underCard = screen.getByText('Under 2.5').closest('.value-bet-card')!
+      const overCard = screen.getByText('Over 2.5').closest('.value-bet-card')!
+      expect(underCard.className).toContain('value-bet-card-favored')
+      expect(overCard.className).not.toContain('value-bet-card-favored')
+      expect(screen.getByText('Favori du modèle')).toBeInTheDocument()
+      // Le badge "Favori du modèle" n'apparaît que sur la carte favorite (Under).
+      expect(underCard.textContent).toContain('Favori du modèle')
+      expect(overCard.textContent).not.toContain('Favori du modèle')
+    })
+
+    it('n’affiche jamais le pronostic comme une recommandation de pari (BET) - texte factuel uniquement', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText('UNDER 2.5 (56.2 %)')).toBeInTheDocument())
+      const summary = screen.getByText('UNDER 2.5 (56.2 %)').closest('p.favored-side-summary')!
+      expect(summary.textContent).not.toMatch(/recommand|pariez|misez|jouez/i)
+      expect(screen.getByText('NO_BET')).toBeInTheDocument()
+    })
+  })
+
   // --- EXTENSION fixtures futures 2026/27 ---------------------------------
 
-  describe('fixtures futures (B/C) - analyse indisponible', () => {
-    it('désactive "Analyser le match" pour une fixture B (heure locale connue, kickoff_utc absent) et explique pourquoi', async () => {
+  describe('fixtures futures (B/C) - heure estimée (B, Ligue 1) ou analyse indisponible (C)', () => {
+    it('autorise "Analyser le match" pour une fixture B Ligue 1 (heure locale connue, kickoff_utc absent) avec une heure UTC estimée - demande produit explicite : l’heure ne doit jamais bloquer', async () => {
       getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B])
+      getPredictionMock.mockResolvedValue({ ...FIXTURE_PREDICTION_NO_MARKET, kickoff_utc_estimated: true })
       renderPage()
 
-      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
       fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
       await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
       fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
@@ -743,18 +779,26 @@ describe('AnalyzeMatch', () => {
       // Heure locale affichée explicitement comme telle, jamais comme UTC.
       expect(screen.getByText(/9 octobre 2026 · 20:45 \(heure locale, UTC non confirmée\)/)).toBeInTheDocument()
       expect(screen.getByText(/Match à venir/)).toBeInTheDocument()
+      // Rappel explicite AVANT même de cliquer "Analyser" : l'heure utilisée
+      // sera une estimation, jamais un fait masqué.
       expect(
-        screen.getByText('Analyse indisponible : heure connue localement, mais conversion UTC non confirmée.'),
+        screen.getByText(
+          "Heure de coup d'envoi estimée (conversion CET/CEST depuis l'heure locale publiée) - non confirmée par une seconde source indépendante.",
+        ),
       ).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Analyser le match' })).toBeDisabled()
-      expect(getPredictionMock).not.toHaveBeenCalled()
+      const analyzeButton = screen.getByRole('button', { name: 'Analyser le match' })
+      expect(analyzeButton).not.toBeDisabled()
+
+      fireEvent.click(analyzeButton)
+      await waitFor(() => expect(getPredictionMock).toHaveBeenCalled())
+      expect(screen.getByText('NO_BET')).toBeInTheDocument()
     })
 
     it('désactive "Analyser le match" pour une fixture C (aucune heure publiée) et explique pourquoi', async () => {
       getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_C])
       renderPage()
 
-      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
       fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
       await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
       fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
@@ -775,7 +819,7 @@ describe('AnalyzeMatch', () => {
       getMatchesMock.mockResolvedValue([FIXTURE_MATCH_STATE_B, FIXTURE_MATCH_STATE_C])
       renderPage()
 
-      fireEvent.change(screen.getByLabelText('Compétition'), { target: { value: 'ligue1' } })
+      fireEvent.click(screen.getByRole('tab', { name: 'Ligue 1' }))
       fireEvent.change(screen.getByLabelText('Saison'), { target: { value: '2026_27' } })
       await waitFor(() => expect(screen.getByLabelText('Équipe à domicile')).toBeInTheDocument())
       fireEvent.change(screen.getByLabelText('Équipe à domicile'), { target: { value: 'Lens' } })
