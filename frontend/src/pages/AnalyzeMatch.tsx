@@ -64,6 +64,14 @@ function describeMatchDateTime(match: MatchResponse): string {
  * pas réellement. */
 const MARKET_THRESHOLD = '2.5'
 
+/** Seuils SUPPLÉMENTAIRES (demande explicite) pour lesquels le moteur
+ * calcule déjà une probabilité/cote juste (`calibration.probabilities`/
+ * `pricing.fair_price`, INCHANGÉS - mêmes champs que 2.5, jamais un
+ * nouveau calcul) mais pour lesquels AUCUNE cote de marché réelle n'existe
+ * dans le corpus (voir `MARKET_THRESHOLD` ci-dessus) - affichés en
+ * projection seule, jamais comparés à un marché inexistant. */
+const PROJECTION_ONLY_THRESHOLDS = ['3.5', '4.5']
+
 type SearchState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -86,18 +94,20 @@ interface SideView {
   fairPrice: number
 }
 
-/** Dérive la vue Over/Under 2.5 du modèle PRINCIPAL. `over` vient
- * directement de `calibration.probabilities`/`pricing.fair_price` (API,
- * aucune transformation). `under` est son complément - voir le
- * commentaire d'en-tête du fichier. Retourne `null` si le modèle principal
- * n'a pas de probabilités disponibles (historique insuffisant), jamais une
- * valeur inventée. */
-function buildPrimaryModelMarketView(prediction: MatchDecisionOutput): { over: SideView; under: SideView } | null {
+/** Dérive la vue Over/Under d'un SEUIL donné (2.5, ou un des
+ * `PROJECTION_ONLY_THRESHOLDS`) pour le modèle PRINCIPAL - même fonction
+ * pour les deux cas, seul le seuil change. `over` vient directement de
+ * `calibration.probabilities`/`pricing.fair_price` (API, aucune
+ * transformation). `under` est son complément - voir le commentaire
+ * d'en-tête du fichier. Retourne `null` si le modèle principal n'a pas de
+ * probabilités disponibles pour CE seuil (historique insuffisant), jamais
+ * une valeur inventée. */
+function buildPrimaryModelMarketView(prediction: MatchDecisionOutput, threshold: string): { over: SideView; under: SideView } | null {
   const calibration = prediction.calibration[prediction.primary_model]
   const pricing = prediction.pricing[prediction.primary_model]
-  const overProbability = calibration?.probabilities?.[MARKET_THRESHOLD]
+  const overProbability = calibration?.probabilities?.[threshold]
   if (overProbability === undefined || overProbability === null || !pricing) return null
-  const overFairPrice = pricing.fair_price[MARKET_THRESHOLD]
+  const overFairPrice = pricing.fair_price[threshold]
 
   // Complément direct - même convention que `model_probs["Under"] = 1.0 -
   // model_probability_over` déjà calculée par `compare_over_under_to_market`
@@ -260,6 +270,37 @@ function MarketBlock({
       ) : (
         <p className="hint">Entrez une cote de marché pour vérifier si une Value Bet est actuellement présente.</p>
       )}
+    </div>
+  )
+}
+
+/** Carte de projection pour un seuil SANS marché comparable (voir
+ * `PROJECTION_ONLY_THRESHOLDS`) - même probabilité/cote juste qu'une
+ * `MarketBlock`, mais JAMAIS de champ "cote renseignée", de badge VALUE ni
+ * de seuil mathématique de Value Bet : rien de tout cela n'a de sens sans
+ * cote de marché réelle à comparer, et en suggérer un serait fabriquer une
+ * fonctionnalité que le moteur ne fournit pas pour cette ligne. */
+function ProjectionBlock({ label, side, favored }: { label: string; side: SideView; favored: boolean }) {
+  return (
+    <div className={`card value-bet-card${favored ? ' value-bet-card-favored' : ''}`}>
+      <h3>
+        {label}
+        {favored && <span className="favored-badge">Favori du modèle</span>}
+      </h3>
+      <dl className="value-bet-stats">
+        <div>
+          <dt>Probabilité modèle</dt>
+          <dd>{formatProbability(side.probability)}</dd>
+        </div>
+        <div>
+          <dt>Cote juste</dt>
+          <dd>{formatOdds(side.fairPrice)}</dd>
+        </div>
+      </dl>
+      <p className="hint">
+        Projection du modèle uniquement - aucune cote de marché n'est comparée pour cette ligne (le corpus ne publie
+        une cote Over/Under que pour 2.5 buts).
+      </p>
     </div>
   )
 }
@@ -602,8 +643,18 @@ export function AnalyzeMatch() {
     runPrediction(activeMatch)
   }
 
-  const marketView = predictionState?.status === 'ready' ? buildPrimaryModelMarketView(predictionState.prediction) : null
+  const marketView = predictionState?.status === 'ready' ? buildPrimaryModelMarketView(predictionState.prediction, MARKET_THRESHOLD) : null
   const market = predictionState?.status === 'ready' ? predictionState.prediction.market : null
+  // Projections supplémentaires (3.5, 4.5) - voir PROJECTION_ONLY_THRESHOLDS.
+  // Un seuil sans probabilité disponible (historique insuffisant) est
+  // simplement absent de cette liste, jamais une entrée vide affichée.
+  const projectionViews =
+    predictionState?.status === 'ready'
+      ? PROJECTION_ONLY_THRESHOLDS.map((threshold) => ({
+          threshold,
+          view: buildPrimaryModelMarketView(predictionState.prediction, threshold),
+        })).filter((entry): entry is { threshold: string; view: { over: SideView; under: SideView } } => entry.view !== null)
+      : []
 
   return (
     <div className="page analyze-match">
@@ -799,6 +850,31 @@ export function AnalyzeMatch() {
                         favored={favoredSide(marketView) === 'Under'}
                       />
                     </div>
+                  </>
+                )}
+
+                {projectionViews.length > 0 && (
+                  <>
+                    <h2>Autres lignes de buts</h2>
+                    <p className="hint">
+                      Le moteur calcule aussi ces seuils, mais aucune cote de marché n'est comparée ici (le corpus ne
+                      publie une cote Over/Under que pour la ligne 2.5) - projection du modèle uniquement.
+                    </p>
+                    {projectionViews.map(({ threshold, view }) => (
+                      <div key={threshold} className="projection-threshold-block">
+                        <p className="favored-side-summary">
+                          Pronostic du modèle ({threshold} buts) :{' '}
+                          <strong>
+                            {favoredSide(view) === 'Over' ? 'OVER' : 'UNDER'} {threshold} (
+                            {formatProbability(favoredSide(view) === 'Over' ? view.over.probability : view.under.probability)})
+                          </strong>
+                        </p>
+                        <div className="value-bet-grid">
+                          <ProjectionBlock label={`Over ${threshold}`} side={view.over} favored={favoredSide(view) === 'Over'} />
+                          <ProjectionBlock label={`Under ${threshold}`} side={view.under} favored={favoredSide(view) === 'Under'} />
+                        </div>
+                      </div>
+                    ))}
                   </>
                 )}
 

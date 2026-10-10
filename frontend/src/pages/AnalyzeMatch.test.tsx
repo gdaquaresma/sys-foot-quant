@@ -741,8 +741,10 @@ describe('AnalyzeMatch', () => {
       const overCard = screen.getByText('Over 2.5').closest('.value-bet-card')!
       expect(underCard.className).toContain('value-bet-card-favored')
       expect(overCard.className).not.toContain('value-bet-card-favored')
-      expect(screen.getByText('Favori du modèle')).toBeInTheDocument()
-      // Le badge "Favori du modèle" n'apparaît que sur la carte favorite (Under).
+      // Le badge "Favori du modèle" n'apparaît que sur la carte favorite (Under) -
+      // d'autres cartes de projection (3.5/4.5) portent aussi ce badge, voir le
+      // bloc "pronostic par seuil supplémentaire" plus bas, d'où une vérification
+      // scopée à CETTE carte plutôt qu'un `getByText` global.
       expect(underCard.textContent).toContain('Favori du modèle')
       expect(overCard.textContent).not.toContain('Favori du modèle')
     })
@@ -758,6 +760,57 @@ describe('AnalyzeMatch', () => {
       const summary = screen.getByText('UNDER 2.5 (56.2 %)').closest('p.favored-side-summary')!
       expect(summary.textContent).not.toMatch(/recommand|pariez|misez|jouez/i)
       expect(screen.getByText('NO_BET')).toBeInTheDocument()
+    })
+  })
+
+  describe('autres lignes de buts (3.5, 4.5 - projection seule, demande explicite)', () => {
+    it('affiche la probabilité et la cote juste pour 3.5 ET 4.5, avec le côté favori signalé par carte', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      // FIXTURE_PREDICTION_NO_MARKET : P(Over 3.5)=0.2 -> P(Under 3.5)=0.8 ;
+      // P(Over 4.5)=0.1 -> P(Under 4.5)=0.9 - Under favori dans les deux cas.
+      await waitFor(() => expect(screen.getByText('Autres lignes de buts')).toBeInTheDocument())
+      expect(screen.getByText('UNDER 3.5 (80.0 %)')).toBeInTheDocument()
+      expect(screen.getByText('UNDER 4.5 (90.0 %)')).toBeInTheDocument()
+
+      const under35Card = screen.getByText('Under 3.5').closest('.value-bet-card')!
+      const over35Card = screen.getByText('Over 3.5').closest('.value-bet-card')!
+      expect(under35Card.textContent).toContain('80.0 %')
+      expect(under35Card.textContent).toContain('1.25') // cote juste Under = 1 / 0.8
+      expect(under35Card.textContent).toContain('Favori du modèle')
+      expect(over35Card.textContent).not.toContain('Favori du modèle')
+
+      const under45Card = screen.getByText('Under 4.5').closest('.value-bet-card')!
+      expect(under45Card.textContent).toContain('90.0 %')
+    })
+
+    it('n’affiche jamais de cote renseignée, de badge VALUE ni de champ de saisie pour ces seuils - aucun marché réel à comparer', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_NO_MARKET)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText('Autres lignes de buts')).toBeInTheDocument())
+      const under35Card = screen.getByText('Under 3.5').closest('.value-bet-card')!
+      expect(under35Card.textContent).not.toContain('Cote renseignée')
+      expect(under35Card.textContent).not.toMatch(/VALUE/)
+      expect(under35Card.querySelector('input')).toBeNull()
+    })
+
+    it('reste absent quand les probabilités sont indisponibles (historique insuffisant) - aucune régression', async () => {
+      getMatchesMock.mockResolvedValue(FIXTURE_MATCHES)
+      getPredictionMock.mockResolvedValue(FIXTURE_PREDICTION_INSUFFICIENT_DATA)
+      renderPage()
+      await searchAndSelectMatch()
+      fireEvent.click(screen.getByRole('button', { name: 'Analyser le match' }))
+
+      await waitFor(() => expect(screen.getByText(/Probabilités indisponibles pour ce match/)).toBeInTheDocument())
+      expect(screen.queryByText('Autres lignes de buts')).not.toBeInTheDocument()
     })
   })
 

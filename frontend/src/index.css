@@ -460,6 +460,10 @@ summary:focus-visible {
   font-weight: 700;
 }
 
+.projection-threshold-block {
+  margin-bottom: var(--space-5);
+}
+
 /* --- Carte "pronostic du modèle" (Value Bet, AnalyzeMatch.tsx) --------- */
 
 .favored-side-summary {
