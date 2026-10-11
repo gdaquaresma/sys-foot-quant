@@ -39,12 +39,16 @@ def test_list_matches_returns_all_matches_for_a_valid_selection() -> None:
 def test_list_matches_2026_27_returns_only_the_current_season_file_not_the_training_aggregate() -> None:
     """Verifie explicitement la separation avec predict_match._CURRENT_SEASON_SOURCES
     (qui agrege 3 fichiers pour l'entrainement) - ce catalogue doit retourner
-    UNIQUEMENT les 36 matchs reels de la saison 2026/27 elle-meme, jamais
-    ~650 matchs agregeant l'historique."""
+    UNIQUEMENT les matchs reels de la saison 2026/27 elle-meme (51 au
+    2026-10-11, suite a la premiere execution reelle de la tache planifiee
+    locale - launchd, scripts/cron_sync_and_oddsportal.sh - qui a
+    synchronise 5 nouveaux matchs joues depuis le dernier resync manuel du
+    2026-10-10 ou le compte etait de 46), jamais ~650 matchs agregeant
+    l'historique."""
     with open(_LIGUE1_2026_PATH, encoding="utf-8") as f:
         raw = json.load(f)
     matches = match_catalog.list_matches("ligue1", "2026_27")
-    assert len(matches) == len(raw) == 36
+    assert len(matches) == len(raw) == 51
     assert all(m.season == "2026_27" for m in matches)
 
 
@@ -117,12 +121,22 @@ def test_list_teams_rejects_unknown_competition() -> None:
         match_catalog.list_teams("bundesliga", "2024_25")
 
 
-def test_list_matches_rejects_a_competition_not_available_for_the_current_season() -> None:
-    """``premier_league``/``liga`` n'ont pas de fichier 2026/27 dans ce
-    catalogue (seul ``ligue1`` en a un) - refus explicite, jamais un
-    catalogue vide silencieux."""
-    with pytest.raises(match_catalog.MatchCatalogError, match="Competition inconnue"):
-        match_catalog.list_matches("premier_league", "2026_27")
+def test_list_matches_accepts_premier_league_and_liga_for_the_current_season() -> None:
+    """EXTENSION (2026-10-11) : ``premier_league``/``liga`` sont desormais
+    ENREGISTRES dans ``_SEASON_FILES`` pour 2026/27, exactement comme
+    ``ligue1`` - ce test couvrait auparavant le refus explicite inverse
+    (fichier volontairement non enregistre tant que la deduplication
+    inter-sources n'existait pas). Desormais sans risque de doublon :
+    ``routes_matches._list_catalog_entries`` deduplique explicitement par
+    couple exact (home_team, away_team) avant de fusionner avec
+    ``future_fixture_catalog`` (voir le CORRECTIF DEDUPLICATION de ce
+    module, 2026-10-11, et ``tests/integration/test_api_matches.py``).
+    Ce catalogue lui-meme (``match_catalog``, sans fusion) doit donc
+    desormais retourner les matchs Understat deja joues pour ces deux
+    competitions, sans lever ``MatchCatalogError``."""
+    matches = match_catalog.list_matches("premier_league", "2026_27")
+    assert len(matches) > 0
+    assert all(m.competition == "premier_league" and m.season == "2026_27" for m in matches)
 
 
 # --- 6. saison inconnue ------------------------------------------------------
@@ -265,7 +279,7 @@ def test_list_matches_is_deterministic_across_repeated_calls() -> None:
 @pytest.mark.parametrize("competition,season", [
     ("ligue1", "2024_25"), ("premier_league", "2024_25"), ("liga", "2024_25"),
     ("ligue1", "2025_26"), ("premier_league", "2025_26"), ("liga", "2025_26"),
-    ("ligue1", "2026_27"),
+    ("ligue1", "2026_27"), ("premier_league", "2026_27"), ("liga", "2026_27"),
 ])
 def test_list_matches_works_for_every_real_canonical_file(competition, season) -> None:
     matches = match_catalog.list_matches(competition, season)

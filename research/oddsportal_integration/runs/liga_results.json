@@ -1,0 +1,2008 @@
+{
+  "competition": "liga",
+  "source_url": "https://www.oddsportal.com/football/spain/laliga/results/",
+  "fetched_at_utc": "2026-10-11T12:56:44.678666+00:00",
+  "match_count": 50,
+  "matches": [
+    {
+      "event_id": 10971147,
+      "tournament_name": "LaLiga",
+      "home_team": "Racing Santander",
+      "away_team": "Valencia",
+      "kickoff_utc": "2026-10-11T19:00:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Estadio El Sardinero",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0bxv464x0xshsbj",
+          "avg_odds": 2.24,
+          "max_odds": 2.33
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0bxv498x0x0",
+          "avg_odds": 3.53,
+          "max_odds": 3.65
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0bxv464x0xshsbl",
+          "avg_odds": 3.2,
+          "max_odds": 3.29
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971137,
+      "tournament_name": "LaLiga",
+      "home_team": "Betis",
+      "away_team": "Osasuna",
+      "kickoff_utc": "2026-10-11T16:30:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Estadio de La Cartuja",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq01xv464x0xshsav",
+          "avg_odds": 1.5,
+          "max_odds": 1.56
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq01xv498x0x0",
+          "avg_odds": 4.54,
+          "max_odds": 4.7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq01xv464x0xshsb1",
+          "avg_odds": 6.31,
+          "max_odds": 6.75
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971153,
+      "tournament_name": "LaLiga",
+      "home_team": "Real Sociedad",
+      "away_team": "Dep. A Coruna",
+      "kickoff_utc": "2026-10-11T14:15:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Anoeta",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0hxv464x0xshsbv",
+          "avg_odds": 1.62,
+          "max_odds": 1.66
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0hxv498x0x0",
+          "avg_odds": 4.06,
+          "max_odds": 4.3
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq0hxv464x0xshsc1",
+          "avg_odds": 5.46,
+          "max_odds": 5.75
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971139,
+      "tournament_name": "LaLiga",
+      "home_team": "Elche",
+      "away_team": "Celta Vigo",
+      "kickoff_utc": "2026-10-11T12:00:00+00:00",
+      "status": "1st Half",
+      "is_finished": false,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Estadio Manuel Martínez Valero",
+      "raw_partial_result": "0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq03xv464x0xshsb3",
+          "avg_odds": 3.17,
+          "max_odds": 3.25
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq03xv498x0x0",
+          "avg_odds": 3.28,
+          "max_odds": 3.41
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "aeq03xv464x0xshsb5",
+          "avg_odds": 2.34,
+          "max_odds": 2.43
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971151,
+      "tournament_name": "LaLiga",
+      "home_team": "Real Madrid",
+      "away_team": "Villarreal",
+      "kickoff_utc": "2026-10-10T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Estadio Santiago Bernabéu",
+      "raw_partial_result": "0:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeq0fxv464x0xshsbr",
+          "avg_odds": 1.33,
+          "max_odds": 1.36
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq0fxv498x0x0",
+          "avg_odds": 5.85,
+          "max_odds": 6.4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq0fxv464x0xshsbt",
+          "avg_odds": 7.95,
+          "max_odds": 8.37
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971141,
+      "tournament_name": "LaLiga",
+      "home_team": "Barcelona",
+      "away_team": "Getafe",
+      "kickoff_utc": "2026-10-10T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 0,
+      "venue": "Camp Nou",
+      "raw_partial_result": "2:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeq05xv464x0xshsb7",
+          "avg_odds": 1.12,
+          "max_odds": 1.14
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq05xv498x0x0",
+          "avg_odds": 9.8,
+          "max_odds": 11.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq05xv464x0xshsb9",
+          "avg_odds": 20.39,
+          "max_odds": 27
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971135,
+      "tournament_name": "LaLiga",
+      "home_team": "Alaves",
+      "away_team": "Atl. Madrid",
+      "kickoff_utc": "2026-10-10T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 2,
+      "venue": "Estadio Mendizorrotza",
+      "raw_partial_result": "1:1, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvvxv464x0xshsar",
+          "avg_odds": 4.54,
+          "max_odds": 4.65
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvvxv498x0x0",
+          "avg_odds": 3.68,
+          "max_odds": 3.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvvxv464x0xshsat",
+          "avg_odds": 1.8,
+          "max_odds": 1.86
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971149,
+      "tournament_name": "LaLiga",
+      "home_team": "Rayo Vallecano",
+      "away_team": "Ath Bilbao",
+      "kickoff_utc": "2026-10-10T12:00:00+00:00",
+      "status": "Abandoned",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Campo de Futbol de Vallecas",
+      "raw_partial_result": "0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 3,
+          "outcome_id": "aeq0dxv464x0xshsbn",
+          "avg_odds": 3,
+          "max_odds": 3.1
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 3,
+          "outcome_id": "aeq0dxv498x0x0",
+          "avg_odds": 3.25,
+          "max_odds": 3.41
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 3,
+          "outcome_id": "aeq0dxv464x0xshsbp",
+          "avg_odds": 2.47,
+          "max_odds": 2.54
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971145,
+      "tournament_name": "LaLiga",
+      "home_team": "Malaga",
+      "away_team": "Espanyol",
+      "kickoff_utc": "2026-10-09T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Estadio La Rosaleda",
+      "raw_partial_result": "0:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq09xv464x0xshsbf",
+          "avg_odds": 2.91,
+          "max_odds": 3.05
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeq09xv498x0x0",
+          "avg_odds": 3.24,
+          "max_odds": 3.41
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeq09xv464x0xshsbh",
+          "avg_odds": 2.53,
+          "max_odds": 2.63
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971131,
+      "tournament_name": "LaLiga",
+      "home_team": "Valencia",
+      "away_team": "Real Sociedad",
+      "kickoff_utc": "2026-09-20T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Estadio de Mestalla",
+      "raw_partial_result": "0:1, 2:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvrxv464x0xshsaj",
+          "avg_odds": 2.99,
+          "max_odds": 3.18
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvrxv498x0x0",
+          "avg_odds": 3.36,
+          "max_odds": 3.45
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvrxv464x0xshsal",
+          "avg_odds": 2.41,
+          "max_odds": 2.54
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971121,
+      "tournament_name": "LaLiga",
+      "home_team": "Dep. A Coruna",
+      "away_team": "Betis",
+      "kickoff_utc": "2026-09-20T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Estadio Municipal de Riazor",
+      "raw_partial_result": "0:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvhxv464x0xshs9v",
+          "avg_odds": 3.87,
+          "max_odds": 3.98
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvhxv498x0x0",
+          "avg_odds": 3.77,
+          "max_odds": 3.94
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvhxv464x0xshsa1",
+          "avg_odds": 1.91,
+          "max_odds": 2.05
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971133,
+      "tournament_name": "LaLiga",
+      "home_team": "Villarreal",
+      "away_team": "Levante",
+      "kickoff_utc": "2026-09-20T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 1,
+      "venue": "Estadio de la Ceramica",
+      "raw_partial_result": "1:1, 2:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvtxv464x0xshsan",
+          "avg_odds": 1.55,
+          "max_odds": 1.59
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvtxv498x0x0",
+          "avg_odds": 4.49,
+          "max_odds": 4.7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvtxv464x0xshsap",
+          "avg_odds": 5.52,
+          "max_odds": 5.9
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971117,
+      "tournament_name": "LaLiga",
+      "home_team": "Atl. Madrid",
+      "away_team": "Real Madrid",
+      "kickoff_utc": "2026-09-20T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Metropolitano Stadium",
+      "raw_partial_result": "0:0, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvdxv464x0xshs9n",
+          "avg_odds": 3.62,
+          "max_odds": 3.75
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvdxv498x0x0",
+          "avg_odds": 3.77,
+          "max_odds": 3.95
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvdxv464x0xshs9p",
+          "avg_odds": 1.98,
+          "max_odds": 2.05
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971125,
+      "tournament_name": "LaLiga",
+      "home_team": "Getafe",
+      "away_team": "Malaga",
+      "kickoff_utc": "2026-09-20T12:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Coliseum",
+      "raw_partial_result": "0:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvlxv464x0xshsa7",
+          "avg_odds": 1.91,
+          "max_odds": 1.96
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvlxv498x0x0",
+          "avg_odds": 3.28,
+          "max_odds": 3.42
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvlxv464x0xshsa9",
+          "avg_odds": 4.56,
+          "max_odds": 4.95
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971129,
+      "tournament_name": "LaLiga",
+      "home_team": "Sevilla",
+      "away_team": "Barcelona",
+      "kickoff_utc": "2026-09-19T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 3,
+      "venue": "Estadio Ramón Sánchez Pizjuán",
+      "raw_partial_result": "1:1, 0:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvpxv464x0xshsaf",
+          "avg_odds": 8.96,
+          "max_odds": 9.62
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvpxv498x0x0",
+          "avg_odds": 6.48,
+          "max_odds": 7.12
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvpxv464x0xshsah",
+          "avg_odds": 1.28,
+          "max_odds": 1.3
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971119,
+      "tournament_name": "LaLiga",
+      "home_team": "Celta Vigo",
+      "away_team": "Racing Santander",
+      "kickoff_utc": "2026-09-19T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 0,
+      "venue": "Estadio de Balaídos",
+      "raw_partial_result": "2:0, 3:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvfxv464x0xshs9r",
+          "avg_odds": 1.82,
+          "max_odds": 1.91
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvfxv498x0x0",
+          "avg_odds": 3.75,
+          "max_odds": 3.95
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvfxv464x0xshs9t",
+          "avg_odds": 4.33,
+          "max_odds": 4.47
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971115,
+      "tournament_name": "LaLiga",
+      "home_team": "Ath Bilbao",
+      "away_team": "Alaves",
+      "kickoff_utc": "2026-09-19T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Estadio San Mamés",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvbxv464x0xshs9j",
+          "avg_odds": 1.61,
+          "max_odds": 1.65
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvbxv498x0x0",
+          "avg_odds": 3.85,
+          "max_odds": 4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvbxv464x0xshs9l",
+          "avg_odds": 6.01,
+          "max_odds": 6.33
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971127,
+      "tournament_name": "LaLiga",
+      "home_team": "Osasuna",
+      "away_team": "Rayo Vallecano",
+      "kickoff_utc": "2026-09-19T12:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Estadio El Sadar",
+      "raw_partial_result": "1:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvnxv464x0xshsab",
+          "avg_odds": 2.7,
+          "max_odds": 2.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvnxv498x0x0",
+          "avg_odds": 3.22,
+          "max_odds": 3.35
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvnxv464x0xshsad",
+          "avg_odds": 2.71,
+          "max_odds": 2.81
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971123,
+      "tournament_name": "LaLiga",
+      "home_team": "Espanyol",
+      "away_team": "Elche",
+      "kickoff_utc": "2026-09-18T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 3,
+      "venue": "RCDE Stadium",
+      "raw_partial_result": "0:2, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvjxv464x0xshsa3",
+          "avg_odds": 1.78,
+          "max_odds": 1.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepvjxv498x0x0",
+          "avg_odds": 3.7,
+          "max_odds": 3.85
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepvjxv464x0xshsa5",
+          "avg_odds": 4.6,
+          "max_odds": 4.81
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971109,
+      "tournament_name": "LaLiga",
+      "home_team": "Malaga",
+      "away_team": "Villarreal",
+      "kickoff_utc": "2026-09-17T19:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 3,
+      "venue": "Estadio La Rosaleda",
+      "raw_partial_result": "1:2, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv5xv464x0xshs97",
+          "avg_odds": 3.54,
+          "max_odds": 3.76
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv5xv498x0x0",
+          "avg_odds": 3.6,
+          "max_odds": 3.75
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepv5xv464x0xshs99",
+          "avg_odds": 2.06,
+          "max_odds": 2.22
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971099,
+      "tournament_name": "LaLiga",
+      "home_team": "Betis",
+      "away_team": "Getafe",
+      "kickoff_utc": "2026-09-17T17:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Estadio de La Cartuja",
+      "raw_partial_result": "1:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepurxv464x0xshs8j",
+          "avg_odds": 1.51,
+          "max_odds": 1.53
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepurxv498x0x0",
+          "avg_odds": 4.06,
+          "max_odds": 4.3
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepurxv464x0xshs8l",
+          "avg_odds": 7.07,
+          "max_odds": 7.75
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971105,
+      "tournament_name": "LaLiga",
+      "home_team": "Barcelona",
+      "away_team": "Racing Santander",
+      "kickoff_utc": "2026-09-16T19:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 7,
+      "away_goals": 2,
+      "venue": "Camp Nou",
+      "raw_partial_result": "4:1, 3:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepv1xv464x0xshs8v",
+          "avg_odds": 1.06,
+          "max_odds": 1.08
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv1xv498x0x0",
+          "avg_odds": 14.76,
+          "max_odds": 17.39
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv1xv464x0xshs91",
+          "avg_odds": 27.93,
+          "max_odds": 41
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971097,
+      "tournament_name": "LaLiga",
+      "home_team": "Atl. Madrid",
+      "away_team": "Osasuna",
+      "kickoff_utc": "2026-09-16T17:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 4,
+      "away_goals": 0,
+      "venue": "Metropolitano Stadium",
+      "raw_partial_result": "1:0, 3:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepupxv464x0xshs8f",
+          "avg_odds": 1.31,
+          "max_odds": 1.35
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepupxv498x0x0",
+          "avg_odds": 5.33,
+          "max_odds": 5.7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepupxv464x0xshs8h",
+          "avg_odds": 9.99,
+          "max_odds": 11
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971101,
+      "tournament_name": "LaLiga",
+      "home_team": "Dep. A Coruna",
+      "away_team": "Sevilla",
+      "kickoff_utc": "2026-09-16T17:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Estadio Municipal de Riazor",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeputxv464x0xshs8n",
+          "avg_odds": 2.74,
+          "max_odds": 2.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeputxv498x0x0",
+          "avg_odds": 3.09,
+          "max_odds": 3.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeputxv464x0xshs8p",
+          "avg_odds": 2.79,
+          "max_odds": 2.91
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971103,
+      "tournament_name": "LaLiga",
+      "home_team": "Elche",
+      "away_team": "Real Madrid",
+      "kickoff_utc": "2026-09-15T19:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Estadio Manuel Martínez Valero",
+      "raw_partial_result": "0:2, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepuvxv464x0xshs8r",
+          "avg_odds": 12.71,
+          "max_odds": 14.5
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepuvxv498x0x0",
+          "avg_odds": 7.4,
+          "max_odds": 8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepuvxv464x0xshs8t",
+          "avg_odds": 1.2,
+          "max_odds": 1.21
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971095,
+      "tournament_name": "LaLiga",
+      "home_team": "Alaves",
+      "away_team": "Valencia",
+      "kickoff_utc": "2026-09-15T18:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Estadio Mendizorrotza",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepunxv464x0xshs8b",
+          "avg_odds": 1.73,
+          "max_odds": 1.78
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepunxv498x0x0",
+          "avg_odds": 3.51,
+          "max_odds": 3.71
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepunxv464x0xshs8d",
+          "avg_odds": 5.37,
+          "max_odds": 5.57
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971111,
+      "tournament_name": "LaLiga",
+      "home_team": "Rayo Vallecano",
+      "away_team": "Espanyol",
+      "kickoff_utc": "2026-09-15T17:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Estadio Municipal de Butarque",
+      "raw_partial_result": "2:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepv7xv464x0xshs9b",
+          "avg_odds": 2.26,
+          "max_odds": 2.34
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv7xv498x0x0",
+          "avg_odds": 3.26,
+          "max_odds": 3.43
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv7xv464x0xshs9d",
+          "avg_odds": 3.36,
+          "max_odds": 3.51
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971093,
+      "tournament_name": "LaLiga",
+      "home_team": "Villarreal",
+      "away_team": "Betis",
+      "kickoff_utc": "2026-09-14T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 2,
+      "venue": "Estadio de la Ceramica",
+      "raw_partial_result": "1:2, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepulxv464x0xshs87",
+          "avg_odds": 1.96,
+          "max_odds": 2.02
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepulxv498x0x0",
+          "avg_odds": 3.99,
+          "max_odds": 4.1
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepulxv464x0xshs89",
+          "avg_odds": 3.49,
+          "max_odds": 3.65
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971089,
+      "tournament_name": "LaLiga",
+      "home_team": "Real Sociedad",
+      "away_team": "Atl. Madrid",
+      "kickoff_utc": "2026-09-13T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 3,
+      "venue": "Anoeta",
+      "raw_partial_result": "0:0, 0:3",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepuhxv464x0xshs7v",
+          "avg_odds": 3.49,
+          "max_odds": 3.64
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepuhxv498x0x0",
+          "avg_odds": 3.59,
+          "max_odds": 3.68
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepuhxv464x0xshs81",
+          "avg_odds": 2.08,
+          "max_odds": 2.22
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971079,
+      "tournament_name": "LaLiga",
+      "home_team": "Getafe",
+      "away_team": "Dep. A Coruna",
+      "kickoff_utc": "2026-09-13T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Coliseum",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu7xv464x0xshs7b",
+          "avg_odds": 2.56,
+          "max_odds": 2.64
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepu7xv498x0x0",
+          "avg_odds": 2.96,
+          "max_odds": 3.14
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu7xv464x0xshs7d",
+          "avg_odds": 3.16,
+          "max_odds": 3.37
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971081,
+      "tournament_name": "LaLiga",
+      "home_team": "Levante",
+      "away_team": "Barcelona",
+      "kickoff_utc": "2026-09-13T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 4,
+      "venue": "Estadi Ciutat de València",
+      "raw_partial_result": "0:2, 2:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu9xv464x0xshs7f",
+          "avg_odds": 13.22,
+          "max_odds": 14.5
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu9xv498x0x0",
+          "avg_odds": 8.31,
+          "max_odds": 8.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepu9xv464x0xshs7h",
+          "avg_odds": 1.18,
+          "max_odds": 1.2
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971077,
+      "tournament_name": "LaLiga",
+      "home_team": "Celta Vigo",
+      "away_team": "Malaga",
+      "kickoff_utc": "2026-09-13T12:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Estadio de Balaídos",
+      "raw_partial_result": "1:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu5xv464x0xshs77",
+          "avg_odds": 1.69,
+          "max_odds": 1.76
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepu5xv498x0x0",
+          "avg_odds": 3.67,
+          "max_odds": 3.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu5xv464x0xshs79",
+          "avg_odds": 5.44,
+          "max_odds": 5.7
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971087,
+      "tournament_name": "LaLiga",
+      "home_team": "Real Madrid",
+      "away_team": "Rayo Vallecano",
+      "kickoff_utc": "2026-09-12T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 4,
+      "away_goals": 1,
+      "venue": "Estadio Santiago Bernabéu",
+      "raw_partial_result": "3:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepufxv464x0xshs7r",
+          "avg_odds": 1.15,
+          "max_odds": 1.17
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepufxv498x0x0",
+          "avg_odds": 8.64,
+          "max_odds": 9.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepufxv464x0xshs7t",
+          "avg_odds": 17.18,
+          "max_odds": 19.5
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971075,
+      "tournament_name": "LaLiga",
+      "home_team": "Ath Bilbao",
+      "away_team": "Elche",
+      "kickoff_utc": "2026-09-12T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Estadio San Mamés",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu3xv464x0xshs73",
+          "avg_odds": 1.4,
+          "max_odds": 1.47
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepu3xv498x0x0",
+          "avg_odds": 4.89,
+          "max_odds": 5.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu3xv464x0xshs75",
+          "avg_odds": 7.8,
+          "max_odds": 8.3
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971083,
+      "tournament_name": "LaLiga",
+      "home_team": "Osasuna",
+      "away_team": "Espanyol",
+      "kickoff_utc": "2026-09-12T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 2,
+      "venue": "Estadio El Sadar",
+      "raw_partial_result": "0:2, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepubxv464x0xshs7j",
+          "avg_odds": 2.51,
+          "max_odds": 6.4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepubxv498x0x0",
+          "avg_odds": 3.28,
+          "max_odds": 4.6
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepubxv464x0xshs7l",
+          "avg_odds": 3.32,
+          "max_odds": 3.57
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971085,
+      "tournament_name": "LaLiga",
+      "home_team": "Racing Santander",
+      "away_team": "Alaves",
+      "kickoff_utc": "2026-09-12T12:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Estadio El Sardinero",
+      "raw_partial_result": "1:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepudxv464x0xshs7n",
+          "avg_odds": 2.67,
+          "max_odds": 2.77
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepudxv498x0x0",
+          "avg_odds": 3.47,
+          "max_odds": 3.62
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepudxv464x0xshs7p",
+          "avg_odds": 2.6,
+          "max_odds": 2.72
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971091,
+      "tournament_name": "LaLiga",
+      "home_team": "Sevilla",
+      "away_team": "Valencia",
+      "kickoff_utc": "2026-09-11T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Estadio Ramón Sánchez Pizjuán",
+      "raw_partial_result": "0:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepujxv464x0xshs83",
+          "avg_odds": 1.79,
+          "max_odds": 1.85
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepujxv498x0x0",
+          "avg_odds": 3.55,
+          "max_odds": 3.66
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepujxv464x0xshs85",
+          "avg_odds": 4.88,
+          "max_odds": 5.12
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971061,
+      "tournament_name": "LaLiga",
+      "home_team": "Elche",
+      "away_team": "Real Sociedad",
+      "kickoff_utc": "2026-09-07T19:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Estadio Manuel Martínez Valero",
+      "raw_partial_result": "0:2, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptlxv464x0xshs67",
+          "avg_odds": 3.17,
+          "max_odds": 3.29
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptlxv498x0x0",
+          "avg_odds": 3.42,
+          "max_odds": 3.56
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptlxv464x0xshs69",
+          "avg_odds": 2.3,
+          "max_odds": 2.36
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971065,
+      "tournament_name": "LaLiga",
+      "home_team": "Getafe",
+      "away_team": "Celta Vigo",
+      "kickoff_utc": "2026-09-07T17:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Coliseum",
+      "raw_partial_result": "1:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptpxv464x0xshs6f",
+          "avg_odds": 2.77,
+          "max_odds": 2.88
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptpxv498x0x0",
+          "avg_odds": 2.72,
+          "max_odds": 2.84
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptpxv464x0xshs6h",
+          "avg_odds": 3.17,
+          "max_odds": 3.29
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971063,
+      "tournament_name": "LaLiga",
+      "home_team": "Espanyol",
+      "away_team": "Sevilla",
+      "kickoff_utc": "2026-09-06T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "RCDE Stadium",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptnxv464x0xshs6b",
+          "avg_odds": 2.31,
+          "max_odds": 2.41
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptnxv498x0x0",
+          "avg_odds": 3.21,
+          "max_odds": 3.3
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptnxv464x0xshs6d",
+          "avg_odds": 3.34,
+          "max_odds": 3.5
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971055,
+      "tournament_name": "LaLiga",
+      "home_team": "Alaves",
+      "away_team": "Osasuna",
+      "kickoff_utc": "2026-09-06T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 2,
+      "venue": "Estadio Mendizorrotza",
+      "raw_partial_result": "2:0, 3:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptfxv464x0xshs5r",
+          "avg_odds": 2.23,
+          "max_odds": 2.31
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptfxv498x0x0",
+          "avg_odds": 3.09,
+          "max_odds": 3.23
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptfxv464x0xshs5t",
+          "avg_odds": 3.66,
+          "max_odds": 3.78
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971067,
+      "tournament_name": "LaLiga",
+      "home_team": "Malaga",
+      "away_team": "Levante",
+      "kickoff_utc": "2026-09-06T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Estadio La Rosaleda",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptrxv464x0xshs6j",
+          "avg_odds": 2.41,
+          "max_odds": 2.47
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptrxv498x0x0",
+          "avg_odds": 3.31,
+          "max_odds": 3.41
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptrxv464x0xshs6l",
+          "avg_odds": 3.03,
+          "max_odds": 3.15
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971071,
+      "tournament_name": "LaLiga",
+      "home_team": "Valencia",
+      "away_team": "Barcelona",
+      "kickoff_utc": "2026-09-06T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 5,
+      "venue": "Estadio de Mestalla",
+      "raw_partial_result": "0:2, 0:3",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptvxv464x0xshs6r",
+          "avg_odds": 10.81,
+          "max_odds": 11.5
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptvxv498x0x0",
+          "avg_odds": 6.43,
+          "max_odds": 7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptvxv464x0xshs6t",
+          "avg_odds": 1.26,
+          "max_odds": 1.28
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971073,
+      "tournament_name": "LaLiga",
+      "home_team": "Villarreal",
+      "away_team": "Dep. A Coruna",
+      "kickoff_utc": "2026-09-05T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Estadio de la Ceramica",
+      "raw_partial_result": "1:1, 1:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu1xv464x0xshs6v",
+          "avg_odds": 1.45,
+          "max_odds": 1.48
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepu1xv498x0x0",
+          "avg_odds": 4.79,
+          "max_odds": 5.25
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepu1xv464x0xshs71",
+          "avg_odds": 6.83,
+          "max_odds": 7.03
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971069,
+      "tournament_name": "LaLiga",
+      "home_team": "Rayo Vallecano",
+      "away_team": "Racing Santander",
+      "kickoff_utc": "2026-09-05T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 2,
+      "venue": "Estadio Municipal de Butarque",
+      "raw_partial_result": "2:2, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepttxv464x0xshs6n",
+          "avg_odds": 1.97,
+          "max_odds": 2.1
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepttxv498x0x0",
+          "avg_odds": 3.61,
+          "max_odds": 3.75
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepttxv464x0xshs6p",
+          "avg_odds": 3.78,
+          "max_odds": 3.95
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971057,
+      "tournament_name": "LaLiga",
+      "home_team": "Ath Bilbao",
+      "away_team": "Atl. Madrid",
+      "kickoff_utc": "2026-09-05T14:15:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 0,
+      "venue": "Estadio San Mamés",
+      "raw_partial_result": "0:0, 3:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepthxv464x0xshs5v",
+          "avg_odds": 2.78,
+          "max_odds": 2.9
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepthxv498x0x0",
+          "avg_odds": 3.33,
+          "max_odds": 3.48
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepthxv464x0xshs61",
+          "avg_odds": 2.61,
+          "max_odds": 2.7
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971059,
+      "tournament_name": "LaLiga",
+      "home_team": "Betis",
+      "away_team": "Real Madrid",
+      "kickoff_utc": "2026-09-04T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Estadio de La Cartuja",
+      "raw_partial_result": "0:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aeptjxv464x0xshs63",
+          "avg_odds": 6.28,
+          "max_odds": 6.79
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptjxv498x0x0",
+          "avg_odds": 5.08,
+          "max_odds": 5.4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aeptjxv464x0xshs65",
+          "avg_odds": 1.46,
+          "max_odds": 1.49
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971113,
+      "tournament_name": "LaLiga",
+      "home_team": "Real Sociedad",
+      "away_team": "Celta Vigo",
+      "kickoff_utc": "2026-09-03T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Anoeta",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv9xv464x0xshs9f",
+          "avg_odds": 1.77,
+          "max_odds": 1.83
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aepv9xv498x0x0",
+          "avg_odds": 3.71,
+          "max_odds": 3.85
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aepv9xv464x0xshs9h",
+          "avg_odds": 4.76,
+          "max_odds": 5.1
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971041,
+      "tournament_name": "LaLiga",
+      "home_team": "Barcelona",
+      "away_team": "Rayo Vallecano",
+      "kickoff_utc": "2026-08-31T19:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 2,
+      "venue": "Camp Nou",
+      "raw_partial_result": "2:1, 3:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aept1xv464x0xshs4v",
+          "avg_odds": 1.1,
+          "max_odds": 1.11
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aept1xv498x0x0",
+          "avg_odds": 10.9,
+          "max_odds": 13.87
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aept1xv464x0xshs51",
+          "avg_odds": 23.06,
+          "max_odds": 27.21
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    },
+    {
+      "event_id": 10971045,
+      "tournament_name": "LaLiga",
+      "home_team": "Osasuna",
+      "away_team": "Getafe",
+      "kickoff_utc": "2026-08-31T17:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Estadio El Sadar",
+      "raw_partial_result": "1:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "aept5xv464x0xshs57",
+          "avg_odds": 2.16,
+          "max_odds": 2.23
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aept5xv498x0x0",
+          "avg_odds": 2.9,
+          "max_odds": 2.98
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "aept5xv464x0xshs59",
+          "avg_odds": 4.24,
+          "max_odds": 4.55
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/spain/laliga/results/"
+    }
+  ]
+}

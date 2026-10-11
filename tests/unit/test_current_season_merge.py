@@ -238,11 +238,15 @@ def test_o_existing_match_content_is_never_altered_by_a_successful_merge() -> No
 
 
 def test_p_real_2026_file_bootstraps_cleanly_through_merge() -> None:
+    """Compte mis a jour (46 -> 51) suite a la premiere execution reelle
+    de la tache planifiee locale (launchd, 2026-10-11) : 5 nouveaux
+    matchs Ligue 1 synchronises via cli_sync_current_season.py - voir
+    scripts/cron_sync_and_oddsportal.sh."""
     with open(REAL_2026_FILE, encoding="utf-8") as f:
         real_matches = json.load(f)
     merged, diff = merge_current_season([], real_matches)
-    assert len(merged) == len(real_matches) == 36
-    assert len(diff.new_matches) == 36
+    assert len(merged) == len(real_matches) == 51
+    assert len(diff.new_matches) == 51
     assert not diff.has_inconsistency
 
 
@@ -250,7 +254,7 @@ def test_p_real_2026_file_reapplied_against_itself_is_fully_unchanged() -> None:
     with open(REAL_2026_FILE, encoding="utf-8") as f:
         real_matches = json.load(f)
     merged, diff = merge_current_season(real_matches, real_matches)
-    assert len(diff.unchanged_matches) == 36
+    assert len(diff.unchanged_matches) == 51
     assert not diff.new_matches
     assert not diff.has_inconsistency
     assert [m["id"] for m in merged] == [m["id"] for m in sorted(real_matches, key=lambda m: m["datetime"])]

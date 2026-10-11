@@ -1,0 +1,2008 @@
+{
+  "competition": "premier_league",
+  "source_url": "https://www.oddsportal.com/football/england/premier-league/results/",
+  "fetched_at_utc": "2026-10-11T12:56:46.504009+00:00",
+  "match_count": 50,
+  "matches": [
+    {
+      "event_id": 10852651,
+      "tournament_name": "Premier League",
+      "home_team": "Liverpool",
+      "away_team": "Manchester City",
+      "kickoff_utc": "2026-10-11T15:30:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Anfield",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab69bxv464x0xs9ejd",
+          "avg_odds": 3.25,
+          "max_odds": 3.37
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab69bxv498x0x0",
+          "avg_odds": 3.77,
+          "max_odds": 3.94
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab69bxv464x0xs9ejf",
+          "avg_odds": 2.13,
+          "max_odds": 2.2
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852645,
+      "tournament_name": "Premier League",
+      "home_team": "Crystal Palace",
+      "away_team": "Nottingham",
+      "kickoff_utc": "2026-10-11T13:00:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "Selhurst Park",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab695xv464x0xs9ej1",
+          "avg_odds": 2.85,
+          "max_odds": 3
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab695xv498x0x0",
+          "avg_odds": 3.36,
+          "max_odds": 3.48
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab695xv464x0xs9ej3",
+          "avg_odds": 2.54,
+          "max_odds": 2.62
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852647,
+      "tournament_name": "Premier League",
+      "home_team": "Hull",
+      "away_team": "Everton",
+      "kickoff_utc": "2026-10-11T13:00:00+00:00",
+      "status": "Scheduled",
+      "is_finished": false,
+      "home_goals": null,
+      "away_goals": null,
+      "venue": "MKM Stadium",
+      "raw_partial_result": null,
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab697xv464x0xs9ej5",
+          "avg_odds": 3.98,
+          "max_odds": 4.15
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab697xv498x0x0",
+          "avg_odds": 3.38,
+          "max_odds": 3.47
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 0,
+          "outcome_id": "ab697xv464x0xs9ej7",
+          "avg_odds": 2.03,
+          "max_odds": 2.13
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852653,
+      "tournament_name": "Premier League",
+      "home_team": "Manchester Utd",
+      "away_team": "Tottenham",
+      "kickoff_utc": "2026-10-10T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Old Trafford",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab69dxv464x0xs9ejh",
+          "avg_odds": 1.71,
+          "max_odds": 1.78
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab69dxv498x0x0",
+          "avg_odds": 4.18,
+          "max_odds": 4.4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab69dxv464x0xs9ejj",
+          "avg_odds": 4.47,
+          "max_odds": 4.6
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852639,
+      "tournament_name": "Premier League",
+      "home_team": "Aston Villa",
+      "away_team": "Brentford",
+      "kickoff_utc": "2026-10-10T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "Villa Park",
+      "raw_partial_result": "1:1, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68vxv464x0xs9eil",
+          "avg_odds": 2.56,
+          "max_odds": 2.68
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68vxv498x0x0",
+          "avg_odds": 3.6,
+          "max_odds": 3.69
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68vxv464x0xs9ein",
+          "avg_odds": 2.65,
+          "max_odds": 2.74
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852641,
+      "tournament_name": "Premier League",
+      "home_team": "Chelsea",
+      "away_team": "Bournemouth",
+      "kickoff_utc": "2026-10-10T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 1,
+      "venue": "Stamford Bridge",
+      "raw_partial_result": "2:0, 3:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab691xv464x0xs9eip",
+          "avg_odds": 1.83,
+          "max_odds": 1.89
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab691xv498x0x0",
+          "avg_odds": 3.92,
+          "max_odds": 4.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab691xv464x0xs9eir",
+          "avg_odds": 4.1,
+          "max_odds": 4.36
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852655,
+      "tournament_name": "Premier League",
+      "home_team": "Sunderland",
+      "away_team": "Brighton",
+      "kickoff_utc": "2026-10-10T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 2,
+      "venue": "Stadium of Light",
+      "raw_partial_result": "0:0, 0:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab69fxv464x0xs9ejl",
+          "avg_odds": 3.06,
+          "max_odds": 3.21
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab69fxv498x0x0",
+          "avg_odds": 3.36,
+          "max_odds": 3.54
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab69fxv464x0xs9ejn",
+          "avg_odds": 2.38,
+          "max_odds": 2.5
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852649,
+      "tournament_name": "Premier League",
+      "home_team": "Ipswich",
+      "away_team": "Fulham",
+      "kickoff_utc": "2026-10-10T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Portman Road",
+      "raw_partial_result": "0:0, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab699xv464x0xs9ej9",
+          "avg_odds": 3.06,
+          "max_odds": 3.16
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab699xv498x0x0",
+          "avg_odds": 3.41,
+          "max_odds": 3.55
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab699xv464x0xs9ejb",
+          "avg_odds": 2.36,
+          "max_odds": 2.43
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852637,
+      "tournament_name": "Premier League",
+      "home_team": "Arsenal",
+      "away_team": "Leeds",
+      "kickoff_utc": "2026-10-10T11:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Emirates Stadium",
+      "raw_partial_result": "0:0, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68txv464x0xs9eih",
+          "avg_odds": 1.44,
+          "max_odds": 1.48
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68txv498x0x0",
+          "avg_odds": 4.58,
+          "max_odds": 4.79
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68txv464x0xs9eij",
+          "avg_odds": 7.71,
+          "max_odds": 8.58
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852625,
+      "tournament_name": "Premier League",
+      "home_team": "Fulham",
+      "away_team": "Manchester Utd",
+      "kickoff_utc": "2026-09-20T15:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Craven Cottage",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68hxv464x0xs9ehp",
+          "avg_odds": 3.63,
+          "max_odds": 3.83
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68hxv498x0x0",
+          "avg_odds": 3.77,
+          "max_odds": 3.9
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68hxv464x0xs9ehr",
+          "avg_odds": 1.98,
+          "max_odds": 2.06
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852617,
+      "tournament_name": "Premier League",
+      "home_team": "Bournemouth",
+      "away_team": "Liverpool",
+      "kickoff_utc": "2026-09-20T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Vitality Stadium",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab689xv464x0xs9eh9",
+          "avg_odds": 3.17,
+          "max_odds": 3.34
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab689xv498x0x0",
+          "avg_odds": 3.69,
+          "max_odds": 3.95
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab689xv464x0xs9ehb",
+          "avg_odds": 2.19,
+          "max_odds": 2.27
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852627,
+      "tournament_name": "Premier League",
+      "home_team": "Leeds",
+      "away_team": "Crystal Palace",
+      "kickoff_utc": "2026-09-20T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Elland Road",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68jxv464x0xs9eht",
+          "avg_odds": 1.68,
+          "max_odds": 1.78
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68jxv498x0x0",
+          "avg_odds": 4,
+          "max_odds": 4.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68jxv464x0xs9ehv",
+          "avg_odds": 5.03,
+          "max_odds": 5.35
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852629,
+      "tournament_name": "Premier League",
+      "home_team": "Manchester City",
+      "away_team": "Sunderland",
+      "kickoff_utc": "2026-09-20T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 3,
+      "venue": "Etihad Stadium",
+      "raw_partial_result": "3:2, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68lxv464x0xs9ei1",
+          "avg_odds": 1.35,
+          "max_odds": 1.39
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68lxv498x0x0",
+          "avg_odds": 5.23,
+          "max_odds": 5.72
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68lxv464x0xs9ei3",
+          "avg_odds": 8.6,
+          "max_odds": 9.1
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852633,
+      "tournament_name": "Premier League",
+      "home_team": "Nottingham",
+      "away_team": "Coventry",
+      "kickoff_utc": "2026-09-19T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "City Ground",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68pxv464x0xs9ei9",
+          "avg_odds": 1.64,
+          "max_odds": 1.67
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68pxv498x0x0",
+          "avg_odds": 3.91,
+          "max_odds": 4.2
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68pxv464x0xs9eib",
+          "avg_odds": 5.61,
+          "max_odds": 5.9
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852621,
+      "tournament_name": "Premier League",
+      "home_team": "Brighton",
+      "away_team": "Arsenal",
+      "kickoff_utc": "2026-09-19T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 0,
+      "venue": "Amex Stadium",
+      "raw_partial_result": "2:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68dxv464x0xs9ehh",
+          "avg_odds": 5.1,
+          "max_odds": 5.39
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68dxv498x0x0",
+          "avg_odds": 3.92,
+          "max_odds": 4.03
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68dxv464x0xs9ehj",
+          "avg_odds": 1.69,
+          "max_odds": 1.73
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852623,
+      "tournament_name": "Premier League",
+      "home_team": "Everton",
+      "away_team": "Ipswich",
+      "kickoff_utc": "2026-09-19T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Hill Dickinson Stadium",
+      "raw_partial_result": "1:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68fxv464x0xs9ehl",
+          "avg_odds": 1.76,
+          "max_odds": 1.85
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68fxv498x0x0",
+          "avg_odds": 3.92,
+          "max_odds": 4.1
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68fxv464x0xs9ehn",
+          "avg_odds": 4.52,
+          "max_odds": 4.76
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852631,
+      "tournament_name": "Premier League",
+      "home_team": "Newcastle",
+      "away_team": "Hull",
+      "kickoff_utc": "2026-09-19T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "St. James' Park",
+      "raw_partial_result": "2:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68nxv464x0xs9ei5",
+          "avg_odds": 1.6,
+          "max_odds": 1.63
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68nxv498x0x0",
+          "avg_odds": 4.39,
+          "max_odds": 4.53
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68nxv464x0xs9ei7",
+          "avg_odds": 5.2,
+          "max_odds": 5.63
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852635,
+      "tournament_name": "Premier League",
+      "home_team": "Tottenham",
+      "away_team": "Aston Villa",
+      "kickoff_utc": "2026-09-19T11:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Tottenham Hotspur Stadium",
+      "raw_partial_result": "0:1, 2:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68rxv464x0xs9eid",
+          "avg_odds": 1.9,
+          "max_odds": 2.01
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68rxv498x0x0",
+          "avg_odds": 3.78,
+          "max_odds": 3.95
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68rxv464x0xs9eif",
+          "avg_odds": 3.92,
+          "max_odds": 4.1
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852619,
+      "tournament_name": "Premier League",
+      "home_team": "Brentford",
+      "away_team": "Chelsea",
+      "kickoff_utc": "2026-09-18T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 3,
+      "away_goals": 0,
+      "venue": "Brentford Community Stadium",
+      "raw_partial_result": "0:0, 3:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab68bxv464x0xs9ehd",
+          "avg_odds": 2.61,
+          "max_odds": 2.77
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68bxv498x0x0",
+          "avg_odds": 3.65,
+          "max_odds": 3.79
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab68bxv464x0xs9ehf",
+          "avg_odds": 2.59,
+          "max_odds": 2.7
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852607,
+      "tournament_name": "Premier League",
+      "home_team": "Leeds",
+      "away_team": "Newcastle",
+      "kickoff_utc": "2026-09-14T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 4,
+      "away_goals": 1,
+      "venue": "Elland Road",
+      "raw_partial_result": "3:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67vxv464x0xs9egl",
+          "avg_odds": 2.36,
+          "max_odds": 2.44
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67vxv498x0x0",
+          "avg_odds": 3.5,
+          "max_odds": 3.7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67vxv464x0xs9egn",
+          "avg_odds": 2.98,
+          "max_odds": 3.12
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852611,
+      "tournament_name": "Premier League",
+      "home_team": "Manchester Utd",
+      "away_team": "Manchester City",
+      "kickoff_utc": "2026-09-13T15:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Old Trafford",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab683xv464x0xs9egt",
+          "avg_odds": 3.05,
+          "max_odds": 3.23
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab683xv498x0x0",
+          "avg_odds": 3.78,
+          "max_odds": 3.89
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab683xv464x0xs9egv",
+          "avg_odds": 2.21,
+          "max_odds": 2.3
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852603,
+      "tournament_name": "Premier League",
+      "home_team": "Coventry",
+      "away_team": "Brighton",
+      "kickoff_utc": "2026-09-13T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 5,
+      "venue": "Coventry Building Society Arena",
+      "raw_partial_result": "0:1, 0:4",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67rxv464x0xs9egd",
+          "avg_odds": 3.87,
+          "max_odds": 4.08
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67rxv498x0x0",
+          "avg_odds": 3.81,
+          "max_odds": 3.87
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67rxv464x0xs9egf",
+          "avg_odds": 1.91,
+          "max_odds": 1.96
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852613,
+      "tournament_name": "Premier League",
+      "home_team": "Sunderland",
+      "away_team": "Arsenal",
+      "kickoff_utc": "2026-09-12T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 2,
+      "venue": "Stadium of Light",
+      "raw_partial_result": "0:0, 0:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab685xv464x0xs9eh1",
+          "avg_odds": 6.19,
+          "max_odds": 6.55
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab685xv498x0x0",
+          "avg_odds": 3.77,
+          "max_odds": 4.01
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab685xv464x0xs9eh3",
+          "avg_odds": 1.62,
+          "max_odds": 1.69
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852615,
+      "tournament_name": "Premier League",
+      "home_team": "Tottenham",
+      "away_team": "Everton",
+      "kickoff_utc": "2026-09-12T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Tottenham Hotspur Stadium",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab687xv464x0xs9eh5",
+          "avg_odds": 2.02,
+          "max_odds": 2.09
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab687xv498x0x0",
+          "avg_odds": 3.67,
+          "max_odds": 3.75
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab687xv464x0xs9eh7",
+          "avg_odds": 3.64,
+          "max_odds": 3.8
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852599,
+      "tournament_name": "Premier League",
+      "home_team": "Aston Villa",
+      "away_team": "Nottingham",
+      "kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 2,
+      "venue": "Villa Park",
+      "raw_partial_result": "0:0, 1:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67nxv464x0xs9eg5",
+          "avg_odds": 2.23,
+          "max_odds": 2.31
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67nxv498x0x0",
+          "avg_odds": 3.43,
+          "max_odds": 3.53
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67nxv464x0xs9eg7",
+          "avg_odds": 3.28,
+          "max_odds": 3.42
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852597,
+      "tournament_name": "Premier League",
+      "home_team": "Bournemouth",
+      "away_team": "Brentford",
+      "kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "Vitality Stadium",
+      "raw_partial_result": "1:1, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67lxv464x0xs9eg1",
+          "avg_odds": 2.3,
+          "max_odds": 2.5
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67lxv498x0x0",
+          "avg_odds": 3.62,
+          "max_odds": 3.7
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67lxv464x0xs9eg3",
+          "avg_odds": 3,
+          "max_odds": 3.12
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852601,
+      "tournament_name": "Premier League",
+      "home_team": "Chelsea",
+      "away_team": "Hull",
+      "kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "Stamford Bridge",
+      "raw_partial_result": "1:2, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67pxv464x0xs9eg9",
+          "avg_odds": 1.23,
+          "max_odds": 1.24
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67pxv498x0x0",
+          "avg_odds": 6.69,
+          "max_odds": 7.19
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67pxv464x0xs9egb",
+          "avg_odds": 12.18,
+          "max_odds": 13
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852605,
+      "tournament_name": "Premier League",
+      "home_team": "Crystal Palace",
+      "away_team": "Ipswich",
+      "kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Selhurst Park",
+      "raw_partial_result": "1:2, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67txv464x0xs9egh",
+          "avg_odds": 2.16,
+          "max_odds": 2.21
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67txv498x0x0",
+          "avg_odds": 3.67,
+          "max_odds": 3.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67txv464x0xs9egj",
+          "avg_odds": 3.25,
+          "max_odds": 3.39
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852609,
+      "tournament_name": "Premier League",
+      "home_team": "Liverpool",
+      "away_team": "Fulham",
+      "kickoff_utc": "2026-09-12T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "Anfield",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab681xv464x0xs9egp",
+          "avg_odds": 1.52,
+          "max_odds": 1.55
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab681xv498x0x0",
+          "avg_odds": 4.62,
+          "max_odds": 4.8
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab681xv464x0xs9egr",
+          "avg_odds": 5.83,
+          "max_odds": 6.2
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852577,
+      "tournament_name": "Premier League",
+      "home_team": "Arsenal",
+      "away_team": "Chelsea",
+      "kickoff_utc": "2026-09-06T15:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 1,
+      "venue": "Emirates Stadium",
+      "raw_partial_result": "1:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab671xv464x0xs9eep",
+          "avg_odds": 1.73,
+          "max_odds": 1.78
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab671xv498x0x0",
+          "avg_odds": 3.9,
+          "max_odds": 4.01
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab671xv464x0xs9eer",
+          "avg_odds": 4.75,
+          "max_odds": 5.08
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852583,
+      "tournament_name": "Premier League",
+      "home_team": "Everton",
+      "away_team": "Manchester Utd",
+      "kickoff_utc": "2026-09-06T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "Hill Dickinson Stadium",
+      "raw_partial_result": "0:0, 2:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab677xv464x0xs9ef5",
+          "avg_odds": 3.77,
+          "max_odds": 4.09
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab677xv498x0x0",
+          "avg_odds": 3.87,
+          "max_odds": 4.01
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab677xv464x0xs9ef7",
+          "avg_odds": 1.93,
+          "max_odds": 2.04
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852587,
+      "tournament_name": "Premier League",
+      "home_team": "Hull",
+      "away_team": "Aston Villa",
+      "kickoff_utc": "2026-09-05T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "MKM Stadium",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67bxv464x0xs9efd",
+          "avg_odds": 4.1,
+          "max_odds": 4.34
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67bxv498x0x0",
+          "avg_odds": 3.66,
+          "max_odds": 3.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67bxv464x0xs9eff",
+          "avg_odds": 1.91,
+          "max_odds": 1.94
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852579,
+      "tournament_name": "Premier League",
+      "home_team": "Brentford",
+      "away_team": "Sunderland",
+      "kickoff_utc": "2026-09-05T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Brentford Community Stadium",
+      "raw_partial_result": "0:0, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab673xv464x0xs9eet",
+          "avg_odds": 1.72,
+          "max_odds": 1.75
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab673xv498x0x0",
+          "avg_odds": 3.87,
+          "max_odds": 4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab673xv464x0xs9eev",
+          "avg_odds": 4.94,
+          "max_odds": 5.21
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852581,
+      "tournament_name": "Premier League",
+      "home_team": "Brighton",
+      "away_team": "Leeds",
+      "kickoff_utc": "2026-09-05T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Amex Stadium",
+      "raw_partial_result": "0:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab675xv464x0xs9ef1",
+          "avg_odds": 1.96,
+          "max_odds": 2.05
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab675xv498x0x0",
+          "avg_odds": 3.67,
+          "max_odds": 3.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab675xv464x0xs9ef3",
+          "avg_odds": 3.85,
+          "max_odds": 4.06
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852591,
+      "tournament_name": "Premier League",
+      "home_team": "Manchester City",
+      "away_team": "Coventry",
+      "kickoff_utc": "2026-09-05T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Etihad Stadium",
+      "raw_partial_result": "1:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67fxv464x0xs9efl",
+          "avg_odds": 1.2,
+          "max_odds": 1.22
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67fxv498x0x0",
+          "avg_odds": 7.4,
+          "max_odds": 7.97
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67fxv464x0xs9efn",
+          "avg_odds": 13.64,
+          "max_odds": 15
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852585,
+      "tournament_name": "Premier League",
+      "home_team": "Fulham",
+      "away_team": "Crystal Palace",
+      "kickoff_utc": "2026-09-05T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Craven Cottage",
+      "raw_partial_result": "2:1, 0:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab679xv464x0xs9ef9",
+          "avg_odds": 2.17,
+          "max_odds": 2.27
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab679xv498x0x0",
+          "avg_odds": 3.44,
+          "max_odds": 3.55
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab679xv464x0xs9efb",
+          "avg_odds": 3.47,
+          "max_odds": 3.65
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852595,
+      "tournament_name": "Premier League",
+      "home_team": "Nottingham",
+      "away_team": "Tottenham",
+      "kickoff_utc": "2026-09-05T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 0,
+      "venue": "City Ground",
+      "raw_partial_result": "0:0, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67jxv464x0xs9eft",
+          "avg_odds": 2.74,
+          "max_odds": 2.94
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67jxv498x0x0",
+          "avg_odds": 3.38,
+          "max_odds": 3.6
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67jxv464x0xs9efv",
+          "avg_odds": 2.63,
+          "max_odds": 2.71
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852593,
+      "tournament_name": "Premier League",
+      "home_team": "Newcastle",
+      "away_team": "Bournemouth",
+      "kickoff_utc": "2026-09-05T11:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "St. James' Park",
+      "raw_partial_result": "1:2, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67hxv464x0xs9efp",
+          "avg_odds": 2.15,
+          "max_odds": 2.21
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67hxv498x0x0",
+          "avg_odds": 3.62,
+          "max_odds": 3.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67hxv464x0xs9efr",
+          "avg_odds": 3.32,
+          "max_odds": 3.55
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852589,
+      "tournament_name": "Premier League",
+      "home_team": "Ipswich",
+      "away_team": "Liverpool",
+      "kickoff_utc": "2026-09-04T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 2,
+      "venue": "Portman Road",
+      "raw_partial_result": "0:2, 0:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67dxv464x0xs9efh",
+          "avg_odds": 5.05,
+          "max_odds": 5.4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab67dxv498x0x0",
+          "avg_odds": 4.41,
+          "max_odds": 4.91
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab67dxv464x0xs9efj",
+          "avg_odds": 1.62,
+          "max_odds": 1.66
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852559,
+      "tournament_name": "Premier League",
+      "home_team": "Aston Villa",
+      "away_team": "Arsenal",
+      "kickoff_utc": "2026-08-31T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Villa Park",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66fxv464x0xs9edl",
+          "avg_odds": 6.81,
+          "max_odds": 7.25
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66fxv498x0x0",
+          "avg_odds": 4.52,
+          "max_odds": 4.68
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66fxv464x0xs9edn",
+          "avg_odds": 1.48,
+          "max_odds": 1.53
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852571,
+      "tournament_name": "Premier League",
+      "home_team": "Manchester Utd",
+      "away_team": "Ipswich",
+      "kickoff_utc": "2026-08-30T15:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 5,
+      "away_goals": 2,
+      "venue": "Old Trafford",
+      "raw_partial_result": "1:1, 4:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66rxv464x0xs9eed",
+          "avg_odds": 1.35,
+          "max_odds": 1.38
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66rxv498x0x0",
+          "avg_odds": 5.55,
+          "max_odds": 6
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66rxv464x0xs9eef",
+          "avg_odds": 7.98,
+          "max_odds": 8.47
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852567,
+      "tournament_name": "Premier League",
+      "home_team": "Leeds",
+      "away_team": "Brentford",
+      "kickoff_utc": "2026-08-30T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Elland Road",
+      "raw_partial_result": "0:1, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66nxv464x0xs9ee5",
+          "avg_odds": 2.82,
+          "max_odds": 2.92
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66nxv498x0x0",
+          "avg_odds": 3.42,
+          "max_odds": 3.5
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66nxv464x0xs9ee7",
+          "avg_odds": 2.52,
+          "max_odds": 2.61
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852561,
+      "tournament_name": "Premier League",
+      "home_team": "Chelsea",
+      "away_team": "Brighton",
+      "kickoff_utc": "2026-08-30T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 4,
+      "away_goals": 3,
+      "venue": "Stamford Bridge",
+      "raw_partial_result": "3:1, 1:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66hxv464x0xs9edp",
+          "avg_odds": 1.86,
+          "max_odds": 1.92
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66hxv498x0x0",
+          "avg_odds": 3.85,
+          "max_odds": 3.95
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66hxv464x0xs9edr",
+          "avg_odds": 4.11,
+          "max_odds": 4.37
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852573,
+      "tournament_name": "Premier League",
+      "home_team": "Sunderland",
+      "away_team": "Fulham",
+      "kickoff_utc": "2026-08-30T13:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 0,
+      "venue": "Stadium of Light",
+      "raw_partial_result": "0:0, 1:0",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66txv464x0xs9eeh",
+          "avg_odds": 2.26,
+          "max_odds": 2.34
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66txv498x0x0",
+          "avg_odds": 3.37,
+          "max_odds": 3.47
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66txv464x0xs9eej",
+          "avg_odds": 3.31,
+          "max_odds": 3.46
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852575,
+      "tournament_name": "Premier League",
+      "home_team": "Tottenham",
+      "away_team": "Newcastle",
+      "kickoff_utc": "2026-08-29T16:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 2,
+      "venue": "Tottenham Hotspur Stadium",
+      "raw_partial_result": "0:0, 0:2",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66vxv464x0xs9eel",
+          "avg_odds": 2.18,
+          "max_odds": 2.25
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66vxv498x0x0",
+          "avg_odds": 3.72,
+          "max_odds": 3.83
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66vxv464x0xs9een",
+          "avg_odds": 3.18,
+          "max_odds": 3.34
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852557,
+      "tournament_name": "Premier League",
+      "home_team": "Bournemouth",
+      "away_team": "Everton",
+      "kickoff_utc": "2026-08-29T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 1,
+      "venue": "Vitality Stadium",
+      "raw_partial_result": "1:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66dxv464x0xs9edh",
+          "avg_odds": 2.2,
+          "max_odds": 2.26
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66dxv498x0x0",
+          "avg_odds": 3.49,
+          "max_odds": 3.56
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66dxv464x0xs9edj",
+          "avg_odds": 3.32,
+          "max_odds": 3.51
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852563,
+      "tournament_name": "Premier League",
+      "home_team": "Coventry",
+      "away_team": "Hull",
+      "kickoff_utc": "2026-08-29T14:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 0,
+      "away_goals": 1,
+      "venue": "Coventry Building Society Arena",
+      "raw_partial_result": "0:0, 0:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66jxv464x0xs9edt",
+          "avg_odds": 1.74,
+          "max_odds": 1.81
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66jxv498x0x0",
+          "avg_odds": 3.89,
+          "max_odds": 4
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66jxv464x0xs9edv",
+          "avg_odds": 4.79,
+          "max_odds": 5.2
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852569,
+      "tournament_name": "Premier League",
+      "home_team": "Liverpool",
+      "away_team": "Nottingham",
+      "kickoff_utc": "2026-08-29T11:30:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 2,
+      "venue": "Anfield",
+      "raw_partial_result": "0:1, 2:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66pxv464x0xs9ee9",
+          "avg_odds": 1.48,
+          "max_odds": 1.53
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66pxv498x0x0",
+          "avg_odds": 4.77,
+          "max_odds": 5.12
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66pxv464x0xs9eeb",
+          "avg_odds": 6.42,
+          "max_odds": 6.7
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852565,
+      "tournament_name": "Premier League",
+      "home_team": "Crystal Palace",
+      "away_team": "Manchester City",
+      "kickoff_utc": "2026-08-28T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 1,
+      "away_goals": 4,
+      "venue": "Selhurst Park",
+      "raw_partial_result": "0:1, 1:3",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66lxv464x0xs9ee1",
+          "avg_odds": 5.2,
+          "max_odds": 5.45
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab66lxv498x0x0",
+          "avg_odds": 4.15,
+          "max_odds": 4.31
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab66lxv464x0xs9ee3",
+          "avg_odds": 1.64,
+          "max_odds": 1.68
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    },
+    {
+      "event_id": 10852509,
+      "tournament_name": "Premier League",
+      "home_team": "Fulham",
+      "away_team": "Chelsea",
+      "kickoff_utc": "2026-08-24T19:00:00+00:00",
+      "status": "Finished",
+      "is_finished": true,
+      "home_goals": 2,
+      "away_goals": 3,
+      "venue": "Craven Cottage",
+      "raw_partial_result": "1:2, 1:1",
+      "odds": [
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab64txv464x0xs9eah",
+          "avg_odds": 3.73,
+          "max_odds": 3.9
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 2,
+          "outcome_id": "ab64txv498x0x0",
+          "avg_odds": 3.55,
+          "max_odds": 3.79
+        },
+        {
+          "betting_type_id": 1,
+          "scope_id": 2,
+          "outcome_result_id": 1,
+          "outcome_id": "ab64txv464x0xs9eaj",
+          "avg_odds": 2.03,
+          "max_odds": 2.07
+        }
+      ],
+      "source_url": "https://www.oddsportal.com/football/england/premier-league/results/"
+    }
+  ]
+}

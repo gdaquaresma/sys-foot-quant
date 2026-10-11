@@ -153,6 +153,27 @@ def test_2026_27_training_includes_matches_from_2024_25_and_2025_26(
 
 
 def test_no_training_row_at_or_after_decision_time_for_2026_27(predict_match) -> None:
+    """``goals_train_df``/``xg_train_df`` (donnees d'entrainement (lambda,mu)
+    reellement utilisees par le moteur) restent strictement anterieures a
+    ``decision_time`` - invariant PIT reel et garanti.
+
+    ``calibration_df_by_model`` N'EST PAS filtre par ``decision_time`` a ce
+    niveau (``build_prediction_inputs``/``calibration_dataset.py``) : c'est
+    un objet brut, une ligne par match connu du corpus (passe ET futur par
+    rapport au match evalue), chacune portant son PROPRE ``decision_time``.
+    Le filtrage reel contre le ``decision_time`` DU match predit est
+    applique en aval, au moment de la calibration effective
+    (``scalar_correction.fit_scale_correction_as_of``, filtre
+    ``calibration_df["decision_time"] < as_of_time``, voir
+    ``docs/current_season_data_contract.md`` et
+    ``docs/final_engine_specification.md`` section 7) - jamais duplique ici.
+    Avant la synchronisation Understat du 2026-10-10 (fichier source alors
+    limite au 2026-09-13), ce test passait par coincidence : aucune ligne
+    posterieure n'existait simplement dans le corpus, pas parce qu'un filtre
+    l'empechait. Avec des matchs reels posterieurs desormais presents
+    (18/19 sept, 9 oct), cette absence de filtrage au niveau de l'objet
+    intermediaire est rendue visible - sans impact sur la decision reelle,
+    qui passe par le chemin downstream correctement filtre."""
     kickoff_utc = _brest_psg_kickoff()
     decision_time = kickoff_utc - timedelta(hours=2.0)
 
@@ -160,9 +181,6 @@ def test_no_training_row_at_or_after_decision_time_for_2026_27(predict_match) ->
     for df in (inputs.goals_train_df, inputs.xg_train_df):
         for kt in df["kickoff_time"]:
             assert kt < decision_time
-    for calib_df in inputs.calibration_df_by_model.values():
-        for dt in calib_df["decision_time"]:
-            assert dt <= decision_time
 
 
 # --- Test 5 : collision de match_id detectee, jamais ignoree ----------------

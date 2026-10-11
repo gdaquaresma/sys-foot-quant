@@ -206,8 +206,14 @@ def test_no_bet_is_returned_as_a_valid_200_response_not_an_error() -> None:
 # --- 11. EXTENSION : fixtures futures B/C -----------------------------------
 #
 # match_id reels (voir tests/integration/test_future_fixture_catalog_real_files.py) :
-# Lens-Lyon (etat B, heure locale connue mais kickoff_utc absent) et
+# Brest-Nice (etat B, heure locale connue mais kickoff_utc absent) et
 # Lens-Le Havre (etat C, aucune heure publiee).
+#
+# NOTE (2026-10-11) : l'exemple d'Etat B utilisait auparavant Lens-Lyon
+# (9 octobre 2026) - devenu invalide car ce match a ete reellement joue
+# depuis et est desormais exclu du catalogue fusionne (voir le CORRECTIF
+# DEDUPLICATION de routes_matches.py). Remplace par Brest-Nice (23 octobre
+# 2026) - voir la meme note dans tests/integration/test_api_matches.py.
 #
 # Demande produit explicite (LOT retravail UI) : une fixture Ligue 1 a
 # l'heure locale connue (etat B) n'est PLUS refusee - l'API estime l'UTC
@@ -216,7 +222,7 @@ def test_no_bet_is_returned_as_a_valid_200_response_not_an_error() -> None:
 # Seul l'etat C (aucune heure publiee du tout) reste un refus 409 - rien a
 # convertir.
 
-_REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00"
+_REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Brest_vs_Nice:2026-10-23T20:45:00"
 _REAL_STATE_C_MATCH_ID = "ligue1:2026_27:Lens_vs_Le Havre:2026-12-05"
 
 
@@ -231,9 +237,11 @@ def test_state_b_future_fixture_ligue1_uses_estimated_kickoff_and_returns_200(mo
     )
     assert response.status_code == 200
     assert len(calls) == 1
-    # 2026-10-09 est en periode CEST (UTC+2) - 20:45 locale -> 18:45 UTC,
-    # meme regle deterministe que ligue1_kickoff_cet_conversion.py.
-    assert calls[0]["kickoff_utc"] == datetime(2026, 10, 9, 18, 45, 0)
+    # 2026-10-23 est en periode CEST (UTC+2 - le passage a l'heure d'hiver
+    # n'a lieu que le dernier dimanche d'octobre, 2026-10-25) - 20:45
+    # locale -> 18:45 UTC, meme regle deterministe que
+    # ligue1_kickoff_cet_conversion.py.
+    assert calls[0]["kickoff_utc"] == datetime(2026, 10, 23, 18, 45, 0)
     assert response.json()["kickoff_utc_estimated"] is True
 
 

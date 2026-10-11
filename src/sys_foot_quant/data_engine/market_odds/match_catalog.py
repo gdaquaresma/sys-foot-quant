@@ -79,6 +79,19 @@ _SEASON_FILES: dict[str, dict[str, tuple[str, Path]]] = {
     },
     "2026_27": {
         "ligue1": ("Ligue_1", Path("research/xg_feasibility/runs/ligue1_2026_datesData.json")),
+        # premier_league/liga : REACTIVES le 2026-10-11 (fichiers Understat
+        # synchronises le 2026-10-10) - initialement laisses de cote car leur
+        # activation produisait un doublon par match deja joue (une entree
+        # Understat is_played=True + une entree OpenFootball is_played=False
+        # perimee pour le MEME match, meme symptome que Lens-Lyon en Ligue 1),
+        # a une echelle large (~70 matchs Liga, ~51 Premier League). Desormais
+        # sans risque : ``routes_matches._list_catalog_entries`` deduplique
+        # explicitement par couple exact (home_team, away_team) avant d'ajouter
+        # une fixture OpenFootball (voir le CORRECTIF DEDUPLICATION de ce
+        # module, 2026-10-11) - verifie sur les 2 competitions (voir
+        # tests/integration/test_api_matches.py).
+        "premier_league": ("EPL", Path("research/xg_feasibility/runs/epl_2026_datesData.json")),
+        "liga": ("La_liga", Path("research/xg_feasibility/runs/liga_2026_datesData.json")),
     },
 }
 

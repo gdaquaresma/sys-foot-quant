@@ -11,9 +11,30 @@ enregistree dans ``FUTURE_FIXTURE_COMPETITIONS``, jamais pour une autre
 saison. ``match_catalog`` reste la seule source pour les matchs joues
 (D) ; seules les fixtures FUTURES (``is_played=False``) de
 ``future_fixture_catalog`` sont ajoutees, pour ne jamais dupliquer un
-match deja present cote Understat (partition stricte sur ``is_played`` -
-aucune logique de correspondance fragile entre les deux sources,
-analyse de risque documentee dans future_fixture_catalog.py).
+match deja present cote Understat.
+
+CORRECTIF DEDUPLICATION INTER-SOURCES (ce tour, 2026-10-11) - le filtre
+``is_played`` seul ne suffit PAS : le fichier OpenFootball source d'une
+competition n'est pas resynchronise a la meme cadence qu'Understat, donc
+un match reellement deja joue peut y rester marque ``is_played=False``
+(perime) PENDANT QUE le meme match existe deja, correctement, cote
+Understat (``is_played=True``) - produisant un doublon visible dans
+``GET /matches`` (constate reellement : Ligue 1 10 matchs, Liga ~70,
+Premier League ~51 au moment de la decouverte). ``_list_catalog_entries``
+retire donc desormais explicitement, PARMI les fixtures futures
+candidates, toute fixture dont le couple exact ``(home_team, away_team)``
+correspond deja a un match Understat present dans ``entries`` - PAS une
+correspondance floue (pas de tolerance de date/orthographe) : les deux
+cotes utilisent la MEME convention de nommage Understat (``home_team``/
+``away_team`` d'une ``FutureFixture`` resolue proviennent de
+``openfootball_team_mapping._try_resolve_openfootball_team``, qui mappe
+explicitement vers les noms Understat - voir future_fixture_catalog.py),
+et un couple domicile/exterieur donne n'apparait qu'UNE FOIS par saison
+dans le calendrier d'une competition (l'affiche retour a domicile/
+exterieur inverses est un couple distinct) - donc une correspondance
+exacte sur ce couple est fiable, contrairement a une correspondance par
+date (fuseau horaire/heure non fiables cote OpenFootball, voir
+DECOUVERTE 2 de future_fixture_catalog.py).
 
 EXTENSION (resolution partielle du catalogue de fixtures futures) :
 ``future_fixture_catalog.build_future_fixtures`` ne leve plus
@@ -94,7 +115,16 @@ def _list_catalog_entries(competition: str, season: str) -> list[MatchResponse]:
     ``TeamResolutionError`` pour ce motif (EXTENSION resolution partielle) -
     seul un ``ValueError`` generique pour une competition non enregistree
     (jamais atteint ici, ``competition`` est deja filtre ci-dessus) reste
-    possible."""
+    possible.
+
+    DEDUPLICATION (voir docstring du module, section CORRECTIF
+    DEDUPLICATION) : une fixture OpenFootball ``is_played=False`` dont le
+    couple exact ``(home_team, away_team)`` correspond deja a un match
+    Understat de ``entries`` est exclue - PAS seulement celles marquees
+    jouees cote OpenFootball. ``already_known_fixture_keys`` est construit
+    UNIQUEMENT a partir des matchs Understat (jamais a partir d'autres
+    fixtures OpenFootball entre elles, qui ne peuvent par construction pas
+    se dupliquer vu l'unicite du couple domicile/exterieur par saison)."""
     entries: list[MatchResponse] = []
     try:
         matches = match_catalog.list_matches(competition, season)
@@ -104,11 +134,14 @@ def _list_catalog_entries(competition: str, season: str) -> list[MatchResponse]:
             raise
 
     if season == FUTURE_FIXTURE_SEASON and competition in FUTURE_FIXTURE_COMPETITIONS:
+        already_known_fixture_keys = {(m.home_team, m.away_team) for m in entries}
         future_fixtures = future_fixture_catalog.build_future_fixtures(competition, season)
         entries.extend(
             MatchResponse.from_future_fixture(f)
             for f in future_fixtures
-            if not f.is_played and f.resolution_status == "resolved"
+            if not f.is_played
+            and f.resolution_status == "resolved"
+            and (f.home_team, f.away_team) not in already_known_fixture_keys
         )
 
     return sorted(entries, key=lambda m: (_sort_instant(m), m.match_id))

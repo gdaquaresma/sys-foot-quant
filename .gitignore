@@ -16,3 +16,4 @@ data/value_logs/
 !data/curated/.gitkeep
 !data/cache/.gitkeep
 research/polymarket_raw_exports/
+logs/

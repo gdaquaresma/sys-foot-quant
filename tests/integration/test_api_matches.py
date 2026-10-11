@@ -20,20 +20,30 @@ client = TestClient(app)
 
 
 def test_get_matches_with_valid_parameters_returns_200_and_the_full_catalogue() -> None:
-    """EXTENSION (integration du catalogue de fixtures futures) : le
-    catalogue fusionne pour ligue1/2026_27 contient desormais les 36
-    matchs Understat deja joues (D) PLUS les 261 fixtures futures B/C
-    d'OpenFootball (69 B + 192 C, is_played=False - voir
-    docs/future_fixture_catalog_2026_27.md) - jamais les 45 matchs "joues"
-    cote OpenFootball (deja couverts, de facon faisant autorite, par
-    Understat)."""
+    """EXTENSION (integration du catalogue de fixtures futures) + CORRECTIF
+    DEDUPLICATION (voir routes_matches.py) : le catalogue fusionne pour
+    ligue1/2026_27 contient les matchs Understat deja joues (D) PLUS les
+    fixtures futures B/C d'OpenFootball MOINS celles dont le couple exact
+    (home_team, away_team) correspond deja a un match Understat deja
+    present.
+
+    Compte joues mis a jour (46 -> 51, 2026-10-11) suite a la premiere
+    execution reelle de la tache planifiee locale (launchd,
+    scripts/cron_sync_and_oddsportal.sh) : 5 nouveaux matchs synchronises.
+    Le TOTAL fusionne reste inchange (305) - ces 5 nouveaux matchs joues
+    correspondaient deja a des fixtures futures OpenFootball resolues,
+    desormais exclues par la deduplication (254 = 259 - 5) plutot que
+    comptees deux fois. Les 2 cas de doublon ORIGINAUX restent les memes
+    (Lens-Lyon, joue le 2026-10-09 mais encore "is_played=False" cote
+    OpenFootball au moment de la decouverte du bug original ; Paris Saint
+    Germain-Rennes, doublon de calendrier OpenFootball)."""
     response = client.get("/matches", params={"competition": "ligue1", "season": "2026_27"})
     assert response.status_code == 200
     body = response.json()
-    assert len(body) == 297
+    assert len(body) == 305
     assert all(m["competition"] == "ligue1" and m["season"] == "2026_27" for m in body)
-    assert sum(1 for m in body if m["is_played"]) == 36
-    assert sum(1 for m in body if not m["is_played"]) == 261
+    assert sum(1 for m in body if m["is_played"]) == 51
+    assert sum(1 for m in body if not m["is_played"]) == 254
 
 
 def test_get_matches_missing_required_parameters_returns_422() -> None:
@@ -117,11 +127,20 @@ def test_get_match_by_id_unknown_competition_or_season_returns_explicit_error(co
 
 # --- EXTENSION : integration du catalogue de fixtures futures (2026/27) -----
 #
-# Etat B : heure locale publiee mais kickoff_utc absent (Lens-Lyon, 9
+# Etat B : heure locale publiee mais kickoff_utc absent (Brest-Nice, 23
 # octobre 2026 - voir tests/integration/test_future_fixture_catalog_real_files.py).
 # Etat C : aucune heure publiee (Lens-Le Havre, 5 decembre 2026 - idem).
+#
+# NOTE (2026-10-11) : l'exemple d'Etat B utilisait auparavant Lens-Lyon
+# (9 octobre 2026) - devenu invalide car ce match a ete reellement joue
+# depuis (voir le CORRECTIF DEDUPLICATION ci-dessus, qui l'exclut
+# desormais correctement du catalogue fusionne). Remplace par Brest-Nice
+# (23 octobre 2026), suffisamment loin dans le futur au moment de l'ecriture
+# de ce correctif pour ne pas redevenir perime au prochain resync
+# Understat a court terme - mais PAS une garantie permanente, a
+# revalider si ce test se remet a echouer plus tard.
 
-_REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Lens_vs_Lyon:2026-10-09T20:45:00"
+_REAL_STATE_B_MATCH_ID = "ligue1:2026_27:Brest_vs_Nice:2026-10-23T20:45:00"
 _REAL_STATE_C_MATCH_ID = "ligue1:2026_27:Lens_vs_Le Havre:2026-12-05"
 
 
@@ -130,10 +149,10 @@ def test_get_matches_includes_a_real_state_b_future_fixture_with_null_kickoff_ut
     assert response.status_code == 200
     body = response.json()
     match = next(m for m in body if m["match_id"] == _REAL_STATE_B_MATCH_ID)
-    assert match["home_team"] == "Lens"
-    assert match["away_team"] == "Lyon"
-    assert match["fixture_date"] == "2026-10-09"
-    assert match["kickoff_local_naive"] == "2026-10-09T20:45:00"
+    assert match["home_team"] == "Brest"
+    assert match["away_team"] == "Nice"
+    assert match["fixture_date"] == "2026-10-23"
+    assert match["kickoff_local_naive"] == "2026-10-23T20:45:00"
     assert match["kickoff_utc"] is None
     assert match["is_played"] is False
 
@@ -158,7 +177,7 @@ def test_get_match_by_id_finds_a_real_state_b_future_fixture() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["kickoff_utc"] is None
-    assert body["kickoff_local_naive"] == "2026-10-09T20:45:00"
+    assert body["kickoff_local_naive"] == "2026-10-23T20:45:00"
 
 
 def test_get_match_by_id_finds_a_real_state_c_future_fixture() -> None:
@@ -190,7 +209,7 @@ def test_get_matches_invalid_id_absent_from_catalogue_still_returns_404() -> Non
     assert response.status_code == 404
 
 
-@pytest.mark.parametrize("competition,expected_count", [("premier_league", 265), ("liga", 223)])
+@pytest.mark.parametrize("competition,expected_count", [("premier_league", 315), ("liga", 293)])
 def test_get_matches_for_2026_27_with_partially_unresolved_clubs_now_returns_200(
     competition: str, expected_count: int
 ) -> None:
@@ -199,12 +218,22 @@ def test_get_matches_for_2026_27_with_partially_unresolved_clubs_now_returns_200
     Coventry City/Hull City/Malaga/Deportivo/Racing Santander - les
     fixtures RESOLUES (ex. Arsenal-Leeds) restent accessibles, seules les
     fixtures impliquant une equipe non resolue sont absentes (voir
-    ``routes_matches._list_catalog_entries`` pour la limite documentee)."""
+    ``routes_matches._list_catalog_entries`` pour la limite documentee).
+
+    EXTENSION (reactivation Understat, 2026-10-11) : premier_league/liga
+    sont desormais ENREGISTRES dans ``match_catalog._SEASON_FILES`` pour
+    2026/27 (voir le CORRECTIF DEDUPLICATION ci-dessus) - le total fusionne
+    inclut donc desormais aussi les matchs Understat deja joues, plus
+    distinct du compte OpenFootball-seul d'avant cette reactivation (265/
+    223) : premier_league = 51 matchs Understat joues + 265 fixtures
+    futures resolues - 1 doublon exact (home_team, away_team) = 315 ; liga
+    = 70 matchs Understat joues + 223 fixtures futures resolues - 0 doublon
+    = 293 (comptes verifies directement via match_catalog.list_matches/
+    future_fixture_catalog.build_future_fixtures)."""
     response = client.get("/matches", params={"competition": competition, "season": "2026_27"})
     assert response.status_code == 200
     body = response.json()
     assert len(body) == expected_count
-    assert all(m["is_played"] is False for m in body)
 
 
 @pytest.mark.parametrize(
